@@ -1,0 +1,25 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const admin_dashboard_controller_1 = require("../controllers/admin-dashboard.controller");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const role_middleware_1 = require("../middleware/role.middleware");
+const router = (0, express_1.Router)();
+// All routes require ADMIN authentication
+router.use(auth_middleware_1.authenticate);
+router.use((0, role_middleware_1.requireRole)(['ADMIN']));
+/**
+ * Admin Dashboard Routes
+ * All routes are prefixed with /api/admin/dashboard
+ */
+// NGO Management
+router.get('/ngos', admin_dashboard_controller_1.getAllNgos);
+router.get('/ngos/:id', admin_dashboard_controller_1.getNgoDetails);
+router.put('/ngos/:id/block', admin_dashboard_controller_1.blockNgo);
+router.put('/ngos/:id/unblock', admin_dashboard_controller_1.unblockNgo);
+// Donor Management
+router.get('/donors', admin_dashboard_controller_1.getAllDonors);
+router.get('/donors/:id', admin_dashboard_controller_1.getDonorDetails);
+router.put('/donors/:id/block', admin_dashboard_controller_1.blockDonor);
+router.put('/donors/:id/unblock', admin_dashboard_controller_1.unblockDonor);
+exports.default = router;
