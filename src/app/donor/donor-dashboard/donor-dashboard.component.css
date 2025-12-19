@@ -1,0 +1,25 @@
+.donor-dashboard-root{padding:20px;font-family:Inter,Arial,Helvetica,sans-serif}
+.container{display:flex;gap:20px;align-items:flex-start}
+.profile-card{flex:0 0 300px;background:#fff;padding:16px;border-radius:8px;box-shadow:0 6px 18px rgba(16,24,40,0.06)}
+.profile-card h2{margin:0 0 8px}
+.profile-info p{margin:6px 0;color:#374151}
+.profile-actions{display:flex;gap:8px;margin-top:12px}
+.btn{background:#f3f4f6;border:1px solid #e5e7eb;padding:8px 10px;border-radius:6px;cursor:pointer}
+.btn.primary{background:#059669;color:#fff;border:none}
+.edit-form input{display:block;width:100%;padding:8px;margin:8px 0;border-radius:6px;border:1px solid #e5e7eb}
+.main-area{flex:1}
+.main-header{display:flex;justify-content:space-between;align-items:center}
+.main-header h1{margin:0}
+.subtitle{color:#6b7280;margin:4px 0 0}
+.stats{display:flex;gap:12px;margin:16px 0}
+.stat{background:#fff;padding:12px;border-radius:8px;box-shadow:0 6px 18px rgba(16,24,40,0.06);flex:1}
+.stat .label{color:#6b7280}
+.stat .value{font-size:24px;font-weight:700}
+.list-section{margin-top:18px}
+.list{display:flex;flex-direction:column;gap:10px}
+.list-item{display:flex;justify-content:space-between;align-items:center;background:#fff;padding:12px;border-radius:8px;box-shadow:0 6px 18px rgba(16,24,40,0.04)}
+.list-item.small{padding:8px}
+.item-main .title{font-weight:600}
+.item-main .meta{color:#6b7280;font-size:13px}
+.empty{padding:16px;color:#6b7280}
+@media (max-width:800px){.container{flex-direction:column}.profile-card{width:100%;flex:unset}}

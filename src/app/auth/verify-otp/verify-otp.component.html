@@ -1,0 +1,81 @@
+<div class="verify-otp-container">
+  <mat-card class="otp-card">
+    <mat-card-header>
+      <div class="header-content">
+        <mat-icon class="header-icon">verified_user</mat-icon>
+        <mat-card-title>Verify Your Email</mat-card-title>
+        <mat-card-subtitle>Enter the 6-digit OTP sent to your email</mat-card-subtitle>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form class="otp-form" (ngSubmit)="verifyOTP()">
+        <!-- Email Display -->
+        <div class="email-display">
+          <mat-icon>email</mat-icon>
+          <span>{{ email || 'your email' }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-message">
+          <mat-icon>error</mat-icon>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- OTP Input -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Enter OTP</mat-label>
+          <input matInput 
+                 type="text" 
+                 [(ngModel)]="otp" 
+                 name="otp"
+                 placeholder="000000"
+                 maxlength="6"
+                 pattern="[0-9]{6}"
+                 required
+                 autocomplete="off">
+          <mat-icon matPrefix>lock</mat-icon>
+          <mat-hint>6-digit code sent to your email</mat-hint>
+        </mat-form-field>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button mat-raised-button 
+                  color="primary" 
+                  type="submit"
+                  [disabled]="isLoading"
+                  class="verify-btn">
+            <mat-icon *ngIf="!isLoading">check_circle</mat-icon>
+            <mat-spinner *ngIf="isLoading" diameter="20" class="button-spinner"></mat-spinner>
+            {{ isLoading ? 'Verifying...' : 'Verify OTP' }}
+          </button>
+        </div>
+
+        <!-- Resend OTP -->
+        <div class="resend-section">
+          <p>Didn't receive the OTP?</p>
+          <button mat-button 
+                  type="button"
+                  (click)="resendOTP()"
+                  [disabled]="isLoading"
+                  class="resend-btn">
+            <mat-icon>refresh</mat-icon>
+            Resend OTP
+          </button>
+        </div>
+
+        <!-- Navigation Links -->
+        <div class="nav-links">
+          <button mat-button type="button" (click)="goToSignup()">
+            <mat-icon>arrow_back</mat-icon>
+            Back to Signup
+          </button>
+          <button mat-button type="button" (click)="goToLogin()">
+            Already verified? Login
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>
+

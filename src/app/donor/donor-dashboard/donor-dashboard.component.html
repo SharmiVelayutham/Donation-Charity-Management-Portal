@@ -1,0 +1,82 @@
+<div class="donor-dashboard-root">
+  <div class="container">
+    <aside class="profile-card">
+      <h2>Profile</h2>
+      <div *ngIf="dashboardData.profile" class="profile-info">
+        <p><strong>Name:</strong> {{ dashboardData.profile.name }}</p>
+        <p><strong>Email:</strong> {{ dashboardData.profile.email }}</p>
+        <p><strong>Phone:</strong> {{ dashboardData.profile.phoneNumber || '—' }}</p>
+        <p><strong>Address:</strong> {{ dashboardData.profile.fullAddress || 'Not set' }}</p>
+        <div class="profile-actions">
+          <button class="btn" (click)="editProfile()">Edit Profile</button>
+          <button class="btn" (click)="shareMyLocation()">Share My Location</button>
+        </div>
+        <div *ngIf="shareLocationStatus" class="muted">{{ shareLocationStatus }}</div>
+      </div>
+
+      <div *ngIf="isEditingProfile" class="edit-form">
+        <h3>Edit Profile</h3>
+        <input placeholder="Name" [(ngModel)]="profileForm.name" />
+        <input placeholder="Contact Info" [(ngModel)]="profileForm.contactInfo" />
+        <input placeholder="Phone Number" [(ngModel)]="profileForm.phoneNumber" />
+        <input placeholder="Full Address or Coordinates" [(ngModel)]="profileForm.fullAddress" />
+        <input placeholder="New Password (leave blank to keep)" type="password" [(ngModel)]="profileForm.password" />
+        <div class="edit-actions">
+          <button class="btn primary" (click)="saveProfile()">Save</button>
+          <button class="btn" (click)="isEditingProfile = false">Cancel</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="main-header">
+        <div>
+          <h1>Donor Dashboard</h1>
+          <p class="subtitle">Track your contributions and upcoming pickups</p>
+        </div>
+        <div class="actions">
+          <button class="primary" (click)="viewDonations()">Browse Donations</button>
+          <button class="btn" (click)="logout()">Logout</button>
+        </div>
+      </header>
+
+      <section class="stats">
+        <div class="stat">
+          <div class="label">Total Contributions</div>
+          <div class="value">{{ dashboardData.totalContributions || 0 }}</div>
+        </div>
+      </section>
+
+      <section class="list-section">
+        <h2>Recent Contributions</h2>
+        <div *ngIf="isLoading">Loading...</div>
+        <div *ngIf="!isLoading && dashboardData.contributions?.length === 0" class="empty">No contributions yet.</div>
+        <div *ngIf="!isLoading" class="list">
+          <div *ngFor="let contribution of dashboardData.contributions" class="list-item">
+            <div class="item-main">
+              <div class="title">{{ contribution.donation_category || contribution.purpose || 'Donation' }}</div>
+              <div class="meta">NGO: {{ contribution.ngo_name || contribution.ngo?.name || '—' }}</div>
+            </div>
+            <div class="item-side">
+              <div>Status: <strong>{{ contribution.status || 'N/A' }}</strong></div>
+              <div *ngIf="contribution.pickup_scheduled_date_time || contribution.pickupScheduledDateTime">Scheduled: {{ (contribution.pickup_scheduled_date_time || contribution.pickupScheduledDateTime) | date:'short' }}</div>
+              <button class="btn" (click)="schedulePickupForDonation(contribution)">Schedule Pickup</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="list-section">
+        <h2>Upcoming Pickups</h2>
+        <div *ngIf="dashboardData.upcomingPickups?.length === 0" class="empty">No upcoming pickups</div>
+        <div *ngIf="dashboardData.upcomingPickups?.length > 0" class="list">
+          <div *ngFor="let p of dashboardData.upcomingPickups" class="list-item small">
+            <div>{{ p.donation_category || p.purpose }}</div>
+            <div>Pickup: {{ p.pickup_scheduled_date_time || p.pickupScheduledDateTime | date:'short' }}</div>
+            <div>NGO: {{ p.ngo_name }}</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>

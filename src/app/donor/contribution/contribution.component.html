@@ -1,0 +1,49 @@
+<div class="contribution-bg">
+  <div class="overlay"></div>
+
+  <div class="contribution-card">
+    <h2>Confirm Contribution</h2>
+
+    <div *ngIf="donation">
+      <p><strong>Category:</strong> {{ donation.donationCategory || donation.donationType }}</p>
+      <p><strong>Purpose:</strong> {{ donation.purpose }}</p>
+      <p><strong>Quantity/Amount:</strong> {{ donation.quantityOrAmount }}</p>
+      <p *ngIf="donation.locationAddress"><strong>Location:</strong> {{ donation.locationAddress }}</p>
+    </div>
+
+    <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
+
+    <input 
+      type="datetime-local" 
+      placeholder="Pickup Date & Time*"
+      [(ngModel)]="pickupScheduledDateTime"
+      [disabled]="isLoading"
+      required />
+
+    <input 
+      type="text" 
+      placeholder="Your Address*"
+      [(ngModel)]="donorAddress"
+      [disabled]="isLoading"
+      required />
+
+    <input 
+      type="text" 
+      placeholder="Your Contact Number*"
+      [(ngModel)]="donorContactNumber"
+      [disabled]="isLoading"
+      required />
+
+    <textarea 
+      placeholder="Optional notes for NGO"
+      [(ngModel)]="notes"
+      [disabled]="isLoading"
+      rows="4"></textarea>
+
+    <button 
+      (click)="submitContribution()"
+      [disabled]="isLoading">
+      {{ isLoading ? 'Submitting...' : 'Confirm Contribution' }}
+    </button>
+  </div>
+</div>
