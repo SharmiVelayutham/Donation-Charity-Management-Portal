@@ -62,12 +62,28 @@ export const routes: Routes = [
     canActivate: [roleGuard(['DONOR'])]
   },
   {
+  path: 'donations/:id',
+  loadComponent: () =>
+    import('./donor/donation-details/donation-details.component')
+      .then(m => m.DonationDetailsComponent),
+  canActivate: [authGuard]
+},
+
+  {
     path: 'dashboard/donor',
     loadComponent: () =>
       import('./donor/donor-dashboard/donor-dashboard.component')
         .then(m => m.DonorDashboardComponent),
     canActivate: [roleGuard(['DONOR'])]
   },
+  {
+  path: 'leaderboard',
+  loadComponent: () =>
+    import('./pages/leaderboard/leaderboard.component')
+      .then(m => m.LeaderboardComponent),
+  canActivate: [authGuard]
+},
+
 
   // ---------------- FALLBACK (ALWAYS LAST) ---------------- 
   { path: '**', redirectTo: 'login' }
