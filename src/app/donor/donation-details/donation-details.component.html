@@ -1,1 +1,17 @@
 <p>donation-details works!</p>
+<mat-card>
+  <h2>Donation Details</h2>
+
+  <p><strong>Type:</strong> {{ donation.donationType }}</p>
+  <p><strong>Quantity:</strong> {{ donation.quantity }}</p>
+  <p><strong>Location:</strong> {{ donation.location }}</p>
+  <p><strong>Pickup Date:</strong> {{ donation.pickupDateTime }}</p>
+  <p><strong>Status:</strong> {{ donation.status }}</p>
+
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="goToContribute()">
+    Contribute
+  </button>
+</mat-card>
