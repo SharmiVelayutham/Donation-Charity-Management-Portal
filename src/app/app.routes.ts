@@ -6,7 +6,13 @@ import { authGuard, roleGuard } from './guards/auth.guard';
 export const routes: Routes = [
 
   // ---------------- AUTH ---------------- 
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  {
+  path: '',
+  loadComponent: () =>
+    import('./pages/home/home.component')
+      .then(m => m.HomeComponent)
+  },
+
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
   {
