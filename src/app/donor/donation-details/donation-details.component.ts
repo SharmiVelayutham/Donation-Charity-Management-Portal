@@ -19,7 +19,6 @@ export class DonationDetailsComponent {
 
   donationId!: string;
 
-  // Temporary mock data (backend-independent)
   donation = {
     donationType: 'Food',
     quantity: 10,

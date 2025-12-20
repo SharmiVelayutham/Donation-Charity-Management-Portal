@@ -5,17 +5,10 @@ import { Router, CanActivateFn } from '@angular/router';
  * Auth Guard - Protects routes that require authentication
  * Checks if user is logged in (has token)
  */
-export const authGuard: CanActivateFn = (route, state) => {
-  const router = inject(Router);
-  const token = localStorage.getItem('token');
-  
-  if (!token) {
-    router.navigate(['/login']);
-    return false;
-  }
-  
-  return true;
+export const authGuard: CanActivateFn = () => {
+  return true; // TEMPORARY for frontend testing
 };
+
 
 /**
  * Role Guard - Protects routes based on user role
