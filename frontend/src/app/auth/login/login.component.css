@@ -1,0 +1,104 @@
+.auth-wrapper {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+/* LEFT IMAGE */
+.auth-image {
+  flex: 1;
+  background-image: url('/assets/images/donation-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.image-overlay {
+  position: absolute;
+  bottom: 40px;
+  left: 40px;
+  color: #fff;
+}
+
+.image-overlay h1 {
+  font-size: 36px;
+  margin-bottom: 8px;
+}
+
+/* RIGHT FORM */
+.auth-form {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-bg {
+  background-color: #f1f8ff; /* calm charity blue */
+}
+
+.auth-card {
+  width: 380px;
+  background: #ffffff;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+.auth-card h2 {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  border: 1px solid #dcdcdc;
+  font-size: 14px;
+}
+
+.forgot {
+  text-align: right;
+  margin-bottom: 16px;
+}
+
+.forgot a {
+  font-size: 13px;
+  color: #1e73d8;
+  text-decoration: none;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #1f73d2;
+  color: #fff;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.login-btn:hover {
+  background-color: #155bb5;
+}
+
+.signup-text {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.signup-text a {
+  color: #1f73d2;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.signup-text a:hover {
+  text-decoration: underline;
+}
+

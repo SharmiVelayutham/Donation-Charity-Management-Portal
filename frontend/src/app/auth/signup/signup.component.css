@@ -1,0 +1,112 @@
+/* ===== PAGE WRAPPER ===== */
+.auth-wrapper {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* ===== LEFT IMAGE SECTION ===== */
+.auth-image {
+  width: 50%;
+  background-image: url('/assets/images/donation-bg.jpg'); /* ✅ update path if needed */
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+/* Dark overlay for text readability */
+.image-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 40px;
+}
+
+.image-overlay h1 {
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+.image-overlay p {
+  font-size: 16px;
+}
+
+/* ===== RIGHT FORM SECTION ===== */
+.auth-form {
+  width: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Background color specific to signup */
+.signup-bg {
+  background: #fff1ea;
+}
+
+/* ===== CARD ===== */
+.auth-card {
+  width: 380px;
+  background: #ffffff;
+  padding: 40px 30px;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+/* ===== INPUTS ===== */
+.auth-card input,
+.auth-card select {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
+
+/* ===== BUTTON ===== */
+.create-account-btn {
+  width: 100%;
+  background: #1e88e5;
+  color: #fff;
+  border: none;
+  padding: 12px;
+  border-radius: 25px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.create-account-btn:hover {
+  background: #1565c0;
+}
+
+/* ===== LOGIN LINK ===== */
+.login-text {
+  margin-top: 18px;
+  font-size: 14px;
+}
+
+.login-text a {
+  color: #1e88e5;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* ===== RESPONSIVE (Mobile) ===== */
+@media (max-width: 900px) {
+  .auth-image {
+    display: none;
+  }
+
+  .auth-form {
+    width: 100%;
+  }
+}

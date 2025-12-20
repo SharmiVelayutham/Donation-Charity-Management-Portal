@@ -1,0 +1,75 @@
+<div class="auth-wrapper">
+
+  <!-- LEFT IMAGE SECTION -->
+  <div class="auth-image">
+    <div class="image-overlay">
+      <h1>Join the Mission</h1>
+      <p>Create an account and start helping today</p>
+    </div>
+  </div>
+
+  <!-- RIGHT FORM SECTION -->
+  <div class="auth-form signup-bg">
+    <div class="auth-card">
+
+      <h2>Sign Up</h2>
+
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <input 
+        type="text" 
+        placeholder="Full Name*" 
+        [(ngModel)]="name"
+        [disabled]="isLoading"
+        required />
+
+      <input 
+        type="email" 
+        placeholder="Email*" 
+        [(ngModel)]="email"
+        [disabled]="isLoading"
+        required />
+
+      <input 
+        type="password" 
+        placeholder="Password* (min 6 characters)" 
+        [(ngModel)]="password"
+        [disabled]="isLoading"
+        required />
+
+      <input 
+        type="text" 
+        placeholder="Contact Info* (Mobile Number)" 
+        [(ngModel)]="contactInfo"
+        [disabled]="isLoading"
+        required />
+
+      <select 
+        [(ngModel)]="role"
+        (change)="onRoleChange($event)"
+        [disabled]="isLoading"
+        required>
+        <option value="">Select Role*</option>
+        <option value="DONOR">Donor</option>
+        <option value="NGO">NGO</option>
+      </select>
+
+      <button
+        type="button"
+        class="create-account-btn"
+        (click)="createAccount()"
+        [disabled]="isLoading">
+        {{ isLoading ? 'Creating Account...' : 'Create Account' }}
+      </button>
+
+      <p class="login-text">
+        Already have an account?
+        <a (click)="goToLogin()">Login</a>
+      </p>
+
+    </div>
+  </div>
+
+</div>

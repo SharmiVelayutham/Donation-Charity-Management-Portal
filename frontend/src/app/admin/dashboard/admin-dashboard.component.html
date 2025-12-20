@@ -1,0 +1,130 @@
+<div class="admin-dashboard">
+  <header class="dashboard-header">
+    <h1>Admin Dashboard</h1>
+    <button class="logout-btn" (click)="logout()">Logout</button>
+  </header>
+
+  <div class="tabs">
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'ngos'"
+      (click)="switchTab('ngos')">
+      NGOs ({{ ngos.length }})
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'donors'"
+      (click)="switchTab('donors')">
+      Donors ({{ donors.length }})
+    </button>
+  </div>
+
+  <div class="filters">
+    <input 
+      type="text" 
+      placeholder="Search..." 
+      [(ngModel)]="searchTerm"
+      (keyup.enter)="onSearch()" />
+    <select [(ngModel)]="filterBlocked" (change)="onSearch()">
+      <option value="">All</option>
+      <option value="true">Blocked</option>
+      <option value="false">Active</option>
+    </select>
+    <button (click)="onSearch()">Search</button>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="isLoading" class="loading">Loading...</div>
+
+  <!-- NGOs Tab -->
+  <div *ngIf="activeTab === 'ngos' && !isLoading" class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Contact</th>
+          <th>Donations</th>
+          <th>Contributions</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let ngo of ngos">
+          <td>{{ ngo.id }}</td>
+          <td>{{ ngo.name }}</td>
+          <td>{{ ngo.email }}</td>
+          <td>{{ ngo.contactInfo }}</td>
+          <td>{{ ngo.statistics?.totalDonations || 0 }}</td>
+          <td>{{ ngo.statistics?.totalContributions || 0 }}</td>
+          <td>
+            <span [class.blocked]="ngo.isBlocked">
+              {{ ngo.isBlocked ? 'Blocked' : 'Active' }}
+            </span>
+          </td>
+          <td>
+            <button 
+              [class.block-btn]="!ngo.isBlocked"
+              [class.unblock-btn]="ngo.isBlocked"
+              (click)="toggleBlockNgo(ngo)">
+              {{ ngo.isBlocked ? 'Unblock' : 'Block' }}
+            </button>
+          </td>
+        </tr>
+        <tr *ngIf="ngos.length === 0">
+          <td colspan="8" class="no-data">No NGOs found</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Donors Tab -->
+  <div *ngIf="activeTab === 'donors' && !isLoading" class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Contact</th>
+          <th>Total Contributions</th>
+          <th>Approved</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let donor of donors">
+          <td>{{ donor.id }}</td>
+          <td>{{ donor.name }}</td>
+          <td>{{ donor.email }}</td>
+          <td>{{ donor.contactInfo }}</td>
+          <td>{{ donor.statistics?.totalContributions || 0 }}</td>
+          <td>{{ donor.statistics?.approvedContributions || 0 }}</td>
+          <td>
+            <span [class.blocked]="donor.isBlocked">
+              {{ donor.isBlocked ? 'Blocked' : 'Active' }}
+            </span>
+          </td>
+          <td>
+            <button 
+              [class.block-btn]="!donor.isBlocked"
+              [class.unblock-btn]="donor.isBlocked"
+              (click)="toggleBlockDonor(donor)">
+              {{ donor.isBlocked ? 'Unblock' : 'Block' }}
+            </button>
+          </td>
+        </tr>
+        <tr *ngIf="donors.length === 0">
+          <td colspan="8" class="no-data">No Donors found</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+

@@ -1,0 +1,97 @@
+/* ===== BACKGROUND ===== */
+.ngo-bg {
+  min-height: 100vh;
+  background: url('/assets/images/ngo-bg.jpg') no-repeat center center / cover;
+  position: relative;
+}
+
+/* White overlay for readability */
+.ngo-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+/* ===== CENTER CONTENT ===== */
+.content-wrapper {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  text-align: center;
+  padding: 20px;
+}
+
+/* Page title */
+.content-wrapper h1 {
+  font-size: 36px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #0f172a;
+}
+
+/* Subtitle */
+.subtitle {
+  font-size: 16px;
+  color: #475569;
+  margin-bottom: 30px;
+}
+
+/* ===== REQUEST CARD ===== */
+.request-card {
+  background: #ffffff;
+  padding: 30px;
+  width: 420px;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Smaller sentence text */
+.request-card h2 {
+  font-size: 20px;      /* 👈 reduced size */
+  font-weight: 500;
+  color: #1e293b;
+  margin-bottom: 24px;
+}
+
+/* ===== BUTTONS ===== */
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Edit button */
+.edit-btn {
+  background: #fbbf24;
+  color: #000;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.edit-btn:hover {
+  background: #f59e0b;
+}
+
+/* Cancel button */
+.cancel-btn {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cancel-btn:hover {
+  background: #dc2626;
+}

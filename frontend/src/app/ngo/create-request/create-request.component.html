@@ -1,0 +1,263 @@
+<div class="create-request-container">
+  <!-- Header -->
+  <header class="request-header">
+    <button mat-icon-button class="back-button" (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="header-content">
+      <h1 class="page-title">
+        <mat-icon>add_circle</mat-icon>
+        Create Donation Request
+      </h1>
+      <p class="page-subtitle">Let donors know what you need</p>
+    </div>
+  </header>
+
+  <!-- Main Form Card -->
+  <mat-card class="form-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>inventory_2</mat-icon>
+        Donation Request Details
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form class="donation-form" (ngSubmit)="onSubmit()">
+        <!-- Error/Success Messages -->
+        <div *ngIf="errorMessage" class="error-message">
+          <mat-icon>error</mat-icon>
+          <span>{{ errorMessage }}</span>
+        </div>
+        <div *ngIf="successMessage" class="success-message">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Donation Category -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Donation Category *</mat-label>
+          <mat-select [(ngModel)]="donationCategory" name="donationCategory" required>
+            <mat-option value="">Select Category</mat-option>
+            <mat-option value="CLOTHES">
+              <mat-icon>checkroom</mat-icon>
+              Clothes
+            </mat-option>
+            <mat-option value="FOOD">
+              <mat-icon>restaurant</mat-icon>
+              Food
+            </mat-option>
+            <mat-option value="MONEY">
+              <mat-icon>monetization_on</mat-icon>
+              Money
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>category</mat-icon>
+          <mat-hint>Select the type of donation you need</mat-hint>
+        </mat-form-field>
+
+        <!-- Purpose -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Purpose *</mat-label>
+          <input matInput 
+                 [(ngModel)]="purpose" 
+                 name="purpose"
+                 placeholder="e.g., Orphan support, disaster relief"
+                 required>
+          <mat-icon matPrefix>flag</mat-icon>
+          <mat-hint>Brief purpose of this donation request</mat-hint>
+        </mat-form-field>
+
+        <!-- Description -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Detailed Description *</mat-label>
+          <textarea matInput 
+                    [(ngModel)]="description" 
+                    name="description"
+                    placeholder="Explain why this donation is needed"
+                    rows="4"
+                    required></textarea>
+          <mat-icon matPrefix>description</mat-icon>
+          <mat-hint>Provide detailed information about the donation need</mat-hint>
+        </mat-form-field>
+
+        <!-- Quantity/Amount -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Quantity/Amount Required *</mat-label>
+          <input matInput 
+                 type="number" 
+                 [(ngModel)]="quantityOrAmount" 
+                 name="quantityOrAmount"
+                 placeholder="Enter quantity or amount"
+                 min="1"
+                 required>
+          <mat-icon matPrefix>numbers</mat-icon>
+          <mat-hint>Enter the quantity (for items) or amount (for money)</mat-hint>
+        </mat-form-field>
+
+        <!-- Payment Details for MONEY -->
+        <div *ngIf="donationCategory === 'MONEY'" class="payment-section">
+          <mat-divider></mat-divider>
+          <h3 class="section-title">
+            <mat-icon>account_balance</mat-icon>
+            Payment Details (Required for Money Donations)
+          </h3>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>QR Code Image URL *</mat-label>
+            <input matInput 
+                   type="url"
+                   [(ngModel)]="qrCodeImage" 
+                   name="qrCodeImage"
+                   placeholder="https://example.com/qr-code.png">
+            <mat-icon matPrefix>qr_code</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Bank Account Number *</mat-label>
+            <input matInput 
+                   [(ngModel)]="bankAccountNumber" 
+                   name="bankAccountNumber"
+                   placeholder="Enter bank account number">
+            <mat-icon matPrefix>account_balance_wallet</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Bank Name *</mat-label>
+            <input matInput 
+                   [(ngModel)]="bankName" 
+                   name="bankName"
+                   placeholder="Enter bank name">
+            <mat-icon matPrefix>business</mat-icon>
+          </mat-form-field>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="half-width">
+              <mat-label>IFSC Code *</mat-label>
+              <input matInput 
+                     [(ngModel)]="ifscCode" 
+                     name="ifscCode"
+                     placeholder="Enter IFSC code">
+              <mat-icon matPrefix>code</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="half-width">
+              <mat-label>Account Holder Name *</mat-label>
+              <input matInput 
+                     [(ngModel)]="accountHolderName" 
+                     name="accountHolderName"
+                     placeholder="Enter account holder name">
+              <mat-icon matPrefix>person</mat-icon>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <!-- Pickup Details for FOOD/CLOTHES -->
+        <div *ngIf="donationCategory !== 'MONEY' && donationCategory" class="pickup-section">
+          <mat-divider></mat-divider>
+          <h3 class="section-title">
+            <mat-icon>location_on</mat-icon>
+            Pickup Details (Required for Food/Clothes)
+          </h3>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Pickup Location *</mat-label>
+            <input matInput 
+                   [(ngModel)]="pickupLocation" 
+                   name="pickupLocation"
+                   placeholder="Enter pickup address"
+                   required>
+            <mat-icon matPrefix>place</mat-icon>
+            <mat-hint>Full address where donation can be picked up</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Pickup Date & Time *</mat-label>
+            <input matInput 
+                   type="datetime-local"
+                   [(ngModel)]="pickupDateTime" 
+                   name="pickupDateTime"
+                   required>
+            <mat-icon matPrefix>schedule</mat-icon>
+            <mat-hint>Preferred date and time for pickup</mat-hint>
+          </mat-form-field>
+        </div>
+
+        <!-- Image Upload (Single) -->
+        <div class="image-upload-section">
+          <mat-divider></mat-divider>
+          <label class="upload-label">
+            <mat-icon>image</mat-icon>
+            <span>Donation Image (Optional)</span>
+          </label>
+          <div class="image-preview-container">
+            <div *ngIf="imagePreview" class="image-preview">
+              <img [src]="imagePreview" alt="Donation preview">
+              <button mat-icon-button 
+                      type="button"
+                      class="remove-image-btn" 
+                      (click)="removeImage()"
+                      matTooltip="Remove image">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+            <div *ngIf="!imagePreview" class="image-placeholder">
+              <mat-icon>image</mat-icon>
+              <p>No image selected</p>
+            </div>
+          </div>
+          <input type="file" 
+                 accept="image/*" 
+                 (change)="onImageSelected($event)"
+                 id="image-upload"
+                 style="display: none;">
+          <button mat-stroked-button 
+                  type="button"
+                  (click)="triggerImageUpload()"
+                  class="upload-btn">
+            <mat-icon>upload</mat-icon>
+            {{ imagePreview ? 'Change Image' : 'Upload Image' }}
+          </button>
+          <p class="upload-hint">Recommended: JPG or PNG, max 5MB</p>
+        </div>
+
+        <!-- Priority -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Priority</mat-label>
+          <mat-select [(ngModel)]="priority" name="priority">
+            <mat-option value="NORMAL">
+              <mat-icon>schedule</mat-icon>
+              Normal Priority
+            </mat-option>
+            <mat-option value="URGENT">
+              <mat-icon>priority_high</mat-icon>
+              Urgent
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>flag</mat-icon>
+          <mat-hint>Set the urgency level of this request</mat-hint>
+        </mat-form-field>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button mat-raised-button 
+                  color="primary" 
+                  type="submit"
+                  [disabled]="isLoading"
+                  class="submit-btn">
+            <mat-icon *ngIf="!isLoading">send</mat-icon>
+            <mat-spinner *ngIf="isLoading" diameter="20" class="button-spinner"></mat-spinner>
+            {{ isLoading ? 'Creating...' : 'Submit Request' }}
+          </button>
+          <button mat-stroked-button 
+                  type="button"
+                  (click)="goBack()"
+                  [disabled]="isLoading">
+            <mat-icon>cancel</mat-icon>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

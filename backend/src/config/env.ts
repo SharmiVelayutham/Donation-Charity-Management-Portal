@@ -12,7 +12,6 @@ requiredVars.forEach((key) => {
 
 export const env = {
   port: parseInt(process.env.PORT || '4000', 10),
-  mongoUri: process.env.MONGO_URI as string,
   jwtSecret: process.env.JWT_SECRET as string,
   
   // SMTP Email Configuration

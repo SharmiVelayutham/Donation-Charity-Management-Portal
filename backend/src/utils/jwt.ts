@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
-import { UserRole } from '../models/User.model';
+
+export type UserRole = 'DONOR' | 'NGO' | 'ADMIN';
 
 export interface JwtPayload {
   userId: string;

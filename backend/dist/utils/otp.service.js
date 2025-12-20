@@ -5,6 +5,7 @@ exports.storeOTP = storeOTP;
 exports.verifyOTP = verifyOTP;
 exports.sendOTPEmail = sendOTPEmail;
 const mysql_1 = require("../config/mysql");
+const email_service_1 = require("./email.service");
 /**
  * Generate a 6-digit OTP
  */
@@ -45,40 +46,20 @@ async function verifyOTP(email, otp, purpose = 'REGISTRATION') {
     return true;
 }
 /**
- * Send OTP via email (placeholder - integrate with email service)
- * For now, logs to console. Replace with actual email service (nodemailer, sendgrid, etc.)
+ * Send OTP via email using nodemailer
+ * Throws error if email sending fails
  */
-async function sendOTPEmail(email, otp, purpose) {
-    // TODO: Integrate with email service (nodemailer, sendgrid, AWS SES, etc.)
-    // For now, log to console for testing
-    console.log('='.repeat(50));
-    console.log(`OTP Email for ${purpose}`);
-    console.log(`To: ${email}`);
-    console.log(`OTP Code: ${otp}`);
-    console.log(`This OTP expires in 10 minutes`);
-    console.log('='.repeat(50));
-    // Example with nodemailer (uncomment and configure):
-    /*
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'noreply@donationportal.com',
-      to: email,
-      subject: `Your ${purpose} OTP Code`,
-      html: `
-        <h2>Your OTP Code</h2>
-        <p>Your OTP code for ${purpose} is: <strong>${otp}</strong></p>
-        <p>This code will expire in 10 minutes.</p>
-        <p>If you didn't request this, please ignore this email.</p>
-      `,
-    });
-    */
+async function sendOTPEmail(email, otp, purpose = 'REGISTRATION') {
+    try {
+        // Use the email service to send OTP
+        await (0, email_service_1.sendOTPEmail)(email, otp, purpose);
+        // Log success (without exposing OTP in production)
+        console.log(`✅ OTP email sent successfully to ${email} for ${purpose}`);
+    }
+    catch (error) {
+        // Log error details for debugging
+        console.error(`❌ Failed to send OTP email to ${email}:`, error.message);
+        // Re-throw to let caller handle the error
+        throw new Error(`Failed to send OTP email: ${error.message}`);
+    }
 }

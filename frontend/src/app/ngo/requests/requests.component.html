@@ -1,0 +1,31 @@
+<div class="ngo-bg">
+  <div class="ngo-overlay"></div>
+
+  <div class="content-wrapper">
+    <h1>Manage Requests</h1>
+    <p class="subtitle">Edit or cancel your posted donations</p>
+
+    <button class="primary-btn" (click)="goToCreate()" style="margin-bottom: 20px;">Create New Request</button>
+
+    <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
+    <div *ngIf="isLoading" class="loading">Loading requests...</div>
+
+    <div *ngIf="!isLoading && donations.length === 0" class="no-donations">
+      <p>No donation requests yet. <a (click)="goToCreate()" style="cursor: pointer; color: #4f46e5;">Create one now</a></p>
+    </div>
+
+    <div class="request-card" *ngFor="let donation of donations">
+      <h2>{{ donation.purpose || donation.donationCategory }}</h2>
+      <p><strong>Category:</strong> {{ donation.donationCategory || donation.donationType }}</p>
+      <p><strong>Quantity/Amount:</strong> {{ donation.quantityOrAmount }}</p>
+      <p><strong>Status:</strong> {{ donation.status }}</p>
+      <p><strong>Priority:</strong> {{ donation.priority }}</p>
+      <p *ngIf="donation.pickupDateTime"><strong>Pickup Date:</strong> {{ formatDate(donation.pickupDateTime) }}</p>
+
+      <div class="actions">
+        <button class="edit-btn" [disabled]="donation.status === 'COMPLETED' || donation.status === 'CANCELLED'">Edit</button>
+        <button class="cancel-btn" [disabled]="donation.status === 'COMPLETED' || donation.status === 'CANCELLED'">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>

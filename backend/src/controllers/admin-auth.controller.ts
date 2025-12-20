@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { AdminModel } from '../models/Admin.model';
 import { signToken } from '../utils/jwt';
 import { sendSuccess } from '../utils/response';
-import { emailExists } from '../utils/auth-helper';
+import { emailExists } from '../utils/mysql-auth-helper';
+import { insert, queryOne } from '../config/mysql';
 
 const SALT_ROUNDS = 10;
 
@@ -31,15 +31,19 @@ export const adminRegister = async (req: Request, res: Response) => {
   }
 
   const hashed = await bcrypt.hash(password, SALT_ROUNDS);
-  const admin = await AdminModel.create({
-    name,
-    email,
-    password: hashed,
-    contactInfo,
-    role: 'ADMIN',
-  });
+  const normalizedEmail = email.toLowerCase();
+  
+  const adminId = await insert(
+    'INSERT INTO admins (name, email, password, contact_info, role) VALUES (?, ?, ?, ?, ?)',
+    [name, normalizedEmail, hashed, contactInfo, 'ADMIN']
+  );
 
-  const token = signToken({ userId: admin.id, role: 'ADMIN', email: admin.email });
+  const admin = await queryOne<any>('SELECT id, name, email, role FROM admins WHERE id = ?', [adminId]);
+  if (!admin) {
+    return res.status(500).json({ success: false, message: 'Failed to create admin' });
+  }
+
+  const token = signToken({ userId: adminId.toString(), role: 'ADMIN', email: admin.email });
   return sendSuccess(
     res,
     {
@@ -67,8 +71,8 @@ export const adminLogin = async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, message: 'Missing credentials' });
   }
 
-  // Only check admin collection
-  const admin = await AdminModel.findOne({ email: email.toLowerCase() });
+  // Only check admin table
+  const admin = await queryOne<any>('SELECT id, name, email, password, role FROM admins WHERE email = ?', [email.toLowerCase()]);
   if (!admin) {
     return res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
@@ -78,7 +82,7 @@ export const adminLogin = async (req: Request, res: Response) => {
     return res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
 
-  const token = signToken({ userId: admin.id, role: 'ADMIN', email: admin.email });
+  const token = signToken({ userId: admin.id.toString(), role: 'ADMIN', email: admin.email });
   return sendSuccess(
     res,
     {

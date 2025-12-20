@@ -1,0 +1,55 @@
+<div class="auth-wrapper">
+
+  <div class="auth-image">
+    <div class="image-overlay">
+      <h1>Donate. Save Lives.</h1>
+      <p>Connecting donors and recipients with care</p>
+    </div>
+  </div>
+
+  <div class="auth-form login-bg">
+    <div class="auth-card">
+
+      <h2>Login</h2>
+
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <input 
+        type="email" 
+        placeholder="Email*" 
+        [(ngModel)]="email"
+        [disabled]="isLoading"
+        required />
+
+      <input 
+        type="password" 
+        placeholder="Password*" 
+        [(ngModel)]="password"
+        [disabled]="isLoading"
+        required />
+
+      <div class="forgot">
+        <a href="#">Forgot Password?</a>
+      </div>
+
+      <!-- LOGIN BUTTON -->
+      <button 
+        type="button" 
+        class="login-btn" 
+        (click)="onLogin()"
+        [disabled]="isLoading">
+        {{ isLoading ? 'Logging in...' : 'Login' }}
+      </button>
+      
+      <!-- TEXT LINK (NOT BUTTON) -->
+      <p class="signup-text">
+        New user?
+        <a routerLink="/signup">Sign up</a>
+      </p>
+
+    </div>
+  </div>
+
+</div>

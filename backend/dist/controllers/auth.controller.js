@@ -38,15 +38,29 @@ const register = async (req, res) => {
         return res.status(409).json({ success: false, message: 'Email already in use' });
     }
     try {
-        // Generate and send OTP
+        // Generate OTP
         const otp = (0, otp_service_1.generateOTP)();
+        // Store OTP in database first (before sending email)
+        // This way, if email fails, we can still track the attempt
         await (0, otp_service_1.storeOTP)(email, otp, 'REGISTRATION');
-        await (0, otp_service_1.sendOTPEmail)(email, otp, 'REGISTRATION');
-        // Store registration data temporarily (in a real app, you might use Redis or session)
-        // For now, we'll require the frontend to send the data again during verification
-        // In production, consider storing in Redis with email as key
+        // Send OTP email - this will throw if email sending fails
+        try {
+            await (0, otp_service_1.sendOTPEmail)(email, otp, 'REGISTRATION');
+        }
+        catch (emailError) {
+            // If email fails, log the error but don't fail the entire registration
+            // The OTP is already stored, so user can request resend
+            console.error('Email sending failed:', emailError.message);
+            // Return error response - do NOT pretend OTP was sent
+            return res.status(500).json({
+                success: false,
+                message: `Failed to send OTP email: ${emailError.message}. Please check your email address and try again.`,
+                emailError: true,
+            });
+        }
+        // Only return success if email was sent successfully
         return (0, response_1.sendSuccess)(res, {
-            message: 'OTP sent to your email. Please verify to complete registration.',
+            message: 'OTP sent to your email. Please check your inbox and verify to complete registration.',
             email: email,
             requiresVerification: true
         }, 'OTP sent successfully', 200);
@@ -55,7 +69,7 @@ const register = async (req, res) => {
         console.error('Registration error:', error);
         return res.status(500).json({
             success: false,
-            message: error.message || 'Failed to send OTP. Please try again.',
+            message: error.message || 'Failed to process registration. Please try again.',
         });
     }
 };

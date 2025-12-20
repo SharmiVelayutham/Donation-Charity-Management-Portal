@@ -1,0 +1,76 @@
+<div class="donor-bg">
+  <div class="overlay"></div>
+
+  <div class="list-container">
+    <h1>Available Donation Requests</h1>
+    <div class="filters">
+      <label>
+        Type:
+        <select [(ngModel)]="filterCategory">
+          <option value="">All</option>
+          <option value="FOOD">Food</option>
+          <option value="CLOTHES">Clothes</option>
+          <option value="MONEY">Money</option>
+          <option value="BOOKS">Books</option>
+        </select>
+      </label>
+
+      <label>
+        Location:
+        <input [(ngModel)]="filterLocation" placeholder="City or ZIP" />
+      </label>
+
+      <label>
+        Date:
+        <input [(ngModel)]="filterDate" type="date" />
+      </label>
+
+      <button (click)="applyFilters()">Apply</button>
+      <button (click)="clearFilters()">Clear</button>
+    </div>
+
+    <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
+
+    <div *ngIf="isLoading" class="loading">Loading donations...</div>
+
+    <div *ngIf="!isLoading && donations.length === 0" class="no-donations">
+      <p>No donation requests available at the moment.</p>
+    </div>
+
+    <div class="donation-card" *ngFor="let d of donations">
+      <div class="info">
+        <h3>{{ d.donationCategory || d.donationType || 'Donation' }}</h3>
+        <p><strong>Purpose:</strong> {{ d.purpose || 'N/A' }}</p>
+        <p><strong>Quantity/Amount:</strong> {{ d.quantityOrAmount }}</p>
+        <p *ngIf="d.locationAddress"><strong>Location:</strong> {{ d.locationAddress }}</p>
+        <p *ngIf="d.pickupDateTime"><strong>Pickup Date:</strong> {{ formatDate(d.pickupDateTime) }}</p>
+        <p><strong>Status:</strong> {{ d.status }}</p>
+        <p><strong>Priority:</strong> {{ d.priority }}</p>
+      </div>
+
+      <div class="actions">
+        <button (click)="contribute(d.id)" [disabled]="d.status !== 'PENDING'">{{ d.status === 'PENDING' ? 'Contribute' : d.status }}</button>
+        <button (click)="toggleQuickSchedule(d.id)" *ngIf="d.status === 'PENDING'">Quick Schedule</button>
+      </div>
+
+      <div class="quick-schedule" *ngIf="showSchedule[d.id]">
+        <label>Pickup Date & Time
+          <input type="datetime-local" [(ngModel)]="scheduleDateTimeMap[d.id]" />
+        </label>
+        <label>Pickup Address
+          <input [(ngModel)]="donorAddress" placeholder="Your pickup address" />
+        </label>
+        <label>Contact Number
+          <input [(ngModel)]="donorContactNumber" placeholder="Phone number" />
+        </label>
+        <label>Notes / Instructions (optional)
+          <input [(ngModel)]="notesMap[d.id]" placeholder="Notes for pickup" />
+        </label>
+        <div class="quick-actions">
+          <button (click)="submitQuickContribution(d.id)" [disabled]="isScheduling[d.id]">Confirm & Schedule</button>
+          <button (click)="toggleQuickSchedule(d.id)">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
