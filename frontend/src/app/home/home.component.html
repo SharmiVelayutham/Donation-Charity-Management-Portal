@@ -1,0 +1,251 @@
+<!-- Navigation Header -->
+<header class="navbar">
+  <div class="nav-container">
+    <div class="logo-section">
+      <div class="logo">
+        <span class="logo-star">★</span>
+        <h1>Donation</h1>
+      </div>
+      <p class="tagline">Help Others, Be Happy!</p>
+    </div>
+    <nav class="nav-menu" [class.menu-open]="menuOpen">
+      <a routerLink="/" class="nav-link active">HOME</a>
+      <a href="#about" class="nav-link">ABOUT</a>
+      <a href="#events" class="nav-link">EVENTS</a>
+      <a href="#blog" class="nav-link">BLOG</a>
+      <div class="nav-dropdown">
+        <a routerLink="/donations" class="nav-link">DONATION <span class="dropdown-arrow">▼</span></a>
+        <div class="dropdown-menu">
+          <a routerLink="/donations" class="dropdown-item">All Donations</a>
+          <a routerLink="/donations" [queryParams]="{category: 'FOOD'}" class="dropdown-item">Food Donations</a>
+          <a routerLink="/donations" [queryParams]="{category: 'CLOTHES'}" class="dropdown-item">Clothes Donations</a>
+          <a routerLink="/donations" [queryParams]="{category: 'MONEY'}" class="dropdown-item">Money Donations</a>
+        </div>
+      </div>
+      <a href="#pages" class="nav-link">PAGES <span class="dropdown-arrow">▼</span></a>
+    </nav>
+    <div class="nav-actions">
+      <button *ngIf="!isAuthenticated" class="btn-donate" routerLink="/signup">DONATE NOW</button>
+      <button *ngIf="isAuthenticated" class="btn-donate" (click)="navigateToDashboard()">DASHBOARD</button>
+      <button class="menu-toggle" (click)="menuOpen = !menuOpen">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Hero Section with Carousel -->
+<section class="hero-section">
+  <div class="hero-slider">
+    <div class="hero-slide active">
+      <div class="hero-image">
+        <!-- Background image will be set via CSS -->
+        <div class="hero-overlay"></div>
+      </div>
+      <div class="hero-content">
+        <p class="hero-tagline">Change the life Change the world</p>
+        <h1 class="hero-title">Every Good Act Is A Charity</h1>
+        <p class="hero-description">
+          There are many variations of passages available majority have suffered alteration in some form by injected humour or randomised words.
+        </p>
+        <div class="hero-buttons">
+          <button class="btn-yellow">
+            <span class="btn-icon">✓</span>
+            HOW WE HELP
+          </button>
+          <button class="btn-red">
+            <span class="btn-icon">✓</span>
+            SUPPORT US
+          </button>
+        </div>
+      </div>
+      <button class="carousel-prev" (click)="prevSlide()">‹</button>
+      <button class="carousel-next" (click)="nextSlide()">›</button>
+    </div>
+  </div>
+</section>
+
+<!-- About Section -->
+<section id="about" class="about-section">
+  <div class="container">
+    <div class="section-header">
+      <h2>About Our Mission</h2>
+      <p>We connect donors with verified NGOs to create positive change in communities</p>
+    </div>
+    <div class="about-grid">
+      <div class="about-card">
+        <div class="about-icon">💝</div>
+        <h3>Transparent Donations</h3>
+        <p>Every donation is tracked and verified to ensure it reaches those in need.</p>
+      </div>
+      <div class="about-card">
+        <div class="about-icon">🤝</div>
+        <h3>Verified NGOs</h3>
+        <p>All NGOs are verified and regularly audited to maintain trust and transparency.</p>
+      </div>
+      <div class="about-card">
+        <div class="about-icon">📍</div>
+        <h3>Local Impact</h3>
+        <p>Find and support causes in your local community for maximum impact.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Section -->
+<section class="stats-section">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-number">{{ stats.totalDonations || '1,250+' }}</div>
+        <div class="stat-label">Total Donations</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">{{ stats.totalContributions || '3,420+' }}</div>
+        <div class="stat-label">Contributions</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">{{ stats.activeNGOs || '45+' }}</div>
+        <div class="stat-label">Active NGOs</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">{{ stats.activeDonors || '320+' }}</div>
+        <div class="stat-label">Active Donors</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How We Help Section -->
+<section id="events" class="help-section">
+  <div class="container">
+    <div class="section-header">
+      <h2>How We Help</h2>
+      <p>Our platform makes it easy to make a difference</p>
+    </div>
+    <div class="help-grid">
+      <div class="help-card">
+        <div class="help-number">01</div>
+        <h3>For Donors</h3>
+        <p>Browse donation requests, contribute easily, and track your impact in real-time.</p>
+        <button class="btn-read-more" routerLink="/signup">Get Started</button>
+      </div>
+      <div class="help-card">
+        <div class="help-number">02</div>
+        <h3>For NGOs</h3>
+        <p>Create donation requests, manage contributions, and connect with generous donors.</p>
+        <button class="btn-read-more" routerLink="/signup">Register NGO</button>
+      </div>
+      <div class="help-card">
+        <div class="help-number">03</div>
+        <h3>Secure Platform</h3>
+        <p>All transactions are secure, transparent, and verified for complete peace of mind.</p>
+        <button class="btn-read-more" routerLink="/donations">Learn More</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Recent Donations -->
+<section class="donations-section">
+  <div class="container">
+    <div class="section-header">
+      <h2>Recent Donation Requests</h2>
+      <p>Help make a difference today</p>
+    </div>
+    <div *ngIf="recentDonations.length > 0" class="donations-grid">
+      <div class="donation-card" *ngFor="let donation of recentDonations">
+        <div class="donation-badge" [class.urgent]="donation.priority === 'URGENT'">
+          {{ donation.priority || 'NORMAL' }}
+        </div>
+        <h3>{{ donation.purpose || donation.donation_type }}</h3>
+        <p class="donation-category">{{ donation.donation_category || donation.donation_type }}</p>
+        <div class="donation-info">
+          <p><strong>🏢 NGO:</strong> {{ donation.ngo_name || 'N/A' }}</p>
+          <p><strong>📍 Address:</strong> {{ donation.location_address || 'Not specified' }}</p>
+          <p><strong>📦 Type:</strong> {{ donation.donation_category || donation.donation_type }}</p>
+          <p><strong>📊 Quantity/Amount:</strong> {{ donation.quantity_or_amount || 'N/A' }}</p>
+          <p *ngIf="donation.pickup_date_time"><strong>📅 Pickup:</strong> {{ formatDate(donation.pickup_date_time) }}</p>
+        </div>
+        <p class="donation-description">{{ donation.description || 'Help make a difference' }}</p>
+        <div class="donation-footer">
+          <button class="btn-donate-small" (click)="handleDonateClick(donation.id)" *ngIf="isAuthenticated && userRole === 'DONOR'">Donate</button>
+          <button class="btn-donate-small" routerLink="/donations" *ngIf="!isAuthenticated || userRole !== 'DONOR'">View Details</button>
+        </div>
+      </div>
+    </div>
+    <div *ngIf="recentDonations.length === 0 && !isLoading" class="empty-donations">
+      <p>No donation requests available at the moment. Check back later!</p>
+      <button class="btn-yellow" routerLink="/donations">Browse All Donations</button>
+    </div>
+    <div class="section-actions" *ngIf="recentDonations.length > 0">
+      <button class="btn-primary" routerLink="/donations">View All Donations</button>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+  <div class="container">
+    <h2>Ready to Make a Difference?</h2>
+    <p>Join thousands of donors and NGOs working together to create positive change.</p>
+    <div class="cta-buttons">
+      <button *ngIf="!isAuthenticated" class="btn-yellow btn-large" routerLink="/signup">
+        <span class="btn-icon">✓</span>
+        GET STARTED
+      </button>
+      <button *ngIf="isAuthenticated" class="btn-yellow btn-large" routerLink="/donations">
+        <span class="btn-icon">✓</span>
+        BROWSE DONATIONS
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-content">
+      <div class="footer-section">
+        <div class="footer-logo">
+          <span class="logo-star">★</span>
+          <h3>Donation</h3>
+        </div>
+        <p>Connecting donors with verified NGOs to create positive change in communities.</p>
+      </div>
+      <div class="footer-section">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a routerLink="/">Home</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a routerLink="/donations">Donations</a></li>
+          <li><a routerLink="/signup">Sign Up</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>For NGOs</h4>
+        <ul>
+          <li><a routerLink="/signup">Register as NGO</a></li>
+          <li><a routerLink="/dashboard/ngo" *ngIf="isAuthenticated">NGO Dashboard</a></li>
+          <li><a href="#events">Events</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">Contact Us</a></li>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Service</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2025 Donation Portal. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+

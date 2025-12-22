@@ -9,9 +9,31 @@
         <mat-icon>add_circle</mat-icon>
         Create Donation Request
       </h1>
-      <p class="page-subtitle">Let donors know what you need</p>
+      <p class="page-subtitle">Specify what you need. Donors will provide their donation details when they contribute.</p>
     </div>
   </header>
+
+  <!-- NGO Info Header -->
+  <mat-card class="ngo-info-card" *ngIf="ngoName">
+    <mat-card-content>
+      <div class="ngo-info-header">
+        <div class="ngo-info-item">
+          <mat-icon>business</mat-icon>
+          <div>
+            <h3>NGO Name</h3>
+            <p>{{ ngoName }}</p>
+          </div>
+        </div>
+        <div class="ngo-info-item">
+          <mat-icon>location_on</mat-icon>
+          <div>
+            <h3>NGO Address</h3>
+            <p>{{ ngoAddress }}</p>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
 
   <!-- Main Form Card -->
   <mat-card class="form-card">
@@ -34,54 +56,53 @@
           <span>{{ successMessage }}</span>
         </div>
 
-        <!-- Donation Category -->
+        <!-- Info Box -->
+        <div class="info-box">
+          <mat-icon>info</mat-icon>
+          <div>
+            <p><strong>Note:</strong> You are creating a donation request. Donors will fill in their donation details (pickup location, date, time) when they contribute.</p>
+          </div>
+        </div>
+
+        <!-- Donation Type -->
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Donation Category *</mat-label>
-          <mat-select [(ngModel)]="donationCategory" name="donationCategory" required>
-            <mat-option value="">Select Category</mat-option>
-            <mat-option value="CLOTHES">
-              <mat-icon>checkroom</mat-icon>
-              Clothes
-            </mat-option>
+          <mat-label>Donation Type *</mat-label>
+          <mat-select [(ngModel)]="donationType" name="donationType" (selectionChange)="onDonationTypeChange()" required>
+            <mat-option value="">Select Type</mat-option>
             <mat-option value="FOOD">
               <mat-icon>restaurant</mat-icon>
               Food
             </mat-option>
-            <mat-option value="MONEY">
+            <mat-option value="FUNDS">
               <mat-icon>monetization_on</mat-icon>
-              Money
+              Funds
+            </mat-option>
+            <mat-option value="CLOTHES">
+              <mat-icon>checkroom</mat-icon>
+              Clothes
+            </mat-option>
+            <mat-option value="MEDICINE">
+              <mat-icon>medication</mat-icon>
+              Medicine
+            </mat-option>
+            <mat-option value="BOOKS">
+              <mat-icon>menu_book</mat-icon>
+              Books
+            </mat-option>
+            <mat-option value="TOYS">
+              <mat-icon>toys</mat-icon>
+              Toys
+            </mat-option>
+            <mat-option value="OTHER">
+              <mat-icon>category</mat-icon>
+              Other
             </mat-option>
           </mat-select>
           <mat-icon matPrefix>category</mat-icon>
           <mat-hint>Select the type of donation you need</mat-hint>
         </mat-form-field>
 
-        <!-- Purpose -->
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Purpose *</mat-label>
-          <input matInput 
-                 [(ngModel)]="purpose" 
-                 name="purpose"
-                 placeholder="e.g., Orphan support, disaster relief"
-                 required>
-          <mat-icon matPrefix>flag</mat-icon>
-          <mat-hint>Brief purpose of this donation request</mat-hint>
-        </mat-form-field>
-
-        <!-- Description -->
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Detailed Description *</mat-label>
-          <textarea matInput 
-                    [(ngModel)]="description" 
-                    name="description"
-                    placeholder="Explain why this donation is needed"
-                    rows="4"
-                    required></textarea>
-          <mat-icon matPrefix>description</mat-icon>
-          <mat-hint>Provide detailed information about the donation need</mat-hint>
-        </mat-form-field>
-
-        <!-- Quantity/Amount -->
+        <!-- Quantity/Amount Required -->
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Quantity/Amount Required *</mat-label>
           <input matInput 
@@ -90,31 +111,24 @@
                  name="quantityOrAmount"
                  placeholder="Enter quantity or amount"
                  min="1"
+                 step="0.01"
                  required>
           <mat-icon matPrefix>numbers</mat-icon>
-          <mat-hint>Enter the quantity (for items) or amount (for money)</mat-hint>
+          <mat-hint>Enter the total quantity (for items) or amount (for funds) you need</mat-hint>
         </mat-form-field>
 
-        <!-- Payment Details for MONEY -->
-        <div *ngIf="donationCategory === 'MONEY'" class="payment-section">
-          <mat-divider></mat-divider>
-          <h3 class="section-title">
+        <!-- Account Details for FUNDS (Optional but recommended) -->
+        <div *ngIf="showAccountDetails" class="account-details-section" style="margin-top: 24px; padding: 20px; background: #F5F5F5; border-radius: 8px; border: 1px solid #E0E0E0;">
+          <h3 style="margin-top: 0; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
             <mat-icon>account_balance</mat-icon>
-            Payment Details (Required for Money Donations)
+            Account Details (Optional but Recommended for Funds)
           </h3>
-
+          <p style="margin-bottom: 16px; color: #666; font-size: 14px;">
+            Providing account details helps donors send funds directly. This information will be visible to donors.
+          </p>
+          
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>QR Code Image URL *</mat-label>
-            <input matInput 
-                   type="url"
-                   [(ngModel)]="qrCodeImage" 
-                   name="qrCodeImage"
-                   placeholder="https://example.com/qr-code.png">
-            <mat-icon matPrefix>qr_code</mat-icon>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Bank Account Number *</mat-label>
+            <mat-label>Bank Account Number</mat-label>
             <input matInput 
                    [(ngModel)]="bankAccountNumber" 
                    name="bankAccountNumber"
@@ -123,7 +137,7 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Bank Name *</mat-label>
+            <mat-label>Bank Name</mat-label>
             <input matInput 
                    [(ngModel)]="bankName" 
                    name="bankName"
@@ -131,9 +145,9 @@
             <mat-icon matPrefix>business</mat-icon>
           </mat-form-field>
 
-          <div class="form-row">
-            <mat-form-field appearance="outline" class="half-width">
-              <mat-label>IFSC Code *</mat-label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <mat-form-field appearance="outline">
+              <mat-label>IFSC Code</mat-label>
               <input matInput 
                      [(ngModel)]="ifscCode" 
                      name="ifscCode"
@@ -141,8 +155,8 @@
               <mat-icon matPrefix>code</mat-icon>
             </mat-form-field>
 
-            <mat-form-field appearance="outline" class="half-width">
-              <mat-label>Account Holder Name *</mat-label>
+            <mat-form-field appearance="outline">
+              <mat-label>Account Holder Name</mat-label>
               <input matInput 
                      [(ngModel)]="accountHolderName" 
                      name="accountHolderName"
@@ -152,62 +166,40 @@
           </div>
         </div>
 
-        <!-- Pickup Details for FOOD/CLOTHES -->
-        <div *ngIf="donationCategory !== 'MONEY' && donationCategory" class="pickup-section">
-          <mat-divider></mat-divider>
-          <h3 class="section-title">
-            <mat-icon>location_on</mat-icon>
-            Pickup Details (Required for Food/Clothes)
-          </h3>
+        <!-- Description (Optional) -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (Optional)</mat-label>
+          <textarea matInput 
+                    [(ngModel)]="description" 
+                    name="description"
+                    placeholder="Add any additional details about this request (optional)"
+                    rows="3"></textarea>
+          <mat-icon matPrefix>description</mat-icon>
+          <mat-hint>Optional: Provide additional information about the donation need</mat-hint>
+        </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Pickup Location *</mat-label>
-            <input matInput 
-                   [(ngModel)]="pickupLocation" 
-                   name="pickupLocation"
-                   placeholder="Enter pickup address"
-                   required>
-            <mat-icon matPrefix>place</mat-icon>
-            <mat-hint>Full address where donation can be picked up</mat-hint>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Pickup Date & Time *</mat-label>
-            <input matInput 
-                   type="datetime-local"
-                   [(ngModel)]="pickupDateTime" 
-                   name="pickupDateTime"
-                   required>
-            <mat-icon matPrefix>schedule</mat-icon>
-            <mat-hint>Preferred date and time for pickup</mat-hint>
-          </mat-form-field>
-        </div>
-
-        <!-- Image Upload (Single) -->
+        <!-- Image Upload (Multiple) -->
         <div class="image-upload-section">
           <mat-divider></mat-divider>
           <label class="upload-label">
             <mat-icon>image</mat-icon>
-            <span>Donation Image (Optional)</span>
+            <span>Donation Images (Optional, up to 5)</span>
           </label>
-          <div class="image-preview-container">
-            <div *ngIf="imagePreview" class="image-preview">
-              <img [src]="imagePreview" alt="Donation preview">
+          <div class="image-preview-container" *ngIf="imagePreviews.length > 0">
+            <div *ngFor="let preview of imagePreviews; let i = index" class="image-preview">
+              <img [src]="preview" alt="Donation preview">
               <button mat-icon-button 
                       type="button"
                       class="remove-image-btn" 
-                      (click)="removeImage()"
+                      (click)="removeImage(i)"
                       matTooltip="Remove image">
                 <mat-icon>close</mat-icon>
               </button>
             </div>
-            <div *ngIf="!imagePreview" class="image-placeholder">
-              <mat-icon>image</mat-icon>
-              <p>No image selected</p>
-            </div>
           </div>
           <input type="file" 
                  accept="image/*" 
+                 multiple
                  (change)="onImageSelected($event)"
                  id="image-upload"
                  style="display: none;">
@@ -216,27 +208,10 @@
                   (click)="triggerImageUpload()"
                   class="upload-btn">
             <mat-icon>upload</mat-icon>
-            {{ imagePreview ? 'Change Image' : 'Upload Image' }}
+            {{ imagePreviews.length > 0 ? 'Add More Images' : 'Upload Images' }}
           </button>
-          <p class="upload-hint">Recommended: JPG or PNG, max 5MB</p>
+          <p class="upload-hint">Recommended: JPG or PNG, max 5MB per image. You can upload up to 5 images.</p>
         </div>
-
-        <!-- Priority -->
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Priority</mat-label>
-          <mat-select [(ngModel)]="priority" name="priority">
-            <mat-option value="NORMAL">
-              <mat-icon>schedule</mat-icon>
-              Normal Priority
-            </mat-option>
-            <mat-option value="URGENT">
-              <mat-icon>priority_high</mat-icon>
-              Urgent
-            </mat-option>
-          </mat-select>
-          <mat-icon matPrefix>flag</mat-icon>
-          <mat-hint>Set the urgency level of this request</mat-hint>
-        </mat-form-field>
 
         <!-- Form Actions -->
         <div class="form-actions">

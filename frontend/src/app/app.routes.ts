@@ -5,8 +5,15 @@ import { authGuard, roleGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
 
+  // ---------------- HOME ---------------- 
+  { 
+    path: '', 
+    loadComponent: () =>
+      import('./home/home.component')
+        .then(m => m.HomeComponent)
+  },
+  
   // ---------------- AUTH ---------------- 
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
   {
@@ -38,13 +45,6 @@ export const routes: Routes = [
         .then(m => m.RequestsComponent),
     canActivate: [roleGuard(['NGO'])]
   },
-  {
-    path: 'ngo/complete-profile',
-    loadComponent: () =>
-      import('./ngo/complete-profile/complete-profile.component')
-        .then(m => m.CompleteProfileComponent),
-    canActivate: [roleGuard(['NGO'])]
-  },
 
 
   {
@@ -53,6 +53,13 @@ export const routes: Routes = [
       import('./donor/donation-list/donation-list.component')
         .then(m => m.DonationListComponent),
     canActivate: [authGuard] 
+  },
+  {
+    path: 'donation-requests/:id/contribute',
+    loadComponent: () =>
+      import('./donor/contribution/contribution.component')
+        .then(m => m.ContributionComponent),
+    canActivate: [roleGuard(['DONOR'])]
   },
   {
     path: 'donations/:id/contribute',
@@ -77,6 +84,18 @@ export const routes: Routes = [
         .then(m => m.AdminLoginComponent)
   },
   {
+    path: 'admin/register',
+    loadComponent: () =>
+      import('./admin/register/admin-register.component')
+        .then(m => m.AdminRegisterComponent)
+  },
+  {
+    path: 'admin/verify-otp',
+    loadComponent: () =>
+      import('./admin/verify-otp/admin-verify-otp.component')
+        .then(m => m.AdminVerifyOtpComponent)
+  },
+  {
     path: 'admin/dashboard',
     loadComponent: () =>
       import('./admin/dashboard/admin-dashboard.component')
@@ -85,6 +104,6 @@ export const routes: Routes = [
   },
 
   // ---------------- FALLBACK (ALWAYS LAST) ---------------- 
-  { path: '**', redirectTo: 'login' }
+  { path: '**', redirectTo: '' }
 
 ];

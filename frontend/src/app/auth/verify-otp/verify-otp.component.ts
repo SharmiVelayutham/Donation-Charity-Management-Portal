@@ -87,35 +87,105 @@ export class VerifyOtpComponent implements OnInit {
     this.isLoading = true;
 
     try {
-      // Verify OTP and complete registration
-      const response = await lastValueFrom(this.apiService.verifyOTPAndRegister({
+      // Build registration data with all fields
+      const registrationPayload: any = {
         name: this.registrationData.name,
         email: this.registrationData.email,
         password: this.registrationData.password,
         role: this.registrationData.role as 'DONOR' | 'NGO',
         contactInfo: this.registrationData.contactInfo,
         otp: this.otp
-      }));
+      };
+
+      // Add NGO-specific fields if role is NGO
+      if (this.registrationData.role === 'NGO') {
+        registrationPayload.registrationNumber = this.registrationData.registrationNumber;
+        registrationPayload.address = this.registrationData.address;
+        registrationPayload.city = this.registrationData.city;
+        registrationPayload.state = this.registrationData.state;
+        registrationPayload.pincode = this.registrationData.pincode;
+        registrationPayload.contactPersonName = this.registrationData.contactPersonName;
+        registrationPayload.phoneNumber = this.registrationData.phoneNumber;
+        registrationPayload.aboutNgo = this.registrationData.aboutNgo;
+        registrationPayload.websiteUrl = this.registrationData.websiteUrl;
+      }
+
+      // Verify OTP and complete registration
+      const response = await lastValueFrom(this.apiService.verifyOTPAndRegister(registrationPayload));
 
       if (response?.success) {
         // Clear pending registration data
         sessionStorage.removeItem('pendingRegistration');
 
-        // IMPORTANT: Do NOT store token/role here even if token is returned
-        // User must login separately after OTP verification
-        // Clear any existing auth data (safety measure)
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('userRole');
+        // Check if this is an NGO registration
+        const isNgo = this.registrationData.role === 'NGO';
+        const responseData = response.data as any;
+        const verificationStatus = responseData?.user?.verification_status || responseData?.verification_status;
 
-        this.showToast('Account verified successfully! Please login to continue.', false);
+        // CRITICAL: For NGOs - check verification status FIRST
+        if (isNgo) {
+          const status = verificationStatus || 'PENDING';
+          
+          // If PENDING or REJECTED, NO TOKEN should be issued - block login
+          if (status === 'PENDING' || status === 'REJECTED') {
+            // Clear any existing auth data (safety measure)
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('userRole');
+            
+            // NGO registered but pending/rejected - cannot login
+            const message = status === 'REJECTED' 
+              ? 'Your NGO registration was rejected. Please contact support.'
+              : 'NGO registration completed! Your profile is under admin verification. You will receive an email once verified.';
+            
+            this.showToast(message, false);
+            
+            // Redirect to login page with message
+            setTimeout(() => {
+              this.router.navigate(['/login'], {
+                queryParams: { 
+                  email: this.email,
+                  message: message
+                }
+              });
+            }, 3000);
+            return; // EXIT - do NOT proceed to login
+          }
+          
+          // Only VERIFIED NGOs can proceed (should have token)
+          if (status === 'VERIFIED' && response.token && response.user) {
+            this.authService.setUser(response.token, response.user);
+            this.showToast('Account verified successfully! Redirecting to dashboard...', false);
+            setTimeout(() => {
+              const role = (response.user?.role || '').toUpperCase();
+              this.authService.navigateToDashboard(role);
+            }, 2000);
+            return;
+          }
+        }
         
-        // Redirect to login page
-        setTimeout(() => {
-          this.router.navigate(['/login'], {
-            queryParams: { email: this.email }
-          });
-        }, 2000);
+        // For DONOR or if token exists (should only happen for VERIFIED NGO)
+        if (response.token && response.user) {
+          // Store user data
+          this.authService.setUser(response.token, response.user);
+          
+          this.showToast('Account verified successfully! Redirecting to dashboard...', false);
+          
+          // Redirect to appropriate dashboard
+          setTimeout(() => {
+            const role = (response.user?.role || '').toUpperCase();
+            this.authService.navigateToDashboard(role);
+          }, 2000);
+        } else {
+          // No token but success - redirect to login
+          this.showToast('Account verified successfully! Please login to continue.', false);
+          
+          setTimeout(() => {
+            this.router.navigate(['/login'], {
+              queryParams: { email: this.email }
+            });
+          }, 2000);
+        }
       } else {
         this.errorMessage = response?.message || 'OTP verification failed';
         this.showToast(this.errorMessage, true);

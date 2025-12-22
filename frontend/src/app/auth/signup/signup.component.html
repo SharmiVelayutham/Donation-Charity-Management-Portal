@@ -56,6 +56,71 @@
         <option value="NGO">NGO</option>
       </select>
 
+      <!-- NGO-Specific Fields (shown only when NGO is selected) -->
+      <div *ngIf="role === 'NGO'" class="ngo-fields">
+        <h3 style="margin: 20px 0 15px 0; color: #333; font-size: 18px;">NGO Organization Information</h3>
+        
+        <input 
+          type="text" 
+          placeholder="Registration Number*" 
+          [(ngModel)]="registrationNumber"
+          [disabled]="isLoading"
+          required />
+
+        <input 
+          type="text" 
+          placeholder="Contact Person Name*" 
+          [(ngModel)]="contactPersonName"
+          [disabled]="isLoading"
+          required />
+
+        <input 
+          type="text" 
+          placeholder="Phone Number* (with country code)" 
+          [(ngModel)]="phoneNumber"
+          [disabled]="isLoading"
+          required />
+
+        <textarea 
+          placeholder="Address* (Full Address)" 
+          [(ngModel)]="address"
+          [disabled]="isLoading"
+          rows="3"
+          required></textarea>
+
+        <div class="address-row">
+          <input 
+            type="text" 
+            placeholder="City" 
+            [(ngModel)]="city"
+            [disabled]="isLoading" />
+
+          <input 
+            type="text" 
+            placeholder="State" 
+            [(ngModel)]="state"
+            [disabled]="isLoading" />
+
+          <input 
+            type="text" 
+            placeholder="Pincode" 
+            [(ngModel)]="pincode"
+            [disabled]="isLoading" />
+        </div>
+
+        <textarea 
+          placeholder="About NGO / Description" 
+          [(ngModel)]="aboutNgo"
+          [disabled]="isLoading"
+          rows="4"></textarea>
+
+        <input 
+          type="url" 
+          placeholder="Website URL (optional)" 
+          [(ngModel)]="websiteUrl"
+          [disabled]="isLoading" />
+      </div>
+
       <button
         type="button"
         class="create-account-btn"

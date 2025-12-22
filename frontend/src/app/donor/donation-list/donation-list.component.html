@@ -1,76 +1,103 @@
-<div class="donor-bg">
-  <div class="overlay"></div>
-
-  <div class="list-container">
-    <h1>Available Donation Requests</h1>
-    <div class="filters">
-      <label>
-        Type:
-        <select [(ngModel)]="filterCategory">
-          <option value="">All</option>
-          <option value="FOOD">Food</option>
-          <option value="CLOTHES">Clothes</option>
-          <option value="MONEY">Money</option>
-          <option value="BOOKS">Books</option>
-        </select>
-      </label>
-
-      <label>
-        Location:
-        <input [(ngModel)]="filterLocation" placeholder="City or ZIP" />
-      </label>
-
-      <label>
-        Date:
-        <input [(ngModel)]="filterDate" type="date" />
-      </label>
-
-      <button (click)="applyFilters()">Apply</button>
-      <button (click)="clearFilters()">Clear</button>
+<div class="donation-list-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-content">
+      <h1>Available Donation Requests</h1>
+      <p>Browse and contribute to donation requests from verified NGOs</p>
     </div>
+  </header>
 
-    <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
-
-    <div *ngIf="isLoading" class="loading">Loading donations...</div>
-
-    <div *ngIf="!isLoading && donations.length === 0" class="no-donations">
-      <p>No donation requests available at the moment.</p>
-    </div>
-
-    <div class="donation-card" *ngFor="let d of donations">
-      <div class="info">
-        <h3>{{ d.donationCategory || d.donationType || 'Donation' }}</h3>
-        <p><strong>Purpose:</strong> {{ d.purpose || 'N/A' }}</p>
-        <p><strong>Quantity/Amount:</strong> {{ d.quantityOrAmount }}</p>
-        <p *ngIf="d.locationAddress"><strong>Location:</strong> {{ d.locationAddress }}</p>
-        <p *ngIf="d.pickupDateTime"><strong>Pickup Date:</strong> {{ formatDate(d.pickupDateTime) }}</p>
-        <p><strong>Status:</strong> {{ d.status }}</p>
-        <p><strong>Priority:</strong> {{ d.priority }}</p>
-      </div>
-
-      <div class="actions">
-        <button (click)="contribute(d.id)" [disabled]="d.status !== 'PENDING'">{{ d.status === 'PENDING' ? 'Contribute' : d.status }}</button>
-        <button (click)="toggleQuickSchedule(d.id)" *ngIf="d.status === 'PENDING'">Quick Schedule</button>
-      </div>
-
-      <div class="quick-schedule" *ngIf="showSchedule[d.id]">
-        <label>Pickup Date & Time
-          <input type="datetime-local" [(ngModel)]="scheduleDateTimeMap[d.id]" />
-        </label>
-        <label>Pickup Address
-          <input [(ngModel)]="donorAddress" placeholder="Your pickup address" />
-        </label>
-        <label>Contact Number
-          <input [(ngModel)]="donorContactNumber" placeholder="Phone number" />
-        </label>
-        <label>Notes / Instructions (optional)
-          <input [(ngModel)]="notesMap[d.id]" placeholder="Notes for pickup" />
-        </label>
-        <div class="quick-actions">
-          <button (click)="submitQuickContribution(d.id)" [disabled]="isScheduling[d.id]">Confirm & Schedule</button>
-          <button (click)="toggleQuickSchedule(d.id)">Cancel</button>
+  <!-- Filters -->
+  <div class="filters-section">
+    <div class="filters-card">
+      <h3>Filter Donation Requests</h3>
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label>Category</label>
+          <select [(ngModel)]="filterCategory" (change)="applyFilters()">
+            <option value="">All Categories</option>
+            <option value="FOOD">Food</option>
+            <option value="FUNDS">Funds</option>
+            <option value="CLOTHES">Clothes</option>
+            <option value="MEDICINE">Medicine</option>
+            <option value="BOOKS">Books</option>
+            <option value="TOYS">Toys</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Location</label>
+          <input type="text" [(ngModel)]="filterLocation" placeholder="Search location..." (keyup.enter)="applyFilters()">
+        </div>
+        <div class="filter-actions">
+          <button class="btn-primary" (click)="applyFilters()">Apply Filters</button>
+          <button class="btn-outline" (click)="clearFilters()">Clear</button>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage" class="error-message">
+    <span>⚠️</span>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading donation requests...</p>
+  </div>
+
+  <!-- Donations Grid -->
+  <div *ngIf="!isLoading && donations.length > 0" class="donations-grid">
+    <div class="donation-card" *ngFor="let donation of donations">
+      <div class="donation-badge" [class.active]="donation.status === 'ACTIVE'">
+        {{ donation.status || 'ACTIVE' }}
+      </div>
+      
+      <div class="donation-header">
+        <h3>{{ donation.donation_type || 'Donation Request' }}</h3>
+        <span class="donation-category">{{ donation.donation_type }}</span>
+      </div>
+
+      <p class="donation-description">{{ donation.description || 'Help make a difference' }}</p>
+
+      <div class="donation-details">
+        <div class="detail-item" *ngIf="donation.ngo_name">
+          <span class="detail-label">🏢 NGO Name:</span>
+          <span class="detail-value">{{ donation.ngo_name }}</span>
+        </div>
+        <div class="detail-item" *ngIf="donation.ngo_address">
+          <span class="detail-label">📍 NGO Address:</span>
+          <span class="detail-value">{{ donation.ngo_address }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">📦 Donation Type:</span>
+          <span class="detail-value">{{ donation.donation_type || 'N/A' }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">📊 Required Quantity/Amount:</span>
+          <span class="detail-value">{{ donation.quantity_or_amount || 'N/A' }}</span>
+        </div>
+        <div class="detail-item" *ngIf="donation.created_at">
+          <span class="detail-label">📅 Posted On:</span>
+          <span class="detail-value">{{ formatDate(donation.created_at) }}</span>
+        </div>
+      </div>
+
+      <div class="donation-actions">
+        <button class="btn-primary btn-full" (click)="contribute(donation.id)">
+          Donate
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && donations.length === 0" class="empty-state">
+    <div class="empty-icon">📦</div>
+    <h3>No donation requests found</h3>
+    <p>Try adjusting your filters or check back later for new donation requests.</p>
   </div>
 </div>

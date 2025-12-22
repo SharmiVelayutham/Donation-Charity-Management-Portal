@@ -44,36 +44,51 @@
     <table>
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Name</th>
+          <th>NGO ID</th>
+          <th>NGO Name</th>
+          <th>Registration Number</th>
           <th>Email</th>
-          <th>Contact</th>
-          <th>Donations</th>
-          <th>Contributions</th>
-          <th>Status</th>
+          <th>Contact Person</th>
+          <th>Verification Status</th>
+          <th>Created Date</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let ngo of ngos">
-          <td>{{ ngo.id }}</td>
+          <td><strong>{{ ngo.ngo_id || 'N/A' }}</strong></td>
           <td>{{ ngo.name }}</td>
+          <td>{{ ngo.registrationNumber || 'N/A' }}</td>
           <td>{{ ngo.email }}</td>
-          <td>{{ ngo.contactInfo }}</td>
-          <td>{{ ngo.statistics?.totalDonations || 0 }}</td>
-          <td>{{ ngo.statistics?.totalContributions || 0 }}</td>
+          <td>{{ ngo.contactPersonName || ngo.contactInfo || 'N/A' }}</td>
           <td>
-            <span [class.blocked]="ngo.isBlocked">
-              {{ ngo.isBlocked ? 'Blocked' : 'Active' }}
+            <span [class]="getVerificationStatusClass(ngo.verificationStatus)">
+              {{ getVerificationStatusText(ngo.verificationStatus) }}
             </span>
+            <div *ngIf="ngo.verificationStatus === 'REJECTED' && ngo.rejectionReason" 
+                 class="rejection-reason" 
+                 [title]="ngo.rejectionReason">
+              Reason: {{ ngo.rejectionReason }}
+            </div>
           </td>
-          <td>
-            <button 
-              [class.block-btn]="!ngo.isBlocked"
-              [class.unblock-btn]="ngo.isBlocked"
-              (click)="toggleBlockNgo(ngo)">
-              {{ ngo.isBlocked ? 'Unblock' : 'Block' }}
-            </button>
+          <td>{{ ngo.createdAt | date:'short' }}</td>
+          <td class="action-buttons">
+            <div class="verification-actions" *ngIf="ngo.verificationStatus === 'PENDING'">
+              <button class="approve-btn" (click)="approveNgo(ngo)" title="Approve NGO">
+                ✅ Approve
+              </button>
+              <button class="reject-btn" (click)="rejectNgo(ngo)" title="Reject NGO">
+                ❌ Reject
+              </button>
+            </div>
+            <div class="block-actions">
+              <button 
+                [class.block-btn]="!ngo.isBlocked"
+                [class.unblock-btn]="ngo.isBlocked"
+                (click)="toggleBlockNgo(ngo)">
+                {{ ngo.isBlocked ? 'Unblock' : 'Block' }}
+              </button>
+            </div>
           </td>
         </tr>
         <tr *ngIf="ngos.length === 0">

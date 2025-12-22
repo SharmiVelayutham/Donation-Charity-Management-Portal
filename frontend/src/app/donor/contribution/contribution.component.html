@@ -2,48 +2,126 @@
   <div class="overlay"></div>
 
   <div class="contribution-card">
-    <h2>Confirm Contribution</h2>
+    <h2>Donate to Request</h2>
 
-    <div *ngIf="donation">
-      <p><strong>Category:</strong> {{ donation.donationCategory || donation.donationType }}</p>
-      <p><strong>Purpose:</strong> {{ donation.purpose }}</p>
-      <p><strong>Quantity/Amount:</strong> {{ donation.quantityOrAmount }}</p>
-      <p *ngIf="donation.locationAddress"><strong>Location:</strong> {{ donation.locationAddress }}</p>
+    <!-- NGO Request Info (Read-only) -->
+    <div *ngIf="request" class="request-info-section">
+      <h3>NGO Request Details</h3>
+      <div class="info-row">
+        <strong>NGO Name:</strong>
+        <span>{{ request.ngo_name || 'N/A' }}</span>
+      </div>
+      <div class="info-row">
+        <strong>NGO Address:</strong>
+        <span>{{ request.ngo_address || 'Not provided' }}</span>
+      </div>
+      <div class="info-row">
+        <strong>Donation Type:</strong>
+        <span>{{ request.donation_type || 'N/A' }}</span>
+      </div>
+      <div class="info-row">
+        <strong>Required Quantity/Amount:</strong>
+        <span>{{ request.quantity_or_amount || 'N/A' }}</span>
+      </div>
+      <div class="info-row" *ngIf="request.description">
+        <strong>Description:</strong>
+        <span>{{ request.description }}</span>
+      </div>
     </div>
 
     <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
 
-    <input 
-      type="datetime-local" 
-      placeholder="Pickup Date & Time*"
-      [(ngModel)]="pickupScheduledDateTime"
-      [disabled]="isLoading"
-      required />
+    <!-- Donor Form -->
+    <form (ngSubmit)="submitContribution()" class="donation-form">
+      <h3>Your Donation Details</h3>
 
-    <input 
-      type="text" 
-      placeholder="Your Address*"
-      [(ngModel)]="donorAddress"
-      [disabled]="isLoading"
-      required />
+      <div class="form-group">
+        <label>Quantity/Amount You Want to Donate *</label>
+        <input 
+          type="number" 
+          placeholder="Enter quantity or amount"
+          [(ngModel)]="quantityOrAmount"
+          name="quantityOrAmount"
+          min="0.01"
+          step="0.01"
+          [disabled]="isLoading"
+          required />
+      </div>
 
-    <input 
-      type="text" 
-      placeholder="Your Contact Number*"
-      [(ngModel)]="donorContactNumber"
-      [disabled]="isLoading"
-      required />
+      <div class="form-group">
+        <label>Pickup Location *</label>
+        <input 
+          type="text" 
+          placeholder="Enter your pickup address"
+          [(ngModel)]="pickupLocation"
+          name="pickupLocation"
+          [disabled]="isLoading"
+          required />
+      </div>
 
-    <textarea 
-      placeholder="Optional notes for NGO"
-      [(ngModel)]="notes"
-      [disabled]="isLoading"
-      rows="4"></textarea>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Pickup Date *</label>
+          <input 
+            type="date" 
+            [(ngModel)]="pickupDate"
+            name="pickupDate"
+            [disabled]="isLoading"
+            required />
+        </div>
 
-    <button 
-      (click)="submitContribution()"
-      [disabled]="isLoading">
-      {{ isLoading ? 'Submitting...' : 'Confirm Contribution' }}
-    </button>
+        <div class="form-group">
+          <label>Pickup Time *</label>
+          <input 
+            type="time" 
+            [(ngModel)]="pickupTime"
+            name="pickupTime"
+            [disabled]="isLoading"
+            required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Notes (Optional)</label>
+        <textarea 
+          placeholder="Any additional information for the NGO"
+          [(ngModel)]="notes"
+          name="notes"
+          [disabled]="isLoading"
+          rows="4"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Images (Optional, up to 5)</label>
+        <input 
+          type="file" 
+          accept="image/*"
+          multiple
+          (change)="onImageSelected($event)"
+          [disabled]="isLoading"
+          id="image-upload"
+          style="display: none;" />
+        <button 
+          type="button"
+          (click)="triggerFileInput()"
+          [disabled]="isLoading"
+          class="btn-upload">
+          Upload Images
+        </button>
+        <div *ngIf="imageFiles.length > 0" class="image-list">
+          <div *ngFor="let file of imageFiles; let i = index" class="image-item">
+            <span>{{ file.name }}</span>
+            <button type="button" (click)="removeImage(i)" [disabled]="isLoading">Remove</button>
+          </div>
+        </div>
+      </div>
+
+      <button 
+        type="submit"
+        [disabled]="isLoading"
+        class="btn-submit">
+        {{ isLoading ? 'Submitting...' : 'Submit Donation' }}
+      </button>
+    </form>
   </div>
 </div>

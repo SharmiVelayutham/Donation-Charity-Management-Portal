@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { ApiService, ApiResponse } from '../../services/api.service';
@@ -40,7 +40,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatTooltipModule
   ],
   templateUrl: './ngo-dashboard.component.html',
-  styleUrls: ['./ngo-dashboard.component.css']
+  styleUrls: ['./ngo-dashboard.component.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class NgoDashboardComponent implements OnInit {
   stats: any = {
@@ -58,9 +59,27 @@ export class NgoDashboardComponent implements OnInit {
     upcomingPickups: []
   };
 
+  // View state - Dashboard or Profile
+  currentView: 'dashboard' | 'profile' = 'dashboard';
+  mobileMenuOpen: boolean = false;
+  
   // Profile edit state
   isEditingProfile: boolean = false;
-  profileForm: any = { name: '', contactInfo: '', description: '' };
+  isSavingProfile: boolean = false;
+  hasPendingProfileUpdates: boolean = false;
+  profileForm: any = { 
+    name: '', 
+    contactInfo: '', 
+    description: '',
+    contactPersonName: '',
+    phoneNumber: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    websiteUrl: '',
+    aboutNgo: ''
+  };
   addressEditable: boolean = false; // controlled by backend when available
   changePasswordOpen: boolean = false;
   pwOld: string = '';
@@ -102,7 +121,9 @@ export class NgoDashboardComponent implements OnInit {
     if (!this.dashboardData.profile) return false;
     const profile = this.dashboardData.profile;
     // Check if essential fields are present
-    return !!(profile.name && profile.email && profile.contactInfo);
+    // Check for both contactInfo and phoneNumber (phoneNumber is from registration)
+    const hasContact = !!(profile.contactInfo || profile.phoneNumber);
+    return !!(profile.name && profile.email && hasContact);
   }
 
   logout() {
@@ -123,12 +144,79 @@ export class NgoDashboardComponent implements OnInit {
 
   async loadDashboard() {
     this.isLoading = true;
+    
+    // CRITICAL: Check token role, not just localStorage
+    const token = localStorage.getItem('token');
+    let tokenRole = '';
+    
+    if (token) {
+      try {
+        // Decode JWT token to get actual role
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        tokenRole = payload.role?.toUpperCase() || '';
+        console.log('[NGO Dashboard] Token decoded - Role:', tokenRole);
+        
+        // Update localStorage if it doesn't match token
+        const storedRole = localStorage.getItem('userRole')?.toUpperCase();
+        if (storedRole !== tokenRole) {
+          console.warn(`[NGO Dashboard] Role mismatch - localStorage: "${storedRole}", Token: "${tokenRole}". Updating localStorage.`);
+          localStorage.setItem('userRole', tokenRole);
+        }
+      } catch (e) {
+        console.error('[NGO Dashboard] Failed to decode token:', e);
+      }
+    }
+    
+    // Check if user is actually an NGO (use token role, not localStorage)
+    const userRole = tokenRole || localStorage.getItem('userRole')?.toUpperCase() || '';
+    if (userRole !== 'NGO') {
+      console.error(`[NGO Dashboard] ❌ Access denied - User role is "${userRole}", not "NGO"`);
+      this.showToast(`Access denied. This page is only for NGOs. Your current role is: ${userRole}. Please logout and login as NGO.`, true);
+      this.isLoading = false;
+      // Redirect immediately to appropriate dashboard
+      if (userRole === 'ADMIN') {
+        this.router.navigate(['/admin/dashboard']);
+      } else if (userRole === 'DONOR') {
+        this.router.navigate(['/dashboard/donor']);
+      } else {
+        this.router.navigate(['/login']);
+      }
+      return;
+    }
+    
+    // Only proceed if user is NGO
+    console.log('[NGO Dashboard] ✅ User is NGO, loading dashboard data...');
+    
     try {
       const resp$: Observable<ApiResponse> = this.apiService.getNgoDashboard();
       const response = await lastValueFrom(resp$);
+      
+      console.log('[NGO Dashboard] ✅ API Response received:', {
+        success: response?.success,
+        hasData: !!response?.data,
+        hasProfile: !!response?.data?.profile
+      });
       if (response?.success && response.data) {
         const d = response.data;
         this.dashboardData = d;
+        
+        console.log('[NGO Dashboard] Loaded dashboard data:', d);
+        console.log('[NGO Dashboard] Profile data:', d.profile);
+        console.log('[NGO Dashboard] Registration fields check:', {
+          ngo_id: d.profile?.ngo_id,
+          name: d.profile?.name,
+          registrationNumber: d.profile?.registrationNumber,
+          address: d.profile?.address,
+          city: d.profile?.city,
+          state: d.profile?.state,
+          pincode: d.profile?.pincode,
+          contactPersonName: d.profile?.contactPersonName,
+          phoneNumber: d.profile?.phoneNumber,
+          aboutNgo: d.profile?.aboutNgo,
+          websiteUrl: d.profile?.websiteUrl,
+          email: d.profile?.email
+        });
+        
         // Map statistics for backward compatibility
         this.stats = {
           totalDonations: d.totalDonations || d.statistics?.donations?.total || 0,
@@ -137,19 +225,53 @@ export class NgoDashboardComponent implements OnInit {
           completedDonations: d.completedDonations || d.statistics?.donations?.completed || 0,
         };
 
-        // Setup profile form
+        // Setup profile form with all registration fields
         this.profileForm.name = d.profile?.name || '';
-        this.profileForm.contactInfo = d.profile?.contactInfo || '';
-        this.profileForm.description = d.profile?.description || '';
+        this.profileForm.contactPersonName = d.profile?.contactPersonName || '';
+        this.profileForm.phoneNumber = d.profile?.phoneNumber || d.profile?.contactInfo || '';
+        this.profileForm.address = d.profile?.address || '';
+        this.profileForm.city = d.profile?.city || '';
+        this.profileForm.state = d.profile?.state || '';
+        this.profileForm.pincode = d.profile?.pincode || '';
+        this.profileForm.websiteUrl = d.profile?.websiteUrl || '';
+        this.profileForm.aboutNgo = d.profile?.aboutNgo || d.profile?.description || '';
+        
+        // Check if there are pending profile updates
+        this.hasPendingProfileUpdates = !!(d.profile?.pendingProfileUpdates && Object.keys(d.profile.pendingProfileUpdates).length > 0);
 
         // If backend exposes an 'addressEditable' flag on profile, use it
         this.addressEditable = !!d.profile?.addressEditable;
+        
+        console.log('[NGO Dashboard] Profile complete check:', {
+          hasProfile: !!d.profile,
+          hasName: !!d.profile?.name,
+          hasEmail: !!d.profile?.email,
+          hasContact: !!(d.profile?.contactInfo || d.profile?.phoneNumber),
+          isComplete: this.isProfileComplete()
+        });
       }
     } catch (err: any) {
-      console.error('Failed to load dashboard', err);
+      console.error('[NGO Dashboard] Failed to load dashboard', err);
     } finally {
       this.isLoading = false;
     }
+  }
+
+  // Navigation methods
+  showDashboard() {
+    this.currentView = 'dashboard';
+    this.isEditingProfile = false;
+    this.mobileMenuOpen = false;
+  }
+
+  showProfile() {
+    this.currentView = 'profile';
+    this.isEditingProfile = false;
+    this.mobileMenuOpen = false;
+  }
+
+  toggleMobileMenu() {
+    this.mobileMenuOpen = !this.mobileMenuOpen;
   }
 
   goToCreateRequest() {
@@ -157,11 +279,86 @@ export class NgoDashboardComponent implements OnInit {
   }
 
   goToCompleteProfile() {
-    this.router.navigate(['/ngo/complete-profile']);
+    // Show profile view and enable edit mode
+    this.currentView = 'profile';
+    this.isEditingProfile = true;
   }
 
   goToRequests() {
     this.router.navigate(['/ngo/requests']);
+  }
+
+  toggleProfileEdit() {
+    this.isEditingProfile = !this.isEditingProfile;
+    if (!this.isEditingProfile) {
+      this.cancelProfileEdit();
+    }
+    this.formError = '';
+    this.successMessage = '';
+  }
+
+  cancelProfileEdit() {
+    this.isEditingProfile = false;
+    // Restore original values from dashboard data
+    if (this.dashboardData.profile) {
+      this.profileForm.name = this.dashboardData.profile.name || '';
+      this.profileForm.contactPersonName = this.dashboardData.profile.contactPersonName || '';
+      this.profileForm.phoneNumber = this.dashboardData.profile.phoneNumber || this.dashboardData.profile.contactInfo || '';
+      this.profileForm.address = this.dashboardData.profile.address || '';
+      this.profileForm.city = this.dashboardData.profile.city || '';
+      this.profileForm.state = this.dashboardData.profile.state || '';
+      this.profileForm.pincode = this.dashboardData.profile.pincode || '';
+      this.profileForm.websiteUrl = this.dashboardData.profile.websiteUrl || '';
+      this.profileForm.aboutNgo = this.dashboardData.profile.aboutNgo || '';
+    }
+    this.formError = '';
+  }
+
+  async saveProfileUpdate() {
+    this.formError = '';
+    this.successMessage = '';
+    this.isSavingProfile = true;
+    
+    // Validation
+    if (!this.profileForm.name || this.profileForm.name.trim().length === 0) {
+      this.formError = 'NGO name is required';
+      this.isSavingProfile = false;
+      this.showToast(this.formError, true);
+      return;
+    }
+    
+    try {
+      const payload: any = {
+        name: this.profileForm.name.trim(),
+        contactPersonName: this.profileForm.contactPersonName?.trim() || null,
+        phoneNumber: this.profileForm.phoneNumber?.trim() || null,
+        address: this.profileForm.address?.trim() || null,
+        city: this.profileForm.city?.trim() || null,
+        state: this.profileForm.state?.trim() || null,
+        pincode: this.profileForm.pincode?.trim() || null,
+        websiteUrl: this.profileForm.websiteUrl?.trim() || null,
+        aboutNgo: this.profileForm.aboutNgo?.trim() || null,
+        saveAsPending: true // Flag to save as pending for admin approval
+      };
+      
+      const resp$ = this.apiService.updateNgoProfile(payload);
+      const response = await lastValueFrom(resp$);
+      
+      if (response?.success) {
+        this.isEditingProfile = false;
+        this.hasPendingProfileUpdates = true;
+        this.showToast('Profile update submitted. Waiting for admin approval.', false);
+        await this.loadDashboard(); // Refresh data
+      } else {
+        this.formError = response?.message || 'Failed to update profile';
+        this.showToast(this.formError, true);
+      }
+    } catch (err: any) {
+      this.formError = err?.message || 'Failed to update profile';
+      this.showToast(this.formError, true);
+    } finally {
+      this.isSavingProfile = false;
+    }
   }
 
   startEditProfile() {

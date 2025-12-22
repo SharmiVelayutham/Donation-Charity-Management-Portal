@@ -173,3 +173,95 @@ tbody tr:hover {
   color: #999;
 }
 
+/* Verification Status Badges */
+.status-verified {
+  display: inline-block;
+  padding: 4px 12px;
+  background-color: #10b981;
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-pending {
+  display: inline-block;
+  padding: 4px 12px;
+  background-color: #f59e0b;
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-rejected {
+  display: inline-block;
+  padding: 4px 12px;
+  background-color: #ef4444;
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rejection-reason {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+  font-style: italic;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 150px;
+}
+
+.verification-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.approve-btn {
+  padding: 6px 12px;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.approve-btn:hover {
+  background-color: #059669;
+}
+
+.reject-btn {
+  padding: 6px 12px;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.reject-btn:hover {
+  background-color: #dc2626;
+}
+
+.block-actions {
+  display: flex;
+  justify-content: center;
+}
+

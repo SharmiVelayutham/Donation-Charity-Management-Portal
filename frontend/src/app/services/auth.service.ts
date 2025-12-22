@@ -46,10 +46,48 @@ export class AuthService {
    * Store user data after login/registration
    */
   setUser(token: string, user: any): void {
-    const normalizedRole = (user?.role || '').toUpperCase();
+    // Ensure user object exists
+    if (!user) {
+      console.error('setUser: user object is null or undefined');
+      return;
+    }
+    
+    // Ensure role is set - check multiple possible locations
+    let role = user.role || (user as any).admin?.role || '';
+    
+    // If still no role, try to infer from the data structure
+    if (!role && user.id) {
+      // This might be admin data without role field
+      console.warn('setUser: Role not found in user object, attempting to infer from context');
+    }
+    
+    // Normalize role to uppercase
+    const normalizedRole = role.toUpperCase();
+    
+    // Ensure role is valid
+    if (!['DONOR', 'NGO', 'ADMIN'].includes(normalizedRole)) {
+      console.error('setUser: Invalid role:', normalizedRole, 'User object:', user);
+      // Don't proceed if role is invalid
+      return;
+    }
+    
+    // Ensure user object has role field
+    if (!user.role) {
+      user.role = normalizedRole;
+    }
+    
+    // Store in localStorage
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     localStorage.setItem('userRole', normalizedRole);
+    
+    // Debug: Verify what was stored
+    console.log('setUser: Stored data:', {
+      token: !!token,
+      user: user,
+      role: normalizedRole,
+      localStorageRole: localStorage.getItem('userRole')
+    });
   }
 
   /**

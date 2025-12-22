@@ -22,6 +22,17 @@ export class SignupComponent {
   role: string = '';
   isLoading: boolean = false;
   errorMessage: string = '';
+  
+  // NGO-specific fields
+  registrationNumber: string = '';
+  address: string = '';
+  city: string = '';
+  state: string = '';
+  pincode: string = '';
+  contactPersonName: string = '';
+  phoneNumber: string = '';
+  aboutNgo: string = '';
+  websiteUrl: string = '';
 
   constructor(
     private router: Router,
@@ -42,6 +53,14 @@ export class SignupComponent {
       return;
     }
 
+    // NGO-specific validation
+    if (this.role === 'NGO') {
+      if (!this.registrationNumber || !this.address || !this.contactPersonName || !this.phoneNumber) {
+        this.errorMessage = 'Please fill all required NGO fields: Registration Number, Address, Contact Person Name, and Phone Number';
+        return;
+      }
+    }
+
     if (this.password.length < 6) {
       this.errorMessage = 'Password must be at least 6 characters';
       return;
@@ -55,13 +74,28 @@ export class SignupComponent {
     this.isLoading = true;
 
     try {
-      const response = await lastValueFrom(this.apiService.register({
+      const registrationData: any = {
         name: this.name,
         email: this.email,
         password: this.password,
         role: this.role as 'DONOR' | 'NGO',
         contactInfo: this.contactInfo
-      }));
+      };
+
+      // Add NGO-specific fields if role is NGO
+      if (this.role === 'NGO') {
+        registrationData.registrationNumber = this.registrationNumber;
+        registrationData.address = this.address;
+        registrationData.city = this.city;
+        registrationData.state = this.state;
+        registrationData.pincode = this.pincode;
+        registrationData.contactPersonName = this.contactPersonName;
+        registrationData.phoneNumber = this.phoneNumber;
+        registrationData.aboutNgo = this.aboutNgo;
+        registrationData.websiteUrl = this.websiteUrl;
+      }
+
+      const response = await lastValueFrom(this.apiService.register(registrationData));
 
       // Debug logging
       console.log('=== REGISTRATION RESPONSE ===');
@@ -94,13 +128,28 @@ export class SignupComponent {
           
           // Store registration data temporarily in sessionStorage (not localStorage)
           // This will be used during OTP verification
-          sessionStorage.setItem('pendingRegistration', JSON.stringify({
+          const pendingData: any = {
             name: this.name,
             email: this.email,
             password: this.password,
             role: this.role,
             contactInfo: this.contactInfo
-          }));
+          };
+
+          // Add NGO-specific fields if role is NGO
+          if (this.role === 'NGO') {
+            pendingData.registrationNumber = this.registrationNumber;
+            pendingData.address = this.address;
+            pendingData.city = this.city;
+            pendingData.state = this.state;
+            pendingData.pincode = this.pincode;
+            pendingData.contactPersonName = this.contactPersonName;
+            pendingData.phoneNumber = this.phoneNumber;
+            pendingData.aboutNgo = this.aboutNgo;
+            pendingData.websiteUrl = this.websiteUrl;
+          }
+
+          sessionStorage.setItem('pendingRegistration', JSON.stringify(pendingData));
 
           // Redirect to OTP verification page
           this.router.navigate(['/verify-otp'], {

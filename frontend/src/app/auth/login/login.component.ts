@@ -78,7 +78,33 @@ export class LoginComponent implements OnInit {
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      this.errorMessage = error?.error?.message || error?.message || 'Invalid email or password';
+      const errorMessage = error?.error?.message || error?.message || 'Invalid email or password';
+      const errorData = error?.error;
+      
+      // Check if this is an admin trying to login through regular endpoint
+      if (errorMessage.includes('Admin login is not allowed through this endpoint') || 
+          errorMessage.includes('Please use /api/admin/auth/login')) {
+        this.errorMessage = 'Admin accounts must use the Admin Login page. Redirecting...';
+        // Redirect to admin login after 2 seconds
+        setTimeout(() => {
+          this.router.navigate(['/admin/login'], { 
+            queryParams: { email: this.email } 
+          });
+        }, 2000);
+      } 
+      // Check if NGO verification status issue
+      else if (errorData?.verification_status === 'PENDING') {
+        this.errorMessage = 'Your NGO profile is under admin verification. You will receive an email once verified.';
+      } 
+      else if (errorData?.verification_status === 'REJECTED') {
+        const rejectionReason = errorData?.rejection_reason 
+          ? `Reason: ${errorData.rejection_reason}` 
+          : '';
+        this.errorMessage = `Your NGO registration was rejected. ${rejectionReason} Please contact support for more information.`;
+      }
+      else {
+        this.errorMessage = errorMessage;
+      }
     } finally {
       this.isLoading = false;
     }

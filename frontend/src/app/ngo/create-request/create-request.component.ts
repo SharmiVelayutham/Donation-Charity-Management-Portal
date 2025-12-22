@@ -35,18 +35,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   styleUrl: './create-request.component.css'
 })
 export class CreateRequestComponent {
-  donationCategory: string = '';
-  purpose: string = '';
-  description: string = '';
+  donationType: string = '';
   quantityOrAmount: number = 0;
-  pickupLocation: string = '';
-  pickupDateTime: string = '';
-  priority: string = 'NORMAL';
-  imageFile: File | null = null;
-  imagePreview: string | null = null;
+  description: string = '';
+  imageFiles: File[] = [];
+  imagePreviews: string[] = [];
   
-  // For MONEY donations
-  qrCodeImage: string = '';
+  // Account details for FUNDS/MONEY donations
+  showAccountDetails: boolean = false;
   bankAccountNumber: string = '';
   bankName: string = '';
   ifscCode: string = '';
@@ -55,42 +51,84 @@ export class CreateRequestComponent {
   isLoading: boolean = false;
   errorMessage: string = '';
   successMessage: string = '';
+  
+  // NGO profile info to display at top
+  ngoName: string = '';
+  ngoAddress: string = '';
 
   constructor(
     private router: Router,
     private apiService: ApiService
   ) {}
 
+  async ngOnInit() {
+    await this.loadNgoProfile();
+  }
+
+  async loadNgoProfile() {
+    try {
+      const response = await this.apiService.getNgoProfile().toPromise();
+      if (response?.success && response.data) {
+        this.ngoName = response.data.name || '';
+        const addressParts = [
+          response.data.address,
+          response.data.city,
+          response.data.state,
+          response.data.pincode
+        ].filter(Boolean);
+        this.ngoAddress = addressParts.join(', ') || 'Address not set';
+      }
+    } catch (error) {
+      console.error('Failed to load NGO profile:', error);
+    }
+  }
+
   onImageSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        this.errorMessage = 'Please select an image file';
-        return;
-      }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        this.errorMessage = 'Image size should be less than 5MB';
-        return;
-      }
-      
-      this.imageFile = file;
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        this.imagePreview = e.target.result;
-      };
-      reader.readAsDataURL(file);
+    const files = Array.from(event.target.files) as File[];
+    if (files.length > 0) {
+      files.forEach(file => {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          this.errorMessage = 'Please select only image files';
+          return;
+        }
+        
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          this.errorMessage = 'Image size should be less than 5MB';
+          return;
+        }
+        
+        if (this.imageFiles.length < 5) {
+          this.imageFiles.push(file);
+          
+          // Create preview
+          const reader = new FileReader();
+          reader.onload = (e: any) => {
+            this.imagePreviews.push(e.target.result);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
       this.errorMessage = '';
     }
   }
 
-  removeImage() {
-    this.imageFile = null;
-    this.imagePreview = null;
+  removeImage(index: number) {
+    this.imageFiles.splice(index, 1);
+    this.imagePreviews.splice(index, 1);
+  }
+
+  onDonationTypeChange() {
+    // Show account details only for FUNDS type
+    this.showAccountDetails = this.donationType === 'FUNDS';
+    // Clear account details if type changes
+    if (!this.showAccountDetails) {
+      this.bankAccountNumber = '';
+      this.bankName = '';
+      this.ifscCode = '';
+      this.accountHolderName = '';
+    }
   }
 
   triggerImageUpload() {
@@ -108,55 +146,50 @@ export class CreateRequestComponent {
     this.errorMessage = '';
     this.successMessage = '';
 
-    // Validation
-    if (!this.donationCategory || !this.purpose || !this.description || !this.quantityOrAmount) {
-      this.errorMessage = 'Please fill all required fields';
+    // Validation - Only Donation Type and Quantity/Amount are required
+    if (!this.donationType) {
+      this.errorMessage = 'Please select a Donation Type';
       return;
     }
 
-    if (this.donationCategory === 'MONEY') {
-      if (!this.qrCodeImage || !this.bankAccountNumber || !this.bankName || !this.ifscCode || !this.accountHolderName) {
-        this.errorMessage = 'Please fill all payment details for MONEY donation';
-        return;
-      }
-    } else {
-      if (!this.pickupLocation || !this.pickupDateTime) {
-        this.errorMessage = 'Please provide pickup location and date/time for FOOD/CLOTHES donation';
-        return;
-      }
+    if (!this.quantityOrAmount || this.quantityOrAmount <= 0) {
+      this.errorMessage = 'Please enter a valid Quantity/Amount (must be greater than 0)';
+      return;
     }
 
     this.isLoading = true;
 
     try {
       const formData = new FormData();
-      formData.append('donationCategory', this.donationCategory);
-      formData.append('purpose', this.purpose);
-      formData.append('description', this.description);
+      formData.append('donationType', this.donationType);
       formData.append('quantityOrAmount', this.quantityOrAmount.toString());
       
-      if (this.donationCategory !== 'MONEY') {
-        formData.append('pickupLocation', this.pickupLocation);
-        formData.append('pickupDateTime', this.pickupDateTime);
+      if (this.description) {
+        formData.append('description', this.description);
       }
       
-      formData.append('priority', this.priority);
+      // Add account details if donation type is FUNDS
+      if (this.donationType === 'FUNDS') {
+        if (this.bankAccountNumber) {
+          formData.append('bankAccountNumber', this.bankAccountNumber);
+        }
+        if (this.bankName) {
+          formData.append('bankName', this.bankName);
+        }
+        if (this.ifscCode) {
+          formData.append('ifscCode', this.ifscCode);
+        }
+        if (this.accountHolderName) {
+          formData.append('accountHolderName', this.accountHolderName);
+        }
+      }
       
-      // Add single image if selected
-      if (this.imageFile) {
-        formData.append('images', this.imageFile);
-      }
+      // Add images
+      this.imageFiles.forEach(file => {
+        formData.append('images', file);
+      });
 
-      // Add payment details for MONEY
-      if (this.donationCategory === 'MONEY') {
-        formData.append('qrCodeImage', this.qrCodeImage);
-        formData.append('bankAccountNumber', this.bankAccountNumber);
-        formData.append('bankName', this.bankName);
-        formData.append('ifscCode', this.ifscCode);
-        formData.append('accountHolderName', this.accountHolderName);
-      }
-
-      const response = await this.apiService.createNgoDonation(formData).toPromise();
+      const response = await this.apiService.createDonationRequest(formData).toPromise();
 
       if (response?.success) {
         this.successMessage = 'Donation request created successfully!';

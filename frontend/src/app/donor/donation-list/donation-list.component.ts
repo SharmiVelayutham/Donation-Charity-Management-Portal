@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Observable, lastValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { ApiService, ApiResponse } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-donation-list',
@@ -31,7 +32,8 @@ export class DonationListComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private authService: AuthService
   ) {}
 
   async ngOnInit() {
@@ -43,18 +45,27 @@ export class DonationListComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = '';
     try {
-      const params: any = {};
-      if (this.filterCategory) params.category = this.filterCategory;
-      if (this.filterLocation) params.location = this.filterLocation;
-      if (this.filterDate) params.date = this.filterDate;
-
-      const resp$: Observable<ApiResponse> = this.apiService.getDonations(Object.keys(params).length ? params : undefined);
+      // Use new donation-requests endpoint
+      const donationType = this.filterCategory || undefined;
+      const resp$: Observable<ApiResponse> = this.apiService.getActiveDonationRequests(donationType);
       const response = await lastValueFrom(resp$);
       if (response?.success && response.data) {
-        this.donations = Array.isArray(response.data) ? response.data : [];
+        // Filter by location if provided
+        let donations = Array.isArray(response.data) ? response.data : [];
+        
+        if (this.filterLocation) {
+          const locationLower = this.filterLocation.toLowerCase();
+          donations = donations.filter((d: any) => 
+            d.ngo_address?.toLowerCase().includes(locationLower) ||
+            d.ngoAddress?.toLowerCase().includes(locationLower)
+          );
+        }
+        
+        this.donations = donations;
       }
     } catch (error: any) {
-      this.errorMessage = error?.message || 'Failed to load donations';
+      console.error('Error loading donation requests:', error);
+      this.errorMessage = error?.error?.message || error?.message || 'Failed to load donation requests';
       this.donations = [];
     } finally {
       this.isLoading = false;
@@ -62,7 +73,28 @@ export class DonationListComponent implements OnInit {
   }
 
   contribute(id: string | number) {
-    this.router.navigate(['/donations', id, 'contribute']);
+    // Check if donor is logged in
+    if (!this.authService.isAuthenticated()) {
+      // Redirect to login with message
+      alert('Please register/login to donate');
+      this.router.navigate(['/login'], { 
+        queryParams: { returnUrl: `/donation-requests/${id}/contribute` }
+      });
+      return;
+    }
+    
+    // Check if user is a donor
+    const userRole = this.authService.getCurrentRole();
+    if (userRole !== 'DONOR') {
+      alert('Only registered donors can contribute. Please login as a donor.');
+      this.router.navigate(['/login'], { 
+        queryParams: { returnUrl: `/donation-requests/${id}/contribute` }
+      });
+      return;
+    }
+    
+    // Navigate to contribution form for donation request
+    this.router.navigate(['/donation-requests', id, 'contribute']);
   }
 
   applyFilters() {

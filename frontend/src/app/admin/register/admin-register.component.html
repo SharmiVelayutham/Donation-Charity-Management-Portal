@@ -1,0 +1,82 @@
+<div class="auth-wrapper">
+
+  <div class="auth-image">
+    <div class="image-overlay">
+      <h1>Admin Portal</h1>
+      <p>System Administration</p>
+    </div>
+  </div>
+
+  <div class="auth-form signup-bg">
+    <div class="auth-card">
+
+      <h2>Admin Registration</h2>
+
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <div *ngIf="successMessage" class="success-message">
+        {{ successMessage }}
+      </div>
+
+      <input 
+        type="text" 
+        placeholder="Full Name*" 
+        [(ngModel)]="name"
+        [disabled]="isLoading"
+        required />
+
+      <input 
+        type="email" 
+        placeholder="Email*" 
+        [(ngModel)]="email"
+        [disabled]="isLoading"
+        required />
+
+      <input 
+        type="password" 
+        placeholder="Password* (min 6 characters)" 
+        [(ngModel)]="password"
+        [disabled]="isLoading"
+        required />
+
+      <input 
+        type="text" 
+        placeholder="Contact Info* (Mobile Number)" 
+        [(ngModel)]="contactInfo"
+        [disabled]="isLoading"
+        required />
+
+      <input 
+        type="password" 
+        placeholder="Security Code*" 
+        [(ngModel)]="securityCode"
+        [disabled]="isLoading"
+        required />
+
+      <button
+        type="button"
+        class="create-account-btn"
+        (click)="onRegister()"
+        [disabled]="isLoading">
+        {{ isLoading ? 'Creating Admin Account...' : 'Create Admin Account' }}
+      </button>
+
+      <p class="login-text">
+        Already have an admin account?
+        <a (click)="goToLogin()">Login</a>
+      </p>
+
+      <p class="info-text">
+        <small>
+          Admin registration requires a valid security code and email verification via OTP.
+          You will receive an OTP code via email after submitting this form.
+        </small>
+      </p>
+
+    </div>
+  </div>
+
+</div>
+
