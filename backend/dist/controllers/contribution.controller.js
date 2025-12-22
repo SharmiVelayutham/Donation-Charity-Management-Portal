@@ -2,8 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updatePickupSchedule = exports.approveContribution = exports.getNgoContributions = exports.getMyContributions = exports.createContribution = void 0;
 const mongoose_1 = require("mongoose");
-const Contribution_model_1 = require("../models/Contribution.model");
-const Donation_model_1 = require("../models/Donation.model");
 const response_1 = require("../utils/response");
 const isFutureDate = (value) => new Date(value).getTime() > Date.now();
 const createContribution = async (req, res) => {

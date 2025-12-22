@@ -1,9 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNgoStats = exports.getDonorStats = exports.getPlatformStats = void 0;
-const Contribution_model_1 = require("../models/Contribution.model");
-const Donation_model_1 = require("../models/Donation.model");
-const User_model_1 = require("../models/User.model");
 const response_1 = require("../utils/response");
 /**
  * Get platform-wide analytics (Admin only or public stats)

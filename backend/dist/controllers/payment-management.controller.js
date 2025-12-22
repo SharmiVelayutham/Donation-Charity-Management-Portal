@@ -2,8 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAllOrgPayments = exports.verifyOrgPayment = exports.verifyNgoPayment = exports.getNgoPaymentDetails = exports.getNgoPayments = exports.confirmPayment = void 0;
 const mongoose_1 = require("mongoose");
-const Payment_model_1 = require("../models/Payment.model");
-const Donation_model_1 = require("../models/Donation.model");
 const response_1 = require("../utils/response");
 /**
  * Donor confirms payment after completing external payment

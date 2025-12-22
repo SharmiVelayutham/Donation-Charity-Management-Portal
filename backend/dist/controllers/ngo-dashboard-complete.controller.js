@@ -15,17 +15,36 @@ const SALT_ROUNDS = 10;
 const getNgoDashboard = async (req, res) => {
     try {
         const ngoId = typeof req.user.id === 'string' ? parseInt(req.user.id) : req.user.id;
-        // Get NGO profile
+        // Get NGO profile (updated_at may not exist in older databases)
         const ngo = await (0, mysql_1.queryOne)(`
-      SELECT id, name, email, contact_info, contact_person_name, phone_number, 
+      SELECT id, ngo_id, name, email, contact_info, contact_person_name, phone_number, 
              about_ngo, website_url, logo_url, registration_number, address, 
-             city, state, pincode, verified, admin_approval_for_edit, role, 
-             created_at, updated_at 
+             city, state, pincode, verification_status, rejection_reason,
+             verified, admin_approval_for_edit, address_locked, role, 
+             pending_profile_updates, created_at
       FROM users WHERE id = ?
     `, [ngoId]);
         if (!ngo) {
             return res.status(404).json({ success: false, message: 'NGO not found' });
         }
+        // Log all registration data for debugging
+        console.log('[NGO Dashboard] Fetched NGO data from database:', {
+            id: ngo.id,
+            ngo_id: ngo.ngo_id,
+            name: ngo.name,
+            email: ngo.email,
+            registration_number: ngo.registration_number,
+            address: ngo.address,
+            city: ngo.city,
+            state: ngo.state,
+            pincode: ngo.pincode,
+            contact_person_name: ngo.contact_person_name,
+            phone_number: ngo.phone_number,
+            about_ngo: ngo.about_ngo,
+            website_url: ngo.website_url,
+            verification_status: ngo.verification_status,
+            verified: ngo.verified
+        });
         // Get statistics using SQL queries
         const [totalDonations, pendingDonations, confirmedDonations, completedDonations, urgentDonations, totalContributionsResult, totalAmountResult,] = await Promise.all([
             (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM donations WHERE ngo_id = ?', [ngoId]),
@@ -71,6 +90,7 @@ const getNgoDashboard = async (req, res) => {
         const dashboard = {
             profile: {
                 id: ngo.id,
+                ngo_id: ngo.ngo_id,
                 name: ngo.name,
                 email: ngo.email,
                 contactInfo: ngo.contact_info,
@@ -84,11 +104,15 @@ const getNgoDashboard = async (req, res) => {
                 city: ngo.city,
                 state: ngo.state,
                 pincode: ngo.pincode,
+                verificationStatus: ngo.verification_status || 'PENDING',
+                rejectionReason: ngo.rejection_reason,
                 verified: ngo.verified || false,
                 adminApprovalForEdit: ngo.admin_approval_for_edit || false,
+                addressLocked: ngo.address_locked || false,
+                pendingProfileUpdates: ngo.pending_profile_updates ? JSON.parse(ngo.pending_profile_updates) : null,
                 role: ngo.role,
                 createdAt: ngo.created_at,
-                updatedAt: ngo.updated_at,
+                updatedAt: ngo.updated_at || ngo.created_at, // Fallback if updated_at doesn't exist
             },
             statistics: {
                 donations: {
@@ -127,10 +151,11 @@ const getNgoProfile = async (req, res) => {
     try {
         const ngoId = typeof req.user.id === 'string' ? parseInt(req.user.id) : req.user.id;
         const ngo = await (0, mysql_1.queryOne)(`
-      SELECT id, name, email, contact_info, contact_person_name, phone_number, 
+      SELECT id, ngo_id, name, email, contact_info, contact_person_name, phone_number, 
              about_ngo, website_url, logo_url, registration_number, address, 
-             city, state, pincode, verified, admin_approval_for_edit, role, 
-             created_at, updated_at 
+             city, state, pincode, verification_status, rejection_reason,
+             verified, admin_approval_for_edit, address_locked, role, 
+             created_at
       FROM users WHERE id = ?
     `, [ngoId]);
         if (!ngo) {
@@ -138,6 +163,7 @@ const getNgoProfile = async (req, res) => {
         }
         return (0, response_1.sendSuccess)(res, {
             id: ngo.id,
+            ngo_id: ngo.ngo_id,
             name: ngo.name,
             email: ngo.email,
             contactInfo: ngo.contact_info,
@@ -151,11 +177,14 @@ const getNgoProfile = async (req, res) => {
             city: ngo.city,
             state: ngo.state,
             pincode: ngo.pincode,
+            verificationStatus: ngo.verification_status || 'PENDING',
+            rejectionReason: ngo.rejection_reason,
             verified: ngo.verified || false,
             adminApprovalForEdit: ngo.admin_approval_for_edit || false,
+            addressLocked: ngo.address_locked || false,
             role: ngo.role,
             createdAt: ngo.created_at,
-            updatedAt: ngo.updated_at,
+            updatedAt: ngo.updated_at || ngo.created_at, // Fallback if updated_at doesn't exist
         }, 'NGO profile fetched successfully');
     }
     catch (error) {
@@ -170,19 +199,70 @@ exports.getNgoProfile = getNgoProfile;
 const updateNgoProfile = async (req, res) => {
     try {
         const ngoId = typeof req.user.id === 'string' ? parseInt(req.user.id) : req.user.id;
-        const { name, contactInfo, contactPersonName, phoneNumber, aboutNgo, websiteUrl, logoUrl, password } = req.body;
+        // Check if NGO is verified - only verified NGOs can update profile
+        const ngoCheck = await (0, mysql_1.queryOne)('SELECT verified, verification_status FROM users WHERE id = ?', [ngoId]);
+        if (!ngoCheck) {
+            return res.status(404).json({ success: false, message: 'NGO not found' });
+        }
+        // Handle both boolean and number (0/1) from MySQL
+        const verifiedValue = ngoCheck.verified;
+        const isVerified = verifiedValue === true || verifiedValue === 1 || (verifiedValue !== null && verifiedValue !== false && verifiedValue !== 0);
+        const isStatusVerified = ngoCheck.verification_status === 'VERIFIED';
+        if (!isVerified || !isStatusVerified) {
+            return res.status(403).json({
+                success: false,
+                message: 'Your NGO profile must be verified by admin before you can update it.'
+            });
+        }
+        const { name, contactInfo, contactPersonName, phoneNumber, aboutNgo, websiteUrl, logoUrl, password, address, city, state, pincode, saveAsPending // Flag to save as pending for admin approval
+         } = req.body;
+        console.log(`[Update NGO Profile] NGO ID: ${ngoId}, Update payload:`, req.body);
+        // If saveAsPending is true, save updates to pending_profile_updates JSON field
+        if (saveAsPending === true) {
+            const pendingUpdates = {};
+            if (name !== undefined && name !== null)
+                pendingUpdates.name = name.trim();
+            if (contactPersonName !== undefined)
+                pendingUpdates.contactPersonName = (contactPersonName === null || contactPersonName === void 0 ? void 0 : contactPersonName.trim()) || null;
+            if (phoneNumber !== undefined)
+                pendingUpdates.phoneNumber = (phoneNumber === null || phoneNumber === void 0 ? void 0 : phoneNumber.trim()) || null;
+            if (address !== undefined)
+                pendingUpdates.address = (address === null || address === void 0 ? void 0 : address.trim()) || null;
+            if (city !== undefined)
+                pendingUpdates.city = (city === null || city === void 0 ? void 0 : city.trim()) || null;
+            if (state !== undefined)
+                pendingUpdates.state = (state === null || state === void 0 ? void 0 : state.trim()) || null;
+            if (pincode !== undefined)
+                pendingUpdates.pincode = (pincode === null || pincode === void 0 ? void 0 : pincode.trim()) || null;
+            if (websiteUrl !== undefined)
+                pendingUpdates.websiteUrl = (websiteUrl === null || websiteUrl === void 0 ? void 0 : websiteUrl.trim()) || null;
+            if (aboutNgo !== undefined)
+                pendingUpdates.aboutNgo = (aboutNgo === null || aboutNgo === void 0 ? void 0 : aboutNgo.trim()) || null;
+            if (Object.keys(pendingUpdates).length === 0) {
+                return res.status(400).json({ success: false, message: 'No fields to update' });
+            }
+            // Save pending updates as JSON
+            const pendingJson = JSON.stringify(pendingUpdates);
+            await (0, mysql_1.update)('UPDATE users SET pending_profile_updates = ? WHERE id = ?', [pendingJson, ngoId]);
+            console.log(`[Update NGO Profile] ✅ Saved pending updates for NGO ID: ${ngoId}`);
+            return (0, response_1.sendSuccess)(res, {
+                message: 'Profile update submitted successfully. Waiting for admin approval.',
+                pendingUpdates: pendingUpdates
+            }, 'Profile update submitted for admin approval');
+        }
+        // Otherwise, update directly (existing behavior)
         const updates = [];
         const params = [];
-        // Basic fields (if admin allows)
-        if (name) {
+        // Basic fields (if admin allows) - only if verified
+        if (name !== undefined && name !== null) {
             updates.push('name = ?');
             params.push(name.trim());
         }
-        if (contactInfo) {
+        if (contactInfo !== undefined && contactInfo !== null) {
             updates.push('contact_info = ?');
             params.push(contactInfo.trim());
         }
-        // Profile fields (always editable by NGO)
+        // Profile fields (always editable by verified NGO)
         if (contactPersonName !== undefined) {
             updates.push('contact_person_name = ?');
             params.push(contactPersonName ? contactPersonName.trim() : null);
@@ -190,6 +270,22 @@ const updateNgoProfile = async (req, res) => {
         if (phoneNumber !== undefined) {
             updates.push('phone_number = ?');
             params.push(phoneNumber ? phoneNumber.trim() : null);
+        }
+        if (address !== undefined) {
+            updates.push('address = ?');
+            params.push(address ? address.trim() : null);
+        }
+        if (city !== undefined) {
+            updates.push('city = ?');
+            params.push(city ? city.trim() : null);
+        }
+        if (state !== undefined) {
+            updates.push('state = ?');
+            params.push(state ? state.trim() : null);
+        }
+        if (pincode !== undefined) {
+            updates.push('pincode = ?');
+            params.push(pincode ? pincode.trim() : null);
         }
         if (aboutNgo !== undefined) {
             updates.push('about_ngo = ?');
@@ -216,17 +312,25 @@ const updateNgoProfile = async (req, res) => {
         }
         params.push(ngoId);
         const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
-        await (0, mysql_1.update)(sql, params);
-        // Return updated profile with all fields
+        console.log(`[Update NGO Profile] Executing SQL: ${sql} with params:`, params);
+        const affectedRows = await (0, mysql_1.update)(sql, params);
+        console.log(`[Update NGO Profile] ✅ Updated ${affectedRows} row(s)`);
+        // Return updated profile with all fields (same structure as getNgoDashboard)
         const updated = await (0, mysql_1.queryOne)(`
-      SELECT id, name, email, contact_info, contact_person_name, phone_number, 
+      SELECT id, ngo_id, name, email, contact_info, contact_person_name, phone_number, 
              about_ngo, website_url, logo_url, registration_number, address, 
-             city, state, pincode, verified, admin_approval_for_edit, role, 
+             city, state, pincode, verification_status, rejection_reason,
+             verified, admin_approval_for_edit, address_locked, role, 
              created_at, updated_at 
       FROM users WHERE id = ?
     `, [ngoId]);
+        if (!updated) {
+            return res.status(404).json({ success: false, message: 'NGO not found after update' });
+        }
+        console.log(`[Update NGO Profile] ✅ Returning updated profile for NGO ID: ${updated.ngo_id}`);
         return (0, response_1.sendSuccess)(res, {
             id: updated.id,
+            ngo_id: updated.ngo_id,
             name: updated.name,
             email: updated.email,
             contactInfo: updated.contact_info,
@@ -240,11 +344,14 @@ const updateNgoProfile = async (req, res) => {
             city: updated.city,
             state: updated.state,
             pincode: updated.pincode,
+            verificationStatus: updated.verification_status || 'PENDING',
+            rejectionReason: updated.rejection_reason,
             verified: updated.verified || false,
             adminApprovalForEdit: updated.admin_approval_for_edit || false,
+            addressLocked: updated.address_locked || false,
             role: updated.role,
             createdAt: updated.created_at,
-            updatedAt: updated.updated_at,
+            updatedAt: updated.updated_at || updated.created_at,
         }, 'Profile updated successfully');
     }
     catch (error) {

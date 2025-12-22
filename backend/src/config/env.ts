@@ -21,5 +21,8 @@ export const env = {
   smtpUser: process.env.SMTP_USER as string,
   smtpPass: process.env.SMTP_PASS as string,
   smtpFrom: process.env.SMTP_FROM as string, // Optional: custom "from" address
+  
+  // Admin Security Code (required for admin registration)
+  adminSecurityCode: process.env.ADMIN_SECURITY_CODE as string,
 };
 

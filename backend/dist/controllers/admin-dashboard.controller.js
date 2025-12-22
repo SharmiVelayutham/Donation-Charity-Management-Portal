@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.unblockDonor = exports.blockDonor = exports.unblockNgo = exports.blockNgo = exports.getDonorDetails = exports.getNgoDetails = exports.getAllDonors = exports.getAllNgos = void 0;
+exports.rejectNgoProfileUpdate = exports.approveNgoProfileUpdate = exports.rejectNgo = exports.approveNgo = exports.unblockDonor = exports.blockDonor = exports.unblockNgo = exports.blockNgo = exports.getDonorDetails = exports.getNgoDetails = exports.getAllDonors = exports.getAllNgos = void 0;
 const response_1 = require("../utils/response");
 const mysql_1 = require("../config/mysql");
+const email_service_1 = require("../utils/email.service");
 /**
  * Get all NGOs with detailed information
  * GET /api/admin/dashboard/ngos
@@ -10,16 +11,19 @@ const mysql_1 = require("../config/mysql");
 const getAllNgos = async (req, res) => {
     try {
         const { isBlocked, search } = req.query;
-        let sql = 'SELECT id, name, email, contact_info, role, is_blocked, created_at FROM users WHERE 1=1';
+        let sql = `SELECT id, ngo_id, name, email, contact_info, role, is_blocked, 
+               registration_number, contact_person_name, verification_status, 
+               rejection_reason, pending_profile_updates, created_at 
+               FROM users WHERE role = 'NGO'`;
         const params = [];
         if (isBlocked !== undefined) {
             sql += ' AND is_blocked = ?';
             params.push(isBlocked === 'true' ? 1 : 0);
         }
         if (search) {
-            sql += ' AND (name LIKE ? OR email LIKE ? OR contact_info LIKE ?)';
+            sql += ' AND (name LIKE ? OR email LIKE ? OR contact_info LIKE ? OR ngo_id LIKE ? OR registration_number LIKE ?)';
             const searchTerm = `%${search}%`;
-            params.push(searchTerm, searchTerm, searchTerm);
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
         }
         sql += ' ORDER BY created_at DESC';
         const ngos = await (0, mysql_1.query)(sql, params);
@@ -34,11 +38,18 @@ const getAllNgos = async (req, res) => {
             const totalContributions = (contributionCountResult === null || contributionCountResult === void 0 ? void 0 : contributionCountResult.count) || 0;
             return {
                 id: ngo.id,
+                ngo_id: ngo.ngo_id,
                 name: ngo.name,
                 email: ngo.email,
                 contactInfo: ngo.contact_info,
+                contactPersonName: ngo.contact_person_name,
+                registrationNumber: ngo.registration_number,
+                verificationStatus: ngo.verification_status || 'PENDING',
+                rejectionReason: ngo.rejection_reason,
                 role: ngo.role,
                 isBlocked: ngo.is_blocked === 1,
+                hasPendingProfileUpdate: !!(ngo.pending_profile_updates && JSON.parse(ngo.pending_profile_updates) && Object.keys(JSON.parse(ngo.pending_profile_updates)).length > 0),
+                pendingProfileUpdate: ngo.pending_profile_updates ? JSON.parse(ngo.pending_profile_updates) : null,
                 createdAt: ngo.created_at,
                 statistics: {
                     totalDonations: donationCount,
@@ -327,3 +338,239 @@ const unblockDonor = async (req, res) => {
     }
 };
 exports.unblockDonor = unblockDonor;
+/**
+ * Approve NGO verification
+ * PUT /api/admin/dashboard/ngos/:id/approve
+ */
+const approveNgo = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const ngoId = parseInt(id);
+        if (isNaN(ngoId)) {
+            return res.status(400).json({ success: false, message: 'Invalid NGO id' });
+        }
+        // Get NGO details before updating
+        const ngo = await (0, mysql_1.queryOne)(`SELECT id, ngo_id, name, email, verification_status 
+       FROM users 
+       WHERE id = ? AND role = 'NGO'`, [ngoId]);
+        if (!ngo) {
+            return res.status(404).json({ success: false, message: 'NGO not found' });
+        }
+        if (ngo.verification_status === 'VERIFIED') {
+            return res.status(400).json({ success: false, message: 'NGO is already verified' });
+        }
+        // Update verification status to VERIFIED
+        const affectedRows = await (0, mysql_1.update)(`UPDATE users 
+       SET verification_status = 'VERIFIED', verified = TRUE, rejection_reason = NULL 
+       WHERE id = ? AND role = 'NGO'`, [ngoId]);
+        if (affectedRows === 0) {
+            return res.status(500).json({ success: false, message: 'Failed to approve NGO' });
+        }
+        // Send approval email
+        try {
+            await (0, email_service_1.sendNgoVerificationApprovalEmail)(ngo.email, ngo.name, ngo.ngo_id || `NGO-${ngo.id}`);
+            console.log(`✅ Verification approval email sent to ${ngo.email}`);
+        }
+        catch (emailError) {
+            console.error('Failed to send approval email:', emailError);
+            // Don't fail the approval if email fails, but log it
+        }
+        // Fetch updated NGO
+        const updatedNgo = await (0, mysql_1.queryOne)(`SELECT id, ngo_id, name, email, contact_info, contact_person_name, 
+              registration_number, verification_status, created_at 
+       FROM users 
+       WHERE id = ?`, [ngoId]);
+        return (0, response_1.sendSuccess)(res, {
+            id: updatedNgo.id,
+            ngo_id: updatedNgo.ngo_id,
+            name: updatedNgo.name,
+            email: updatedNgo.email,
+            contactInfo: updatedNgo.contact_info,
+            contactPersonName: updatedNgo.contact_person_name,
+            registrationNumber: updatedNgo.registration_number,
+            verificationStatus: 'VERIFIED',
+            createdAt: updatedNgo.created_at,
+        }, 'NGO approved successfully. Verification email sent.');
+    }
+    catch (error) {
+        console.error('Error approving NGO:', error);
+        return res.status(500).json({ success: false, message: error.message || 'Failed to approve NGO' });
+    }
+};
+exports.approveNgo = approveNgo;
+/**
+ * Reject NGO verification
+ * PUT /api/admin/dashboard/ngos/:id/reject
+ */
+const rejectNgo = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rejectionReason } = req.body;
+        const ngoId = parseInt(id);
+        if (isNaN(ngoId)) {
+            return res.status(400).json({ success: false, message: 'Invalid NGO id' });
+        }
+        if (!rejectionReason || rejectionReason.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Rejection reason is required'
+            });
+        }
+        // Get NGO details before updating
+        const ngo = await (0, mysql_1.queryOne)(`SELECT id, ngo_id, name, email, verification_status 
+       FROM users 
+       WHERE id = ? AND role = 'NGO'`, [ngoId]);
+        if (!ngo) {
+            return res.status(404).json({ success: false, message: 'NGO not found' });
+        }
+        if (ngo.verification_status === 'REJECTED') {
+            return res.status(400).json({ success: false, message: 'NGO is already rejected' });
+        }
+        // Update verification status to REJECTED
+        const affectedRows = await (0, mysql_1.update)(`UPDATE users 
+       SET verification_status = 'REJECTED', verified = FALSE, rejection_reason = ? 
+       WHERE id = ? AND role = 'NGO'`, [rejectionReason.trim(), ngoId]);
+        if (affectedRows === 0) {
+            return res.status(500).json({ success: false, message: 'Failed to reject NGO' });
+        }
+        // Send rejection email
+        try {
+            await (0, email_service_1.sendNgoVerificationRejectionEmail)(ngo.email, ngo.name, rejectionReason.trim());
+            console.log(`✅ Verification rejection email sent to ${ngo.email}`);
+        }
+        catch (emailError) {
+            console.error('Failed to send rejection email:', emailError);
+            // Don't fail the rejection if email fails, but log it
+        }
+        // Fetch updated NGO
+        const updatedNgo = await (0, mysql_1.queryOne)(`SELECT id, ngo_id, name, email, contact_info, contact_person_name, 
+              registration_number, verification_status, rejection_reason, created_at 
+       FROM users 
+       WHERE id = ?`, [ngoId]);
+        return (0, response_1.sendSuccess)(res, {
+            id: updatedNgo.id,
+            ngo_id: updatedNgo.ngo_id,
+            name: updatedNgo.name,
+            email: updatedNgo.email,
+            contactInfo: updatedNgo.contact_info,
+            contactPersonName: updatedNgo.contact_person_name,
+            registrationNumber: updatedNgo.registration_number,
+            verificationStatus: 'REJECTED',
+            rejectionReason: updatedNgo.rejection_reason,
+            createdAt: updatedNgo.created_at,
+        }, 'NGO rejected. Rejection email sent.');
+    }
+    catch (error) {
+        console.error('Error rejecting NGO:', error);
+        return res.status(500).json({ success: false, message: error.message || 'Failed to reject NGO' });
+    }
+};
+exports.rejectNgo = rejectNgo;
+/**
+ * Approve NGO profile update
+ * PUT /api/admin/dashboard/ngos/:id/approve-profile-update
+ */
+const approveNgoProfileUpdate = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const ngoId = parseInt(id);
+        if (isNaN(ngoId)) {
+            return res.status(400).json({ success: false, message: 'Invalid NGO id' });
+        }
+        // Get NGO with pending updates
+        const ngo = await (0, mysql_1.queryOne)('SELECT id, ngo_id, name, email, pending_profile_updates FROM users WHERE id = ?', [ngoId]);
+        if (!ngo) {
+            return res.status(404).json({ success: false, message: 'NGO not found' });
+        }
+        if (!ngo.pending_profile_updates) {
+            return res.status(400).json({ success: false, message: 'No pending profile updates found' });
+        }
+        const pendingUpdates = JSON.parse(ngo.pending_profile_updates);
+        // Build update query
+        const updates = [];
+        const params = [];
+        if (pendingUpdates.name) {
+            updates.push('name = ?');
+            params.push(pendingUpdates.name);
+        }
+        if (pendingUpdates.contactPersonName !== undefined) {
+            updates.push('contact_person_name = ?');
+            params.push(pendingUpdates.contactPersonName);
+        }
+        if (pendingUpdates.phoneNumber !== undefined) {
+            updates.push('phone_number = ?');
+            params.push(pendingUpdates.phoneNumber);
+        }
+        if (pendingUpdates.address !== undefined) {
+            updates.push('address = ?');
+            params.push(pendingUpdates.address);
+        }
+        if (pendingUpdates.city !== undefined) {
+            updates.push('city = ?');
+            params.push(pendingUpdates.city);
+        }
+        if (pendingUpdates.state !== undefined) {
+            updates.push('state = ?');
+            params.push(pendingUpdates.state);
+        }
+        if (pendingUpdates.pincode !== undefined) {
+            updates.push('pincode = ?');
+            params.push(pendingUpdates.pincode);
+        }
+        if (pendingUpdates.websiteUrl !== undefined) {
+            updates.push('website_url = ?');
+            params.push(pendingUpdates.websiteUrl);
+        }
+        if (pendingUpdates.aboutNgo !== undefined) {
+            updates.push('about_ngo = ?');
+            params.push(pendingUpdates.aboutNgo);
+        }
+        // Clear pending updates
+        updates.push('pending_profile_updates = NULL');
+        params.push(ngoId);
+        const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+        await (0, mysql_1.update)(sql, params);
+        // Get updated NGO
+        const updatedNgo = await (0, mysql_1.queryOne)('SELECT id, ngo_id, name, email, contact_person_name, phone_number, address, city, state, pincode, website_url, about_ngo FROM users WHERE id = ?', [ngoId]);
+        return (0, response_1.sendSuccess)(res, {
+            id: updatedNgo.id,
+            ngo_id: updatedNgo.ngo_id,
+            name: updatedNgo.name,
+            email: updatedNgo.email,
+            contactPersonName: updatedNgo.contact_person_name,
+            phoneNumber: updatedNgo.phone_number,
+            address: updatedNgo.address,
+            city: updatedNgo.city,
+            state: updatedNgo.state,
+            pincode: updatedNgo.pincode,
+            websiteUrl: updatedNgo.website_url,
+            aboutNgo: updatedNgo.about_ngo,
+        }, 'Profile update approved successfully');
+    }
+    catch (error) {
+        console.error('Error approving profile update:', error);
+        return res.status(500).json({ success: false, message: error.message || 'Failed to approve profile update' });
+    }
+};
+exports.approveNgoProfileUpdate = approveNgoProfileUpdate;
+/**
+ * Reject NGO profile update
+ * PUT /api/admin/dashboard/ngos/:id/reject-profile-update
+ */
+const rejectNgoProfileUpdate = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const ngoId = parseInt(id);
+        if (isNaN(ngoId)) {
+            return res.status(400).json({ success: false, message: 'Invalid NGO id' });
+        }
+        // Clear pending updates
+        await (0, mysql_1.update)('UPDATE users SET pending_profile_updates = NULL WHERE id = ?', [ngoId]);
+        return (0, response_1.sendSuccess)(res, { id: ngoId }, 'Profile update rejected successfully');
+    }
+    catch (error) {
+        console.error('Error rejecting profile update:', error);
+        return res.status(500).json({ success: false, message: error.message || 'Failed to reject profile update' });
+    }
+};
+exports.rejectNgoProfileUpdate = rejectNgoProfileUpdate;

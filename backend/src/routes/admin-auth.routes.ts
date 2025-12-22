@@ -1,38 +1,22 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { adminLogin, adminRegister } from '../controllers/admin-auth.controller';
-import { authenticate } from '../middleware/auth.middleware';
-import { requireRole } from '../middleware/role.middleware';
-import { queryOne } from '../config/mysql';
+import { Router } from 'express';
+import { adminLogin, adminRegister, adminVerifyOTPAndRegister } from '../controllers/admin-auth.controller';
 
 const router = Router();
 
 /**
  * Admin-only authentication routes
  * These endpoints are separate from regular auth
- * Admin registration: First admin can be created without authentication
- * Subsequent admins require existing admin authentication
+ * Admin registration requires:
+ * 1. Valid security code (ADMIN_SECURITY_CODE from env)
+ * 2. Email OTP verification
+ * No need for existing admin authentication - security code is sufficient
  */
 
-// Middleware to check if first admin registration
-const checkFirstAdmin = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const existingAdmin = await queryOne('SELECT id FROM admins LIMIT 1');
-    if (existingAdmin) {
-      // Admin exists, require authentication
-      return authenticate(req, res, () => {
-        requireRole(['ADMIN'])(req, res, next);
-      });
-    } else {
-      // No admin exists, allow registration
-      next();
-    }
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to check admin status' });
-  }
-};
+// Admin registration - Step 1: Validate security code and send OTP
+router.post('/register', adminRegister);
 
-// Admin registration
-router.post('/register', checkFirstAdmin, adminRegister);
+// Admin registration - Step 2: Verify OTP and create admin account
+router.post('/verify-otp', adminVerifyOTPAndRegister);
 
 // Admin login (public endpoint but only admins can successfully login)
 router.post('/login', adminLogin);

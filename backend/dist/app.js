@@ -10,17 +10,20 @@ const morgan_1 = __importDefault(require("morgan"));
 const path_1 = __importDefault(require("path"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const donation_routes_1 = __importDefault(require("./routes/donation.routes"));
-const contribution_routes_1 = __importDefault(require("./routes/contribution.routes"));
-const leaderboard_routes_1 = __importDefault(require("./routes/leaderboard.routes"));
-const analytics_routes_1 = __importDefault(require("./routes/analytics.routes"));
-const tracking_routes_1 = __importDefault(require("./routes/tracking.routes"));
+// Temporarily disabled - missing model files
+// import contributionRoutes from './routes/contribution.routes';
+// import leaderboardRoutes from './routes/leaderboard.routes';
+// import analyticsRoutes from './routes/analytics.routes';
+// import trackingRoutes from './routes/tracking.routes';
 const ngo_dashboard_routes_1 = __importDefault(require("./routes/ngo-dashboard.routes"));
 const ngo_dashboard_complete_routes_1 = __importDefault(require("./routes/ngo-dashboard-complete.routes"));
 const donor_dashboard_routes_1 = __importDefault(require("./routes/donor-dashboard.routes"));
 const admin_auth_routes_1 = __importDefault(require("./routes/admin-auth.routes"));
 const admin_dashboard_routes_1 = __importDefault(require("./routes/admin-dashboard.routes"));
-const pickup_management_routes_1 = __importDefault(require("./routes/pickup-management.routes"));
-const payment_management_routes_1 = __importDefault(require("./routes/payment-management.routes"));
+const donation_request_routes_1 = __importDefault(require("./routes/donation-request.routes"));
+// Temporarily disabled - missing model files
+// import pickupManagementRoutes from './routes/pickup-management.routes';
+// import paymentManagementRoutes from './routes/payment-management.routes';
 const error_middleware_1 = require("./middleware/error.middleware");
 const app = (0, express_1.default)();
 app.use((0, helmet_1.default)());
@@ -30,19 +33,36 @@ app.use(express_1.default.urlencoded({ extended: true }));
 app.use((0, morgan_1.default)('dev'));
 app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+// Test endpoint to verify route registration
+app.get('/api/test-routes', (_req, res) => {
+    res.json({
+        message: 'Routes test endpoint',
+        routes: {
+            'donation-requests': '/api/donation-requests',
+            'ngo-dashboard': '/api/ngo/dashboard',
+            'donor-dashboard': '/api/donor/dashboard'
+        }
+    });
+});
 app.use('/api/auth', auth_routes_1.default);
 app.use('/api/donations', donation_routes_1.default);
-app.use('/api/contributions', contribution_routes_1.default);
-app.use('/api/leaderboard', leaderboard_routes_1.default);
-app.use('/api/analytics', analytics_routes_1.default);
-app.use('/api/tracking', tracking_routes_1.default);
+// Temporarily disabled - missing model files
+// app.use('/api/contributions', contributionRoutes);
+// app.use('/api/leaderboard', leaderboardRoutes);
+// app.use('/api/analytics', analyticsRoutes);
+// app.use('/api/tracking', trackingRoutes);
 app.use('/api/ngo/donations', ngo_dashboard_routes_1.default); // NGO donation management
 app.use('/api/ngo/dashboard', ngo_dashboard_complete_routes_1.default); // NGO complete dashboard
 app.use('/api/donor/dashboard', donor_dashboard_routes_1.default); // Donor dashboard
+// Donation requests routes
+console.log('📋 Registering donation-requests routes...');
+app.use('/api/donation-requests', donation_request_routes_1.default); // Donation requests (NGO creates, Donors view)
+console.log('✅ Donation-requests routes registered at /api/donation-requests');
+// Temporarily disabled - missing model files
 // Pickup management routes
-app.use('/api', pickup_management_routes_1.default);
+// app.use('/api', pickupManagementRoutes);
 // Payment management routes
-app.use('/api', payment_management_routes_1.default);
+// app.use('/api', paymentManagementRoutes);
 // Admin-only routes (separate from regular auth)
 app.use('/api/admin/auth', admin_auth_routes_1.default);
 app.use('/api/admin/dashboard', admin_dashboard_routes_1.default);

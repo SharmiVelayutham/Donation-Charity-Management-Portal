@@ -12,7 +12,7 @@ const promise_1 = __importDefault(require("mysql2/promise"));
 // MySQL Configuration
 const MYSQL_CONFIG = {
     host: process.env.MYSQL_HOST || 'localhost',
-    port: parseInt(process.env.MYSQL_PORT || '3307'),
+    port: parseInt(process.env.MYSQL_PORT || '3306'),
     user: process.env.MYSQL_USER || 'root',
     password: process.env.MYSQL_PASSWORD || '',
     database: process.env.MYSQL_DATABASE || 'donation_charity',

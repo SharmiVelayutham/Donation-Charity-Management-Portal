@@ -2,8 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNgoUpcomingPickups = exports.getUpcomingPickups = exports.trackMyContributions = exports.trackDonation = void 0;
 const mongoose_1 = require("mongoose");
-const Contribution_model_1 = require("../models/Contribution.model");
-const Donation_model_1 = require("../models/Donation.model");
 const response_1 = require("../utils/response");
 /**
  * Track donation status and get detailed tracking info

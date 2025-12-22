@@ -2,10 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updatePickupStatus = exports.getNgoPickups = exports.contributeToDonation = void 0;
 const mongoose_1 = require("mongoose");
-const Contribution_model_1 = require("../models/Contribution.model");
-const Payment_model_1 = require("../models/Payment.model");
-const Donation_model_1 = require("../models/Donation.model");
-const Donor_model_1 = require("../models/Donor.model");
 const response_1 = require("../utils/response");
 const isFutureDate = (value) => new Date(value).getTime() > Date.now();
 /**

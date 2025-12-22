@@ -8,6 +8,10 @@ import {
   unblockNgo,
   blockDonor,
   unblockDonor,
+  approveNgo,
+  rejectNgo,
+  approveNgoProfileUpdate,
+  rejectNgoProfileUpdate,
 } from '../controllers/admin-dashboard.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
@@ -28,6 +32,10 @@ router.get('/ngos', getAllNgos);
 router.get('/ngos/:id', getNgoDetails);
 router.put('/ngos/:id/block', blockNgo);
 router.put('/ngos/:id/unblock', unblockNgo);
+router.put('/ngos/:id/approve', approveNgo);
+router.put('/ngos/:id/reject', rejectNgo);
+router.put('/ngos/:id/approve-profile-update', approveNgoProfileUpdate);
+router.put('/ngos/:id/reject-profile-update', rejectNgoProfileUpdate);
 
 // Donor Management
 router.get('/donors', getAllDonors);

@@ -105,12 +105,13 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
 export async function sendOTPEmail(
   email: string,
   otp: string,
-  purpose: 'REGISTRATION' | 'PASSWORD_RESET' | 'EMAIL_CHANGE' = 'REGISTRATION'
+  purpose: 'REGISTRATION' | 'PASSWORD_RESET' | 'EMAIL_CHANGE' | 'ADMIN_REGISTRATION' = 'REGISTRATION'
 ): Promise<void> {
   const purposeText = {
     REGISTRATION: 'NGO Registration',
     PASSWORD_RESET: 'Password Reset',
     EMAIL_CHANGE: 'Email Change',
+    ADMIN_REGISTRATION: 'Admin Registration',
   }[purpose];
 
   const subject = `${purposeText} - OTP Verification Code`;
@@ -147,6 +148,194 @@ export async function sendOTPEmail(
         
         <p style="font-size: 14px; color: #64748b; margin-top: 30px;">
           If you didn't request this OTP, please ignore this email or contact support if you have concerns.
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        
+        <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+          This is an automated email. Please do not reply to this message.<br>
+          © ${new Date().getFullYear()} Donation & Charity Management Portal
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject,
+    html,
+  });
+}
+
+/**
+ * Send NGO profile under verification email (after registration)
+ */
+export async function sendNgoProfileUnderVerificationEmail(email: string, ngoName: string): Promise<void> {
+  const subject = 'NGO Profile Under Verification';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>NGO Profile Under Verification</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">NGO Profile Under Verification</h1>
+      </div>
+      
+      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+        <p style="font-size: 16px; color: #0f172a;">Hello <strong>${ngoName}</strong>,</p>
+        
+        <p style="font-size: 16px; color: #0f172a;">
+          Thank you for registering on our platform.
+        </p>
+        
+        <p style="font-size: 16px; color: #0f172a;">
+          Your NGO profile has been submitted successfully and is currently under admin verification.
+        </p>
+        
+        <p style="font-size: 16px; color: #0f172a;">
+          You will receive another email once your profile is reviewed and approved.
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        
+        <p style="font-size: 14px; color: #64748b; margin: 0;">
+          Regards,<br>
+          <strong>Donation & Charity Platform Team</strong>
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        
+        <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+          This is an automated email. Please do not reply to this message.<br>
+          © ${new Date().getFullYear()} Donation & Charity Management Portal
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject,
+    html,
+  });
+}
+
+/**
+ * Send NGO verification approval email
+ */
+export async function sendNgoVerificationApprovalEmail(email: string, ngoName: string, ngoId: string): Promise<void> {
+  const subject = 'NGO Profile Verified Successfully';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>NGO Verification Approved</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">✅ NGO Verification Approved</h1>
+      </div>
+      
+      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+        <p style="font-size: 16px; color: #0f172a;">Congratulations <strong>${ngoName}</strong>,</p>
+        
+        <p style="font-size: 16px; color: #0f172a;">
+          Your NGO profile has been successfully verified by the admin.
+        </p>
+        
+        <p style="font-size: 16px; color: #0f172a;">
+          You can now log in to your account and start creating donation requests.
+        </p>
+        
+        <p style="font-size: 16px; color: #0f172a; margin-top: 20px;">
+          <strong>Welcome aboard!</strong>
+        </p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:4200'}/login" 
+             style="display: inline-block; background-color: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: 600;">
+            Login to Dashboard
+          </a>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        
+        <p style="font-size: 14px; color: #64748b; margin: 0;">
+          Regards,<br>
+          <strong>Donation & Charity Platform Team</strong>
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+        
+        <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+          This is an automated email. Please do not reply to this message.<br>
+          © ${new Date().getFullYear()} Donation & Charity Management Portal
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject,
+    html,
+  });
+}
+
+/**
+ * Send NGO verification rejection email
+ */
+export async function sendNgoVerificationRejectionEmail(
+  email: string, 
+  ngoName: string, 
+  rejectionReason: string
+): Promise<void> {
+  const subject = 'NGO Verification Status - Donation & Charity Portal';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>NGO Verification Status</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">NGO Verification Status</h1>
+      </div>
+      
+      <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+        <h2 style="color: #0f172a; margin-top: 0;">Registration Review</h2>
+        
+        <p style="font-size: 16px; color: #64748b;">Dear ${ngoName},</p>
+        
+        <p style="font-size: 16px; color: #0f172a;">
+          We regret to inform you that your NGO registration has been <strong style="color: #ef4444;">rejected</strong> after review by our admin team.
+        </p>
+        
+        <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; margin: 30px 0; border-radius: 4px;">
+          <p style="margin: 0; font-size: 14px; color: #991b1b;"><strong>Reason for Rejection:</strong></p>
+          <p style="margin: 10px 0 0 0; font-size: 16px; color: #0f172a;">${rejectionReason}</p>
+        </div>
+        
+        <p style="font-size: 16px; color: #0f172a;">
+          If you believe this is an error or would like to provide additional information, please contact our support team for assistance.
+        </p>
+        
+        <p style="font-size: 14px; color: #64748b; margin-top: 30px;">
+          Thank you for your interest in our platform.
         </p>
         
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">

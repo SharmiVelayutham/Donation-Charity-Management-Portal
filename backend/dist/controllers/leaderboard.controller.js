@@ -1,8 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNgoLeaderboard = exports.getDonorLeaderboard = void 0;
-const Contribution_model_1 = require("../models/Contribution.model");
-const Donation_model_1 = require("../models/Donation.model");
 const response_1 = require("../utils/response");
 /**
  * Get donor leaderboard ranked by total contributions

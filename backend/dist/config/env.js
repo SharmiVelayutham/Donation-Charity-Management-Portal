@@ -22,4 +22,6 @@ exports.env = {
     smtpUser: process.env.SMTP_USER,
     smtpPass: process.env.SMTP_PASS,
     smtpFrom: process.env.SMTP_FROM, // Optional: custom "from" address
+    // Admin Security Code (required for admin registration)
+    adminSecurityCode: process.env.ADMIN_SECURITY_CODE,
 };

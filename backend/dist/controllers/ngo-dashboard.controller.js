@@ -4,11 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cancelNgoDonation = exports.updateNgoDonationPriority = exports.updateNgoDonation = exports.getNgoDonationById = exports.getNgoDonations = exports.createNgoDonation = void 0;
-const mongoose_1 = require("mongoose");
-const Donation_model_1 = require("../models/Donation.model");
-const Contribution_model_1 = require("../models/Contribution.model");
 const response_1 = require("../utils/response");
-const location_1 = require("../utils/location");
+const mysql_1 = require("../config/mysql");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const isFutureDate = (value) => new Date(value).getTime() > Date.now();
@@ -19,225 +16,19 @@ const VALID_DONATION_CATEGORIES = ['CLOTHES', 'FOOD', 'MONEY'];
  * POST /api/ngo/donations
  */
 const createNgoDonation = async (req, res) => {
-    const { donationCategory, purpose, description, quantityOrAmount, pickupLocation, pickupDateTime, timezone, priority, 
-    // Payment details for MONEY donations
-    qrCodeImage, bankAccountNumber, bankName, ifscCode, accountHolderName, } = req.body;
-    // Validation: Required fields
-    if (!donationCategory || !purpose || !description || !quantityOrAmount) {
-        return res.status(400).json({
-            success: false,
-            message: 'Missing required fields: donationCategory, purpose, description, quantityOrAmount',
-        });
-    }
-    // Validate donation category
-    const normalizedCategory = donationCategory.toUpperCase();
-    if (!VALID_DONATION_CATEGORIES.includes(normalizedCategory)) {
-        return res.status(400).json({
-            success: false,
-            message: `Invalid donation category. Valid categories: ${VALID_DONATION_CATEGORIES.join(', ')}`,
-        });
-    }
-    // Validate purpose and description (cannot be empty)
-    if (typeof purpose !== 'string' || purpose.trim().length === 0) {
-        return res.status(400).json({ success: false, message: 'Purpose cannot be empty' });
-    }
-    if (typeof description !== 'string' || description.trim().length === 0) {
-        return res.status(400).json({ success: false, message: 'Description cannot be empty' });
-    }
-    // Validate quantity/amount
-    const quantity = Number(quantityOrAmount);
-    if (Number.isNaN(quantity) || quantity <= 0) {
-        return res.status(400).json({ success: false, message: 'Quantity/Amount must be greater than 0' });
-    }
-    // For MONEY donations, validate payment details
-    if (normalizedCategory === 'MONEY') {
-        if (!qrCodeImage || !bankAccountNumber || !bankName || !ifscCode || !accountHolderName) {
+    try {
+        const ngoId = parseInt(req.user.id);
+        const { donationCategory, purpose, description, quantityOrAmount, pickupDateTime, timezone, priority, 
+        // Payment details for MONEY donations
+        qrCodeImage, bankAccountNumber, bankName, ifscCode, accountHolderName, } = req.body;
+        // Validation: Required fields
+        if (!donationCategory || !purpose || !description || !quantityOrAmount) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing payment details for MONEY donation: qrCodeImage, bankAccountNumber, bankName, ifscCode, accountHolderName are required',
+                message: 'Missing required fields: donationCategory, purpose, description, quantityOrAmount',
             });
         }
-    }
-    else {
-        // For FOOD/CLOTHES donations, validate pickup details
-        if (!pickupLocation || !pickupDateTime) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields for FOOD/CLOTHES donation: pickupLocation, pickupDateTime',
-            });
-        }
-    }
-    // Validate and normalize location (for FOOD/CLOTHES only)
-    let normalizedLocation;
-    if (normalizedCategory !== 'MONEY') {
-        try {
-            // Support both string and object format for pickupLocation
-            normalizedLocation = (0, location_1.normalizeLocation)(pickupLocation);
-        }
-        catch (error) {
-            return res.status(400).json({ success: false, message: error.message || 'Invalid pickup location format' });
-        }
-    }
-    // Validate pickup date/time (for FOOD/CLOTHES only)
-    let pickupDate;
-    if (normalizedCategory !== 'MONEY') {
-        pickupDate = new Date(pickupDateTime);
-        if (isNaN(pickupDate.getTime())) {
-            return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
-        }
-        if (!isFutureDate(pickupDate)) {
-            return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
-        }
-    }
-    // Validate timezone if provided
-    if (timezone && !(0, location_1.isValidTimezone)(timezone)) {
-        return res.status(400).json({
-            success: false,
-            message: 'Invalid timezone format. Use IANA timezone (e.g., America/New_York, Europe/London)',
-        });
-    }
-    // Handle image uploads
-    const files = req.files || [];
-    const imagePaths = files.map((file) => file.path);
-    // Build donation data
-    const donationData = {
-        ngoId: req.user.id,
-        donationType: normalizedCategory, // Map category to legacy type for backward compatibility
-        donationCategory: normalizedCategory,
-        purpose: purpose.trim(),
-        description: description.trim(),
-        quantityOrAmount: quantity,
-        status: 'PENDING', // Default status
-        images: imagePaths,
-        priority: priority || 'NORMAL',
-    };
-    // Add location and pickup date for FOOD/CLOTHES donations
-    if (normalizedCategory !== 'MONEY') {
-        donationData.location = normalizedLocation;
-        donationData.pickupDateTime = pickupDate;
-        if (timezone) {
-            donationData.timezone = timezone;
-        }
-    }
-    // Add payment details for MONEY donations
-    if (normalizedCategory === 'MONEY') {
-        donationData.paymentDetails = {
-            qrCodeImage: qrCodeImage.trim(),
-            bankAccountNumber: bankAccountNumber.trim(),
-            bankName: bankName.trim(),
-            ifscCode: ifscCode.trim(),
-            accountHolderName: accountHolderName.trim(),
-        };
-    }
-    // Create donation
-    const donation = await Donation_model_1.DonationModel.create(donationData);
-    const populated = await Donation_model_1.DonationModel.findById(donation._id)
-        .populate('ngoId', 'name email contactInfo role');
-    return (0, response_1.sendSuccess)(res, populated, 'Donation request created successfully', 201);
-};
-exports.createNgoDonation = createNgoDonation;
-/**
- * Get all donations created by logged-in NGO
- * GET /api/ngo/donations
- */
-const getNgoDonations = async (req, res) => {
-    const { status, priority, donationCategory } = req.query;
-    const ngoId = req.user.id;
-    // Build filter - only this NGO's donations
-    const filter = { ngoId };
-    if (status) {
-        filter.status = status;
-    }
-    if (priority) {
-        filter.priority = priority;
-    }
-    if (donationCategory) {
-        filter.donationCategory = donationCategory;
-    }
-    const donations = await Donation_model_1.DonationModel.find(filter)
-        .populate('ngoId', 'name email contactInfo role')
-        .sort({ createdAt: -1 })
-        .lean();
-    // Add contribution counts for each donation
-    const donationsWithCounts = await Promise.all(donations.map(async (donation) => {
-        const contributionCount = await Contribution_model_1.ContributionModel.countDocuments({
-            donationId: donation._id,
-        });
-        const approvedCount = await Contribution_model_1.ContributionModel.countDocuments({
-            donationId: donation._id,
-            status: { $in: ['APPROVED', 'COMPLETED'] },
-        });
-        return {
-            ...donation,
-            contributionCount,
-            approvedContributions: approvedCount,
-        };
-    }));
-    return (0, response_1.sendSuccess)(res, donationsWithCounts, 'NGO donations fetched successfully');
-};
-exports.getNgoDonations = getNgoDonations;
-/**
- * Get donation details (only own donation)
- * GET /api/ngo/donations/:id
- */
-const getNgoDonationById = async (req, res) => {
-    const { id } = req.params;
-    const ngoId = req.user.id;
-    if (!mongoose_1.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ success: false, message: 'Invalid donation id' });
-    }
-    const donation = await Donation_model_1.DonationModel.findOne({ _id: id, ngoId })
-        .populate('ngoId', 'name email contactInfo role')
-        .lean();
-    if (!donation) {
-        return res.status(404).json({
-            success: false,
-            message: 'Donation not found or you do not have permission to access it',
-        });
-    }
-    // Add contribution counts
-    const contributionCount = await Contribution_model_1.ContributionModel.countDocuments({ donationId: id });
-    const approvedCount = await Contribution_model_1.ContributionModel.countDocuments({
-        donationId: id,
-        status: { $in: ['APPROVED', 'COMPLETED'] },
-    });
-    const donationWithCounts = {
-        ...donation,
-        contributionCount,
-        approvedContributions: approvedCount,
-    };
-    return (0, response_1.sendSuccess)(res, donationWithCounts, 'Donation details fetched successfully');
-};
-exports.getNgoDonationById = getNgoDonationById;
-/**
- * Update donation request
- * PUT /api/ngo/donations/:id
- */
-const updateNgoDonation = async (req, res) => {
-    const { id } = req.params;
-    const ngoId = req.user.id;
-    if (!mongoose_1.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ success: false, message: 'Invalid donation id' });
-    }
-    // Find donation and verify ownership
-    const donation = await Donation_model_1.DonationModel.findOne({ _id: id, ngoId });
-    if (!donation) {
-        return res.status(404).json({
-            success: false,
-            message: 'Donation not found or you do not have permission to update it',
-        });
-    }
-    // Cannot update cancelled or completed donations
-    if (donation.status === 'CANCELLED' || donation.status === 'COMPLETED') {
-        return res.status(400).json({
-            success: false,
-            message: `Cannot update ${donation.status.toLowerCase()} donation`,
-        });
-    }
-    const { donationCategory, purpose, description, quantityOrAmount, pickupLocation, pickupDateTime, timezone, status, priority, images, removeImages, } = req.body;
-    const updates = {};
-    // Update donation category
-    if (donationCategory) {
+        // Validate donation category
         const normalizedCategory = donationCategory.toUpperCase();
         if (!VALID_DONATION_CATEGORIES.includes(normalizedCategory)) {
             return res.status(400).json({
@@ -245,105 +36,362 @@ const updateNgoDonation = async (req, res) => {
                 message: `Invalid donation category. Valid categories: ${VALID_DONATION_CATEGORIES.join(', ')}`,
             });
         }
-        updates.donationCategory = normalizedCategory;
-        updates.donationType = normalizedCategory; // Update legacy field
-    }
-    // Update purpose
-    if (purpose !== undefined) {
+        // Validate purpose and description
         if (typeof purpose !== 'string' || purpose.trim().length === 0) {
             return res.status(400).json({ success: false, message: 'Purpose cannot be empty' });
         }
-        updates.purpose = purpose.trim();
-    }
-    // Update description
-    if (description !== undefined) {
         if (typeof description !== 'string' || description.trim().length === 0) {
             return res.status(400).json({ success: false, message: 'Description cannot be empty' });
         }
-        updates.description = description.trim();
-    }
-    // Update quantity/amount
-    if (quantityOrAmount !== undefined) {
+        // Validate quantity/amount
         const quantity = Number(quantityOrAmount);
         if (Number.isNaN(quantity) || quantity <= 0) {
             return res.status(400).json({ success: false, message: 'Quantity/Amount must be greater than 0' });
         }
-        updates.quantityOrAmount = quantity;
-    }
-    // Update location
-    if (pickupLocation) {
-        try {
-            updates.location = (0, location_1.normalizeLocation)(pickupLocation);
+        // Get NGO profile to use registered address
+        const ngoProfile = await (0, mysql_1.queryOne)('SELECT address, city, state, pincode FROM users WHERE id = ?', [ngoId]);
+        if (!ngoProfile) {
+            return res.status(404).json({ success: false, message: 'NGO profile not found' });
         }
-        catch (error) {
-            return res.status(400).json({ success: false, message: error.message || 'Invalid pickup location format' });
-        }
-    }
-    // Update pickup date/time
-    if (pickupDateTime) {
-        const pickupDate = new Date(pickupDateTime);
-        if (isNaN(pickupDate.getTime())) {
-            return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
-        }
-        if (!isFutureDate(pickupDate)) {
-            return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
-        }
-        updates.pickupDateTime = pickupDate;
-    }
-    // Update timezone
-    if (timezone !== undefined) {
-        if (timezone === null || timezone === '') {
-            updates.timezone = undefined;
-        }
-        else if (!(0, location_1.isValidTimezone)(timezone)) {
+        // Build address from NGO profile
+        const ngoAddress = [
+            ngoProfile.address,
+            ngoProfile.city,
+            ngoProfile.state,
+            ngoProfile.pincode
+        ].filter(Boolean).join(', ');
+        if (!ngoAddress) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid timezone format. Use IANA timezone (e.g., America/New_York, Europe/London)',
+                message: 'NGO address not found. Please complete your profile with address details first.',
             });
         }
-        else {
-            updates.timezone = timezone;
-        }
-    }
-    // Update status (NGO can change status)
-    if (status && ['PENDING', 'CONFIRMED', 'COMPLETED'].includes(status)) {
-        updates.status = status;
-    }
-    // Update priority
-    if (priority && ['NORMAL', 'URGENT'].includes(priority)) {
-        updates.priority = priority;
-    }
-    // Handle image updates
-    let updatedImages = [...donation.images];
-    // Remove specified images
-    if (removeImages && Array.isArray(removeImages)) {
-        removeImages.forEach((imagePath) => {
-            const fullPath = path_1.default.join(process.cwd(), imagePath);
-            if (fs_1.default.existsSync(fullPath)) {
-                try {
-                    fs_1.default.unlinkSync(fullPath);
-                }
-                catch (error) {
-                    console.error(`Error deleting image: ${imagePath}`, error);
-                }
+        // For MONEY donations, validate payment details
+        if (normalizedCategory === 'MONEY') {
+            if (!qrCodeImage || !bankAccountNumber || !bankName || !ifscCode || !accountHolderName) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing payment details for MONEY donation: qrCodeImage, bankAccountNumber, bankName, ifscCode, accountHolderName are required',
+                });
             }
-            updatedImages = updatedImages.filter((img) => img !== imagePath);
+        }
+        else {
+            // For FOOD/CLOTHES donations, validate pickup date/time
+            if (!pickupDateTime) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing required field for FOOD/CLOTHES donation: pickupDateTime',
+                });
+            }
+        }
+        // Validate pickup date/time (for FOOD/CLOTHES only)
+        let pickupDate = null;
+        if (normalizedCategory !== 'MONEY') {
+            pickupDate = new Date(pickupDateTime);
+            if (isNaN(pickupDate.getTime())) {
+                return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
+            }
+            if (!isFutureDate(pickupDate)) {
+                return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
+            }
+        }
+        // Handle image uploads
+        const files = req.files || [];
+        const imagePaths = files.map((file) => file.path);
+        // Insert donation into MySQL
+        const donationId = await (0, mysql_1.insert)(`INSERT INTO donations (
+        ngo_id, donation_type, donation_category, purpose, description,
+        quantity_or_amount, location_address, pickup_date_time, timezone,
+        status, priority
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+            ngoId,
+            normalizedCategory, // donation_type (legacy)
+            normalizedCategory, // donation_category
+            purpose.trim(),
+            description.trim(),
+            quantity,
+            ngoAddress, // Use NGO's registered address
+            pickupDate || null,
+            timezone || null,
+            'ACTIVE',
+            priority || 'NORMAL',
+        ]);
+        // Insert images if any
+        if (imagePaths.length > 0) {
+            for (let i = 0; i < imagePaths.length; i++) {
+                await (0, mysql_1.insert)('INSERT INTO donation_images (donation_id, image_path, image_order) VALUES (?, ?, ?)', [donationId, imagePaths[i], i]);
+            }
+        }
+        // Insert payment details for MONEY donations
+        if (normalizedCategory === 'MONEY') {
+            await (0, mysql_1.insert)(`INSERT INTO donation_payment_details (
+          donation_id, qr_code_image, bank_account_number, bank_name, ifsc_code, account_holder_name
+        ) VALUES (?, ?, ?, ?, ?, ?)`, [
+                donationId,
+                qrCodeImage.trim(),
+                bankAccountNumber.trim(),
+                bankName.trim(),
+                ifscCode.trim(),
+                accountHolderName.trim(),
+            ]);
+        }
+        // Fetch created donation with NGO details
+        const donation = await (0, mysql_1.queryOne)(`SELECT d.*, 
+        u.name as ngo_name, u.email as ngo_email, u.contact_info as ngo_contact_info,
+        (SELECT COUNT(*) FROM donation_images di WHERE di.donation_id = d.id) as image_count
+       FROM donations d
+       INNER JOIN users u ON d.ngo_id = u.id
+       WHERE d.id = ?`, [donationId]);
+        // Get images
+        const images = await (0, mysql_1.query)('SELECT image_path FROM donation_images WHERE donation_id = ? ORDER BY image_order', [donationId]);
+        const donationWithDetails = {
+            ...donation,
+            images: images.map((img) => img.image_path),
+        };
+        return (0, response_1.sendSuccess)(res, donationWithDetails, 'Donation request created successfully', 201);
+    }
+    catch (error) {
+        console.error('Error creating donation:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to create donation request',
         });
     }
-    // Add new images
-    const files = req.files || [];
-    if (files.length) {
-        updatedImages = [...updatedImages, ...files.map((file) => file.path)];
+};
+exports.createNgoDonation = createNgoDonation;
+/**
+ * Get all donations created by logged-in NGO
+ * GET /api/ngo/donations
+ */
+const getNgoDonations = async (req, res) => {
+    try {
+        const ngoId = parseInt(req.user.id);
+        const { status, priority, donationCategory } = req.query;
+        let sql = `
+      SELECT d.*,
+        (SELECT COUNT(*) FROM contributions c WHERE c.donation_id = d.id) as contribution_count,
+        (SELECT COUNT(*) FROM contributions c WHERE c.donation_id = d.id AND c.status IN ('APPROVED', 'COMPLETED')) as approved_contributions
+      FROM donations d
+      WHERE d.ngo_id = ?
+    `;
+        const params = [ngoId];
+        if (status) {
+            sql += ' AND d.status = ?';
+            params.push(status);
+        }
+        if (priority) {
+            sql += ' AND d.priority = ?';
+            params.push(priority);
+        }
+        if (donationCategory) {
+            sql += ' AND d.donation_category = ?';
+            params.push(donationCategory);
+        }
+        sql += ' ORDER BY d.created_at DESC';
+        const donations = await (0, mysql_1.query)(sql, params);
+        // Get images for each donation
+        const donationsWithImages = await Promise.all(donations.map(async (donation) => {
+            const images = await (0, mysql_1.query)('SELECT image_path FROM donation_images WHERE donation_id = ? ORDER BY image_order', [donation.id]);
+            return {
+                ...donation,
+                images: images.map((img) => img.image_path),
+            };
+        }));
+        return (0, response_1.sendSuccess)(res, donationsWithImages, 'NGO donations fetched successfully');
     }
-    // Replace images if new array provided
-    if (images && Array.isArray(images)) {
-        updatedImages = images;
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to fetch donations',
+        });
     }
-    updates.images = updatedImages;
-    // Update donation
-    const updated = await Donation_model_1.DonationModel.findByIdAndUpdate(id, updates, { new: true })
-        .populate('ngoId', 'name email contactInfo role');
-    return (0, response_1.sendSuccess)(res, updated, 'Donation request updated successfully');
+};
+exports.getNgoDonations = getNgoDonations;
+/**
+ * Get donation details (only own donation)
+ * GET /api/ngo/donations/:id
+ */
+const getNgoDonationById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const donationId = parseInt(id);
+        const ngoId = parseInt(req.user.id);
+        if (isNaN(donationId)) {
+            return res.status(400).json({ success: false, message: 'Invalid donation id' });
+        }
+        const donation = await (0, mysql_1.queryOne)(`SELECT d.*, 
+        u.name as ngo_name, u.email as ngo_email, u.contact_info as ngo_contact_info
+       FROM donations d
+       INNER JOIN users u ON d.ngo_id = u.id
+       WHERE d.id = ? AND d.ngo_id = ?`, [donationId, ngoId]);
+        if (!donation) {
+            return res.status(404).json({
+                success: false,
+                message: 'Donation not found or you do not have permission to access it',
+            });
+        }
+        // Get images
+        const images = await (0, mysql_1.query)('SELECT image_path FROM donation_images WHERE donation_id = ? ORDER BY image_order', [donationId]);
+        // Get contribution counts
+        const contributionCount = await (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM contributions WHERE donation_id = ?', [donationId]);
+        const approvedCount = await (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM contributions WHERE donation_id = ? AND status IN (?, ?)', [donationId, 'APPROVED', 'COMPLETED']);
+        const donationWithDetails = {
+            ...donation,
+            images: images.map((img) => img.image_path),
+            contributionCount: (contributionCount === null || contributionCount === void 0 ? void 0 : contributionCount.count) || 0,
+            approvedContributions: (approvedCount === null || approvedCount === void 0 ? void 0 : approvedCount.count) || 0,
+        };
+        return (0, response_1.sendSuccess)(res, donationWithDetails, 'Donation details fetched successfully');
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to fetch donation details',
+        });
+    }
+};
+exports.getNgoDonationById = getNgoDonationById;
+/**
+ * Update donation request
+ * PUT /api/ngo/donations/:id
+ */
+const updateNgoDonation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const donationId = parseInt(id);
+        const ngoId = parseInt(req.user.id);
+        if (isNaN(donationId)) {
+            return res.status(400).json({ success: false, message: 'Invalid donation id' });
+        }
+        // Verify ownership
+        const existingDonation = await (0, mysql_1.queryOne)('SELECT status FROM donations WHERE id = ? AND ngo_id = ?', [donationId, ngoId]);
+        if (!existingDonation) {
+            return res.status(404).json({
+                success: false,
+                message: 'Donation not found or you do not have permission to update it',
+            });
+        }
+        // Cannot update cancelled or completed donations
+        if (existingDonation.status === 'CANCELLED' || existingDonation.status === 'COMPLETED') {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot update ${existingDonation.status.toLowerCase()} donation`,
+            });
+        }
+        const { donationCategory, purpose, description, quantityOrAmount, pickupDateTime, timezone, status, priority, } = req.body;
+        const updates = [];
+        const params = [];
+        // Update donation category
+        if (donationCategory) {
+            const normalizedCategory = donationCategory.toUpperCase();
+            if (!VALID_DONATION_CATEGORIES.includes(normalizedCategory)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid donation category. Valid categories: ${VALID_DONATION_CATEGORIES.join(', ')}`,
+                });
+            }
+            updates.push('donation_category = ?', 'donation_type = ?');
+            params.push(normalizedCategory, normalizedCategory);
+        }
+        // Update purpose
+        if (purpose !== undefined) {
+            if (typeof purpose !== 'string' || purpose.trim().length === 0) {
+                return res.status(400).json({ success: false, message: 'Purpose cannot be empty' });
+            }
+            updates.push('purpose = ?');
+            params.push(purpose.trim());
+        }
+        // Update description
+        if (description !== undefined) {
+            if (typeof description !== 'string' || description.trim().length === 0) {
+                return res.status(400).json({ success: false, message: 'Description cannot be empty' });
+            }
+            updates.push('description = ?');
+            params.push(description.trim());
+        }
+        // Update quantity/amount
+        if (quantityOrAmount !== undefined) {
+            const quantity = Number(quantityOrAmount);
+            if (Number.isNaN(quantity) || quantity <= 0) {
+                return res.status(400).json({ success: false, message: 'Quantity/Amount must be greater than 0' });
+            }
+            updates.push('quantity_or_amount = ?');
+            params.push(quantity);
+        }
+        // Update pickup date/time
+        if (pickupDateTime !== undefined) {
+            const pickupDate = new Date(pickupDateTime);
+            if (isNaN(pickupDate.getTime())) {
+                return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
+            }
+            if (!isFutureDate(pickupDate)) {
+                return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
+            }
+            updates.push('pickup_date_time = ?');
+            params.push(pickupDate);
+        }
+        // Update timezone
+        if (timezone !== undefined) {
+            updates.push('timezone = ?');
+            params.push(timezone || null);
+        }
+        // Update status
+        if (status && ['PENDING', 'CONFIRMED', 'COMPLETED'].includes(status)) {
+            updates.push('status = ?');
+            params.push(status);
+        }
+        // Update priority
+        if (priority && ['NORMAL', 'URGENT'].includes(priority)) {
+            updates.push('priority = ?');
+            params.push(priority);
+        }
+        // Handle image updates
+        const files = req.files || [];
+        if (files.length > 0) {
+            // Delete old images
+            const oldImages = await (0, mysql_1.query)('SELECT image_path FROM donation_images WHERE donation_id = ?', [donationId]);
+            oldImages.forEach((img) => {
+                const fullPath = path_1.default.join(process.cwd(), img.image_path);
+                if (fs_1.default.existsSync(fullPath)) {
+                    try {
+                        fs_1.default.unlinkSync(fullPath);
+                    }
+                    catch (error) {
+                        console.error(`Error deleting image: ${img.image_path}`, error);
+                    }
+                }
+            });
+            await (0, mysql_1.query)('DELETE FROM donation_images WHERE donation_id = ?', [donationId]);
+            // Insert new images
+            for (let i = 0; i < files.length; i++) {
+                await (0, mysql_1.insert)('INSERT INTO donation_images (donation_id, image_path, image_order) VALUES (?, ?, ?)', [donationId, files[i].path, i]);
+            }
+        }
+        // Update donation if there are updates
+        if (updates.length > 0) {
+            params.push(donationId);
+            await (0, mysql_1.update)(`UPDATE donations SET ${updates.join(', ')} WHERE id = ?`, params);
+        }
+        // Fetch updated donation
+        const updated = await (0, mysql_1.queryOne)(`SELECT d.*, 
+        u.name as ngo_name, u.email as ngo_email, u.contact_info as ngo_contact_info
+       FROM donations d
+       INNER JOIN users u ON d.ngo_id = u.id
+       WHERE d.id = ?`, [donationId]);
+        // Get images
+        const images = await (0, mysql_1.query)('SELECT image_path FROM donation_images WHERE donation_id = ? ORDER BY image_order', [donationId]);
+        const donationWithDetails = {
+            ...updated,
+            images: images.map((img) => img.image_path),
+        };
+        return (0, response_1.sendSuccess)(res, donationWithDetails, 'Donation request updated successfully');
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to update donation request',
+        });
+    }
 };
 exports.updateNgoDonation = updateNgoDonation;
 /**
@@ -351,30 +399,42 @@ exports.updateNgoDonation = updateNgoDonation;
  * PATCH /api/ngo/donations/:id/priority
  */
 const updateNgoDonationPriority = async (req, res) => {
-    const { id } = req.params;
-    const { priority } = req.body;
-    const ngoId = req.user.id;
-    if (!mongoose_1.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ success: false, message: 'Invalid donation id' });
+    try {
+        const { id } = req.params;
+        const donationId = parseInt(id);
+        const ngoId = parseInt(req.user.id);
+        const { priority } = req.body;
+        if (isNaN(donationId)) {
+            return res.status(400).json({ success: false, message: 'Invalid donation id' });
+        }
+        if (!priority || !['NORMAL', 'URGENT'].includes(priority)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Priority is required and must be either NORMAL or URGENT',
+            });
+        }
+        // Verify ownership
+        const donation = await (0, mysql_1.queryOne)('SELECT id FROM donations WHERE id = ? AND ngo_id = ?', [donationId, ngoId]);
+        if (!donation) {
+            return res.status(404).json({
+                success: false,
+                message: 'Donation not found or you do not have permission to update it',
+            });
+        }
+        await (0, mysql_1.update)('UPDATE donations SET priority = ? WHERE id = ?', [priority, donationId]);
+        const updated = await (0, mysql_1.queryOne)(`SELECT d.*, 
+        u.name as ngo_name, u.email as ngo_email, u.contact_info as ngo_contact_info
+       FROM donations d
+       INNER JOIN users u ON d.ngo_id = u.id
+       WHERE d.id = ?`, [donationId]);
+        return (0, response_1.sendSuccess)(res, updated, 'Donation priority updated successfully');
     }
-    if (!priority || !['NORMAL', 'URGENT'].includes(priority)) {
-        return res.status(400).json({
+    catch (error) {
+        return res.status(500).json({
             success: false,
-            message: 'Priority is required and must be either NORMAL or URGENT',
+            message: error.message || 'Failed to update donation priority',
         });
     }
-    // Find donation and verify ownership
-    const donation = await Donation_model_1.DonationModel.findOne({ _id: id, ngoId });
-    if (!donation) {
-        return res.status(404).json({
-            success: false,
-            message: 'Donation not found or you do not have permission to update it',
-        });
-    }
-    donation.priority = priority;
-    await donation.save();
-    const updated = await Donation_model_1.DonationModel.findById(id).populate('ngoId', 'name email contactInfo role');
-    return (0, response_1.sendSuccess)(res, updated, 'Donation priority updated successfully');
 };
 exports.updateNgoDonationPriority = updateNgoDonationPriority;
 /**
@@ -382,27 +442,38 @@ exports.updateNgoDonationPriority = updateNgoDonationPriority;
  * DELETE /api/ngo/donations/:id
  */
 const cancelNgoDonation = async (req, res) => {
-    const { id } = req.params;
-    const ngoId = req.user.id;
-    if (!mongoose_1.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ success: false, message: 'Invalid donation id' });
+    try {
+        const { id } = req.params;
+        const donationId = parseInt(id);
+        const ngoId = parseInt(req.user.id);
+        if (isNaN(donationId)) {
+            return res.status(400).json({ success: false, message: 'Invalid donation id' });
+        }
+        // Verify ownership
+        const donation = await (0, mysql_1.queryOne)('SELECT status FROM donations WHERE id = ? AND ngo_id = ?', [donationId, ngoId]);
+        if (!donation) {
+            return res.status(404).json({
+                success: false,
+                message: 'Donation not found or you do not have permission to cancel it',
+            });
+        }
+        // Cannot cancel already completed donations
+        if (donation.status === 'COMPLETED') {
+            return res.status(400).json({ success: false, message: 'Cannot cancel completed donation' });
+        }
+        await (0, mysql_1.update)('UPDATE donations SET status = ? WHERE id = ?', ['CANCELLED', donationId]);
+        const updated = await (0, mysql_1.queryOne)(`SELECT d.*, 
+        u.name as ngo_name, u.email as ngo_email, u.contact_info as ngo_contact_info
+       FROM donations d
+       INNER JOIN users u ON d.ngo_id = u.id
+       WHERE d.id = ?`, [donationId]);
+        return (0, response_1.sendSuccess)(res, updated, 'Donation request cancelled successfully');
     }
-    // Find donation and verify ownership
-    const donation = await Donation_model_1.DonationModel.findOne({ _id: id, ngoId });
-    if (!donation) {
-        return res.status(404).json({
+    catch (error) {
+        return res.status(500).json({
             success: false,
-            message: 'Donation not found or you do not have permission to cancel it',
+            message: error.message || 'Failed to cancel donation request',
         });
     }
-    // Cannot cancel already completed donations
-    if (donation.status === 'COMPLETED') {
-        return res.status(400).json({ success: false, message: 'Cannot cancel completed donation' });
-    }
-    // Set status to CANCELLED (preserves history)
-    donation.status = 'CANCELLED';
-    await donation.save();
-    const updated = await Donation_model_1.DonationModel.findById(id).populate('ngoId', 'name email contactInfo role');
-    return (0, response_1.sendSuccess)(res, updated, 'Donation request cancelled successfully');
 };
 exports.cancelNgoDonation = cancelNgoDonation;
