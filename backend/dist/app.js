@@ -21,6 +21,7 @@ const donor_dashboard_routes_1 = __importDefault(require("./routes/donor-dashboa
 const admin_auth_routes_1 = __importDefault(require("./routes/admin-auth.routes"));
 const admin_dashboard_routes_1 = __importDefault(require("./routes/admin-dashboard.routes"));
 const donation_request_routes_1 = __importDefault(require("./routes/donation-request.routes"));
+const dashboard_stats_routes_1 = __importDefault(require("./routes/dashboard-stats.routes"));
 // Temporarily disabled - missing model files
 // import pickupManagementRoutes from './routes/pickup-management.routes';
 // import paymentManagementRoutes from './routes/payment-management.routes';
@@ -52,12 +53,18 @@ app.use('/api/donations', donation_routes_1.default);
 // app.use('/api/analytics', analyticsRoutes);
 // app.use('/api/tracking', trackingRoutes);
 app.use('/api/ngo/donations', ngo_dashboard_routes_1.default); // NGO donation management
+console.log('📋 Registering NGO dashboard complete routes at /api/ngo/dashboard');
 app.use('/api/ngo/dashboard', ngo_dashboard_complete_routes_1.default); // NGO complete dashboard
+console.log('✅ NGO dashboard complete routes registered at /api/ngo/dashboard');
 app.use('/api/donor/dashboard', donor_dashboard_routes_1.default); // Donor dashboard
 // Donation requests routes
 console.log('📋 Registering donation-requests routes...');
 app.use('/api/donation-requests', donation_request_routes_1.default); // Donation requests (NGO creates, Donors view)
 console.log('✅ Donation-requests routes registered at /api/donation-requests');
+// Dashboard statistics routes (real-time stats)
+console.log('📋 Registering dashboard-stats routes...');
+app.use('/api', dashboard_stats_routes_1.default); // Dashboard stats for NGO and Donor
+console.log('✅ Dashboard-stats routes registered');
 // Temporarily disabled - missing model files
 // Pickup management routes
 // app.use('/api', pickupManagementRoutes);

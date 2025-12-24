@@ -30,8 +30,8 @@ router.use(requireRole(['ADMIN']));
 // NGO Management
 router.get('/ngos', getAllNgos);
 router.get('/ngos/:id', getNgoDetails);
-router.put('/ngos/:id/block', blockNgo);
-router.put('/ngos/:id/unblock', unblockNgo);
+router.patch('/ngos/:id/block', blockNgo);
+router.patch('/ngos/:id/unblock', unblockNgo);
 router.put('/ngos/:id/approve', approveNgo);
 router.put('/ngos/:id/reject', rejectNgo);
 router.put('/ngos/:id/approve-profile-update', approveNgoProfileUpdate);

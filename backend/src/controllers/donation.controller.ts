@@ -15,8 +15,8 @@ type DonationType = typeof VALID_DONATION_TYPES[number];
 export const createDonation = async (req: AuthRequest, res: Response) => {
   const { donationType, quantityOrAmount, location, pickupDateTime, timezone, status, priority } = req.body;
 
-  if (!donationType || !quantityOrAmount || !location || !pickupDateTime) {
-    return res.status(400).json({ success: false, message: 'Missing required fields' });
+  if (!donationType || !quantityOrAmount) {
+    return res.status(400).json({ success: false, message: 'Missing required fields: donationType, quantityOrAmount' });
   }
 
   // Validate donation type
@@ -33,21 +33,40 @@ export const createDonation = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ success: false, message: 'Quantity/Amount must be greater than 0' });
   }
 
-  // Validate and normalize location
-  let normalizedLocation;
-  try {
-    normalizedLocation = normalizeLocation(location);
-  } catch (error: any) {
-    return res.status(400).json({ success: false, message: error.message || 'Invalid location format' });
+  const isFunds = normalizedType === 'FUNDS';
+  const requiresPickup = !isFunds;
+
+  // For FUNDS: location and pickupDateTime are not required
+  // For FOOD/CLOTHES: location and pickupDateTime are required
+  if (requiresPickup) {
+    if (!location || !pickupDateTime) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields for FOOD/CLOTHES donations: location, pickupDateTime' 
+      });
+    }
   }
 
-  // Validate pickup date/time
-  const pickupDate = new Date(pickupDateTime);
-  if (isNaN(pickupDate.getTime())) {
-    return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
+  // Validate and normalize location (only for non-FUNDS)
+  let normalizedLocation;
+  if (requiresPickup) {
+    try {
+      normalizedLocation = normalizeLocation(location);
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message || 'Invalid location format' });
+    }
   }
-  if (!isFutureDate(pickupDate)) {
-    return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
+
+  // Validate pickup date/time (only for non-FUNDS)
+  let pickupDate: Date | null = null;
+  if (requiresPickup) {
+    pickupDate = new Date(pickupDateTime);
+    if (isNaN(pickupDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
+    }
+    if (!isFutureDate(pickupDate)) {
+      return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
+    }
   }
 
   // Validate timezone if provided
@@ -64,10 +83,10 @@ export const createDonation = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = parseInt(req.user!.id);
     
-    // Extract location details
-    const locationAddress = normalizedLocation.address || '';
-    const locationLat = normalizedLocation.coordinates?.latitude || null;
-    const locationLng = normalizedLocation.coordinates?.longitude || null;
+    // Extract location details (only for non-FUNDS)
+    const locationAddress = requiresPickup ? (normalizedLocation.address || '') : null;
+    const locationLat = requiresPickup ? (normalizedLocation.coordinates?.latitude || null) : null;
+    const locationLng = requiresPickup ? (normalizedLocation.coordinates?.longitude || null) : null;
 
     // Insert donation
     const donationId = await insert(

@@ -17,8 +17,10 @@ router.get('/', donor_dashboard_controller_1.getDonorDashboard);
 // Profile management
 router.get('/profile', donor_dashboard_controller_1.getDonorProfile);
 router.put('/profile', donor_dashboard_controller_1.updateDonorProfile);
-// Contributions
+// Contributions (old system)
 router.get('/contributions', donor_dashboard_controller_1.getDonorContributions);
+// Donation request contributions (new system)
+router.get('/donation-request-contributions', donor_dashboard_controller_1.getDonorDonationRequestContributions);
 // Browse available donations
 router.get('/available-donations', donor_dashboard_controller_1.getAvailableDonations);
 exports.default = router;

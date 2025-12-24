@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
 import { query, queryOne, insert, update } from '../config/mysql';
+import { emitToNgo, emitToDonor } from '../socket/socket.server';
+import { sendEmail } from '../utils/email.service';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -151,6 +153,31 @@ export const createDonationRequest = async (req: AuthRequest, res: Response) => 
       ...createdRequest,
       images: images.map((img: any) => img.image_path),
     };
+
+    // Emit real-time update to NGO dashboard
+    try {
+      const stats = await Promise.all([
+        queryOne<{ count: number }>(
+          'SELECT COUNT(*) as count FROM donation_requests WHERE ngo_id = ?',
+          [ngoId]
+        ),
+        queryOne<{ count: number }>(
+          `SELECT COUNT(DISTINCT drc.donor_id) as count
+           FROM donation_request_contributions drc
+           INNER JOIN donation_requests dr ON drc.request_id = dr.id
+           WHERE dr.ngo_id = ?`,
+          [ngoId]
+        ),
+      ]);
+
+      emitToNgo(ngoId, 'ngo:stats:updated', {
+        totalDonationRequests: stats[0]?.count || 0,
+        totalDonors: stats[1]?.count || 0,
+      });
+    } catch (socketError) {
+      console.error('Error emitting socket event:', socketError);
+      // Don't fail the request if socket fails
+    }
 
     return sendSuccess(res, requestWithDetails, 'Donation request created successfully', 201);
   } catch (error: any) {
@@ -328,15 +355,16 @@ export const contributeToDonationRequest = async (req: AuthRequest, res: Respons
 
     const { quantityOrAmount, pickupLocation, pickupDate, pickupTime, notes } = req.body;
 
-    // Validation
-    if (!quantityOrAmount || !pickupLocation || !pickupDate || !pickupTime) {
+    console.log('[Contribute] Request body:', { quantityOrAmount, pickupLocation, pickupDate, pickupTime, donationType: 'will check after query' });
+
+    // Validate quantity/amount (required for all types)
+    if (!quantityOrAmount) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: quantityOrAmount, pickupLocation, pickupDate, pickupTime'
+        message: 'Missing required field: quantityOrAmount'
       });
     }
 
-    // Validate quantity/amount
     const quantity = Number(quantityOrAmount);
     if (Number.isNaN(quantity) || quantity <= 0) {
       return res.status(400).json({
@@ -345,23 +373,7 @@ export const contributeToDonationRequest = async (req: AuthRequest, res: Respons
       });
     }
 
-    // Validate pickup date/time
-    const pickupDateTime = new Date(`${pickupDate}T${pickupTime}`);
-    if (isNaN(pickupDateTime.getTime())) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid pickup date/time format'
-      });
-    }
-
-    if (pickupDateTime.getTime() <= Date.now()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Pickup date/time must be in the future'
-      });
-    }
-
-    // Check if request exists and is active
+    // Check if request exists and is active (need to check donation type)
     const request = await queryOne<any>(
       'SELECT * FROM donation_requests WHERE id = ?',
       [requestId]
@@ -378,6 +390,45 @@ export const contributeToDonationRequest = async (req: AuthRequest, res: Respons
       });
     }
 
+    // Validate based on donation type
+    const donationType = (request.donation_type as string).toUpperCase();
+    const isFunds = donationType === 'FUNDS';
+    // Pickup is required for all donation types EXCEPT FUNDS (money)
+    // For FUNDS, donors transfer money directly, so no pickup needed
+    const requiresPickup = !isFunds;
+
+    console.log('[Contribute] Donation type:', donationType, 'requiresPickup:', requiresPickup, 'isFunds:', isFunds);
+
+    // For non-FUNDS donations (FOOD, CLOTHES, MEDICINE, BOOKS, TOYS, OTHER): Pickup fields are REQUIRED
+    if (requiresPickup) {
+      // Check for empty strings as well
+      if (!pickupLocation || pickupLocation.trim() === '' || !pickupDate || pickupDate.trim() === '' || !pickupTime || pickupTime.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: `Missing required fields for ${donationType} donations: pickupLocation, pickupDate, pickupTime`
+        });
+      }
+
+      // Validate pickup date/time
+      const pickupDateTime = new Date(`${pickupDate}T${pickupTime}`);
+      if (isNaN(pickupDateTime.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid pickup date/time format'
+        });
+      }
+
+      if (pickupDateTime.getTime() <= Date.now()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Pickup date/time must be in the future'
+        });
+      }
+    }
+
+    // For FUNDS: Pickup fields should be NULL (donors transfer money directly to bank account)
+    // We'll set them to NULL in the insert statement
+
     // Check if donor already contributed to this request
     const existingContribution = await queryOne<any>(
       'SELECT id FROM donation_request_contributions WHERE request_id = ? AND donor_id = ?',
@@ -392,6 +443,8 @@ export const contributeToDonationRequest = async (req: AuthRequest, res: Respons
     }
 
     // Insert contribution
+    // For FUNDS: pickup fields are NULL (donors transfer money directly to bank account)
+    // For all other types: pickup fields are required (physical items need pickup)
     const contributionId = await insert(
       `INSERT INTO donation_request_contributions (
         request_id, donor_id, quantity_or_amount, pickup_location,
@@ -401,9 +454,9 @@ export const contributeToDonationRequest = async (req: AuthRequest, res: Respons
         requestId,
         donorId,
         quantity,
-        pickupLocation.trim(),
-        pickupDate,
-        pickupTime,
+        requiresPickup ? (pickupLocation?.trim() || null) : null,
+        requiresPickup ? (pickupDate || null) : null,
+        requiresPickup ? (pickupTime || null) : null,
         notes || null,
         'PENDING'
       ]
@@ -444,6 +497,133 @@ export const contributeToDonationRequest = async (req: AuthRequest, res: Respons
       ...contribution,
       images: images.map((img: any) => img.image_path),
     };
+
+    // Send email to donor when they make a donation
+    if (contribution.donor_email) {
+      try {
+        const emailSubject = 'Thank You for Your Contribution';
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Thank You for Your Contribution</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Thank You for Your Contribution!</h1>
+            </div>
+            
+            <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+              <p style="font-size: 16px; color: #0f172a;">Hello <strong>${contribution.donor_name}</strong>,</p>
+              
+              <p style="font-size: 16px; color: #0f172a;">
+                Thank you for your generous contribution! Your donation has been received and is currently <strong style="color: #f59e0b;">under review</strong> by our NGO team.
+              </p>
+              
+              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #0f172a; margin-top: 0;">Contribution Details:</h3>
+                <p style="margin: 10px 0;"><strong>Type:</strong> ${contribution.donation_type}</p>
+                <p style="margin: 10px 0;"><strong>Quantity/Amount:</strong> ${contribution.quantity_or_amount}</p>
+                <p style="margin: 10px 0;"><strong>NGO:</strong> ${contribution.ngo_name}</p>
+                <p style="margin: 10px 0;"><strong>Status:</strong> <span style="color: #f59e0b; font-weight: bold;">UNDER REVIEW</span></p>
+              </div>
+              
+              <p style="font-size: 16px; color: #0f172a;">
+                Our team will review your contribution and you will receive an update via email once the review is complete.
+              </p>
+              
+              <p style="font-size: 16px; color: #0f172a;">
+                Thank you for joining us in making a positive impact!
+              </p>
+              
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+              
+              <p style="font-size: 14px; color: #64748b; margin: 0;">
+                Regards,<br>
+                <strong>Donation & Charity Platform Team</strong>
+              </p>
+              
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+              
+              <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+                This is an automated email. Please do not reply to this message.<br>
+                © ${new Date().getFullYear()} Donation & Charity Management Portal
+              </p>
+            </div>
+          </body>
+          </html>
+        `;
+
+        await sendEmail({
+          to: contribution.donor_email,
+          subject: emailSubject,
+          html: emailHtml,
+        });
+
+        console.log(`[Donation Request] Thank you email sent to donor: ${contribution.donor_email}`);
+      } catch (emailError: any) {
+        console.error('[Donation Request] Failed to send thank you email:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
+
+    // Emit real-time updates to both NGO and Donor dashboards
+    try {
+      // Update NGO stats (get ngo_id from request)
+      const ngoId = request.ngo_id;
+      const ngoStats = await Promise.all([
+        queryOne<{ count: number }>(
+          'SELECT COUNT(*) as count FROM donation_requests WHERE ngo_id = ?',
+          [ngoId]
+        ),
+        queryOne<{ count: number }>(
+          `SELECT COUNT(DISTINCT drc.donor_id) as count
+           FROM donation_request_contributions drc
+           INNER JOIN donation_requests dr ON drc.request_id = dr.id
+           WHERE dr.ngo_id = ?`,
+          [ngoId]
+        ),
+      ]);
+
+      emitToNgo(ngoId, 'ngo:stats:updated', {
+        totalDonationRequests: ngoStats[0]?.count || 0,
+        totalDonors: ngoStats[1]?.count || 0,
+      });
+
+      // Emit donation_created event to NGO with contribution details
+      const donationDetails = {
+        contributionId: contributionWithDetails.id,
+        donor: {
+          id: contributionWithDetails.donor_id,
+          name: contributionWithDetails.donor_name,
+          email: contributionWithDetails.donor_email,
+        },
+        donationType: contributionWithDetails.donation_type,
+        quantityOrAmount: parseFloat(contributionWithDetails.quantity_or_amount),
+        donationDate: contributionWithDetails.created_at,
+        requestId: contributionWithDetails.request_id,
+      };
+      emitToNgo(ngoId, 'donation:created', donationDetails);
+
+      // Update Donor stats
+      const donorStats = await queryOne<{ count: number }>(
+        'SELECT COUNT(*) as count FROM donation_request_contributions WHERE donor_id = ?',
+        [donorId]
+      );
+
+      const donorIdNum = typeof donorId === 'string' ? parseInt(donorId) : donorId;
+      console.log(`[Donation Request] Emitting donor:stats:updated to donor ${donorIdNum} with stats:`, {
+        totalDonations: donorStats?.count || 0,
+      });
+      emitToDonor(donorIdNum, 'donor:stats:updated', {
+        totalDonations: donorStats?.count || 0,
+      });
+    } catch (socketError) {
+      console.error('Error emitting socket event:', socketError);
+      // Don't fail the request if socket fails
+    }
 
     return sendSuccess(res, contributionWithDetails, 'Donation submitted successfully', 201);
   } catch (error: any) {

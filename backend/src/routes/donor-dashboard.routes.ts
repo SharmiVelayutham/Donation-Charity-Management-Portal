@@ -4,6 +4,7 @@ import {
   getDonorProfile,
   updateDonorProfile,
   getDonorContributions,
+  getDonorDonationRequestContributions,
   getAvailableDonations,
 } from '../controllers/donor-dashboard.controller';
 import { authenticate } from '../middleware/auth.middleware';
@@ -27,8 +28,11 @@ router.get('/', getDonorDashboard);
 router.get('/profile', getDonorProfile);
 router.put('/profile', updateDonorProfile);
 
-// Contributions
+// Contributions (old system)
 router.get('/contributions', getDonorContributions);
+
+// Donation request contributions (new system)
+router.get('/donation-request-contributions', getDonorDonationRequestContributions);
 
 // Browse available donations
 router.get('/available-donations', getAvailableDonations);

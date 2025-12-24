@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAvailableDonations = exports.getDonorContributions = exports.updateDonorProfile = exports.getDonorProfile = exports.getDonorDashboard = void 0;
+exports.getAvailableDonations = exports.getDonorDonationRequestContributions = exports.getDonorContributions = exports.updateDonorProfile = exports.getDonorProfile = exports.getDonorDashboard = void 0;
 const response_1 = require("../utils/response");
 const mysql_1 = require("../config/mysql");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
@@ -228,6 +228,70 @@ const getDonorContributions = async (req, res) => {
     }
 };
 exports.getDonorContributions = getDonorContributions;
+/**
+ * Get donor's donation request contributions (new system)
+ * GET /api/donor/dashboard/donation-request-contributions
+ */
+const getDonorDonationRequestContributions = async (req, res) => {
+    try {
+        const donorId = typeof req.user.id === 'string' ? parseInt(req.user.id) : req.user.id;
+        // Get all contributions to donation requests
+        const contributions = await (0, mysql_1.query)(`
+      SELECT 
+        drc.id as contribution_id,
+        drc.quantity_or_amount,
+        drc.pickup_location,
+        drc.pickup_date,
+        drc.pickup_time,
+        drc.notes,
+        drc.status,
+        drc.created_at as contribution_date,
+        dr.id as request_id,
+        dr.donation_type,
+        dr.description as request_description,
+        dr.ngo_name,
+        u.name as ngo_organization_name,
+        u.email as ngo_email,
+        u.contact_info as ngo_contact
+      FROM donation_request_contributions drc
+      INNER JOIN donation_requests dr ON drc.request_id = dr.id
+      INNER JOIN users u ON dr.ngo_id = u.id
+      WHERE drc.donor_id = ?
+      ORDER BY drc.created_at DESC
+    `, [donorId]);
+        // Format the response
+        const formattedContributions = contributions.map((cont) => ({
+            contributionId: cont.contribution_id,
+            requestId: cont.request_id,
+            donationType: cont.donation_type,
+            quantityOrAmount: parseFloat(cont.quantity_or_amount),
+            status: cont.status,
+            contributionDate: cont.contribution_date,
+            pickupLocation: cont.pickup_location,
+            pickupDate: cont.pickup_date,
+            pickupTime: cont.pickup_time,
+            notes: cont.notes,
+            request: {
+                id: cont.request_id,
+                description: cont.request_description
+            },
+            ngo: {
+                name: cont.ngo_organization_name || cont.ngo_name,
+                email: cont.ngo_email,
+                contact: cont.ngo_contact
+            }
+        }));
+        return (0, response_1.sendSuccess)(res, formattedContributions, 'Donation request contributions fetched successfully');
+    }
+    catch (error) {
+        console.error('Error fetching donor donation request contributions:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to fetch donation request contributions'
+        });
+    }
+};
+exports.getDonorDonationRequestContributions = getDonorDonationRequestContributions;
 /**
  * Get available donations to contribute
  * GET /api/donor/dashboard/available-donations

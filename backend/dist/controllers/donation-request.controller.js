@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateDonationRequestStatus = exports.contributeToDonationRequest = exports.getMyDonationRequests = exports.getDonationRequestById = exports.getActiveDonationRequests = exports.createDonationRequest = exports.upload = void 0;
 const response_1 = require("../utils/response");
 const mysql_1 = require("../config/mysql");
+const socket_server_1 = require("../socket/socket.server");
+const email_service_1 = require("../utils/email.service");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
@@ -43,6 +45,7 @@ const VALID_DONATION_TYPES = ['FOOD', 'FUNDS', 'CLOTHES', 'MEDICINE', 'BOOKS', '
  * POST /api/donation-requests
  */
 const createDonationRequest = async (req, res) => {
+    var _a, _b;
     try {
         const ngoId = parseInt(req.user.id);
         // Get NGO profile details
@@ -50,7 +53,7 @@ const createDonationRequest = async (req, res) => {
         if (!ngoProfile) {
             return res.status(404).json({ success: false, message: 'NGO profile not found' });
         }
-        const { donationType, quantityOrAmount, description } = req.body;
+        const { donationType, quantityOrAmount, description, bankAccountNumber, bankName, ifscCode, accountHolderName } = req.body;
         // Validation
         if (!donationType || !quantityOrAmount) {
             return res.status(400).json({
@@ -85,14 +88,20 @@ const createDonationRequest = async (req, res) => {
         // Insert donation request
         const requestId = await (0, mysql_1.insert)(`INSERT INTO donation_requests (
         ngo_id, ngo_name, ngo_address, donation_type, 
-        quantity_or_amount, description, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`, [
+        quantity_or_amount, description, 
+        bank_account_number, bank_name, ifsc_code, account_holder_name,
+        status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
             ngoId,
             ngoProfile.name,
             ngoAddress,
             normalizedType,
             quantity,
             description || null,
+            bankAccountNumber || null,
+            bankName || null,
+            ifscCode || null,
+            accountHolderName || null,
             'ACTIVE'
         ]);
         // Handle image uploads
@@ -109,6 +118,24 @@ const createDonationRequest = async (req, res) => {
             ...createdRequest,
             images: images.map((img) => img.image_path),
         };
+        // Emit real-time update to NGO dashboard
+        try {
+            const stats = await Promise.all([
+                (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM donation_requests WHERE ngo_id = ?', [ngoId]),
+                (0, mysql_1.queryOne)(`SELECT COUNT(DISTINCT drc.donor_id) as count
+           FROM donation_request_contributions drc
+           INNER JOIN donation_requests dr ON drc.request_id = dr.id
+           WHERE dr.ngo_id = ?`, [ngoId]),
+            ]);
+            (0, socket_server_1.emitToNgo)(ngoId, 'ngo:stats:updated', {
+                totalDonationRequests: ((_a = stats[0]) === null || _a === void 0 ? void 0 : _a.count) || 0,
+                totalDonors: ((_b = stats[1]) === null || _b === void 0 ? void 0 : _b.count) || 0,
+            });
+        }
+        catch (socketError) {
+            console.error('Error emitting socket event:', socketError);
+            // Don't fail the request if socket fails
+        }
         return (0, response_1.sendSuccess)(res, requestWithDetails, 'Donation request created successfully', 201);
     }
     catch (error) {
@@ -244,6 +271,7 @@ exports.getMyDonationRequests = getMyDonationRequests;
  * POST /api/donation-requests/:id/contribute
  */
 const contributeToDonationRequest = async (req, res) => {
+    var _a, _b;
     try {
         const { id } = req.params;
         const requestId = parseInt(id);
@@ -252,14 +280,14 @@ const contributeToDonationRequest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid request id' });
         }
         const { quantityOrAmount, pickupLocation, pickupDate, pickupTime, notes } = req.body;
-        // Validation
-        if (!quantityOrAmount || !pickupLocation || !pickupDate || !pickupTime) {
+        console.log('[Contribute] Request body:', { quantityOrAmount, pickupLocation, pickupDate, pickupTime, donationType: 'will check after query' });
+        // Validate quantity/amount (required for all types)
+        if (!quantityOrAmount) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: quantityOrAmount, pickupLocation, pickupDate, pickupTime'
+                message: 'Missing required field: quantityOrAmount'
             });
         }
-        // Validate quantity/amount
         const quantity = Number(quantityOrAmount);
         if (Number.isNaN(quantity) || quantity <= 0) {
             return res.status(400).json({
@@ -267,21 +295,7 @@ const contributeToDonationRequest = async (req, res) => {
                 message: 'Quantity/Amount must be greater than 0'
             });
         }
-        // Validate pickup date/time
-        const pickupDateTime = new Date(`${pickupDate}T${pickupTime}`);
-        if (isNaN(pickupDateTime.getTime())) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid pickup date/time format'
-            });
-        }
-        if (pickupDateTime.getTime() <= Date.now()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Pickup date/time must be in the future'
-            });
-        }
-        // Check if request exists and is active
+        // Check if request exists and is active (need to check donation type)
         const request = await (0, mysql_1.queryOne)('SELECT * FROM donation_requests WHERE id = ?', [requestId]);
         if (!request) {
             return res.status(404).json({ success: false, message: 'Donation request not found' });
@@ -292,6 +306,37 @@ const contributeToDonationRequest = async (req, res) => {
                 message: 'Cannot contribute to a closed donation request'
             });
         }
+        // Validate based on donation type
+        const donationType = request.donation_type.toUpperCase();
+        const requiresPickup = donationType === 'FOOD' || donationType === 'CLOTHES';
+        const isFunds = donationType === 'FUNDS';
+        console.log('[Contribute] Donation type:', donationType, 'requiresPickup:', requiresPickup, 'isFunds:', isFunds);
+        // For FOOD/CLOTHES: Pickup fields are REQUIRED
+        if (requiresPickup) {
+            // Check for empty strings as well
+            if (!pickupLocation || pickupLocation.trim() === '' || !pickupDate || pickupDate.trim() === '' || !pickupTime || pickupTime.trim() === '') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing required fields for FOOD/CLOTHES donations: pickupLocation, pickupDate, pickupTime'
+                });
+            }
+            // Validate pickup date/time
+            const pickupDateTime = new Date(`${pickupDate}T${pickupTime}`);
+            if (isNaN(pickupDateTime.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid pickup date/time format'
+                });
+            }
+            if (pickupDateTime.getTime() <= Date.now()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Pickup date/time must be in the future'
+                });
+            }
+        }
+        // For FUNDS: Pickup fields should be NULL/empty (donors transfer directly)
+        // We'll set them to NULL in the insert statement
         // Check if donor already contributed to this request
         const existingContribution = await (0, mysql_1.queryOne)('SELECT id FROM donation_request_contributions WHERE request_id = ? AND donor_id = ?', [requestId, donorId]);
         if (existingContribution) {
@@ -301,6 +346,8 @@ const contributeToDonationRequest = async (req, res) => {
             });
         }
         // Insert contribution
+        // For FUNDS: pickup fields are NULL
+        // For FOOD/CLOTHES: pickup fields are required
         const contributionId = await (0, mysql_1.insert)(`INSERT INTO donation_request_contributions (
         request_id, donor_id, quantity_or_amount, pickup_location,
         pickup_date, pickup_time, notes, status
@@ -308,9 +355,9 @@ const contributeToDonationRequest = async (req, res) => {
             requestId,
             donorId,
             quantity,
-            pickupLocation.trim(),
-            pickupDate,
-            pickupTime,
+            requiresPickup ? ((pickupLocation === null || pickupLocation === void 0 ? void 0 : pickupLocation.trim()) || null) : null,
+            requiresPickup ? (pickupDate || null) : null,
+            requiresPickup ? (pickupTime || null) : null,
             notes || null,
             'PENDING'
         ]);
@@ -337,6 +384,118 @@ const contributeToDonationRequest = async (req, res) => {
             ...contribution,
             images: images.map((img) => img.image_path),
         };
+        // Send email to donor when they make a donation
+        if (contribution.donor_email) {
+            try {
+                const emailSubject = 'Thank You for Your Contribution';
+                const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Thank You for Your Contribution</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Thank You for Your Contribution!</h1>
+            </div>
+            
+            <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+              <p style="font-size: 16px; color: #0f172a;">Hello <strong>${contribution.donor_name}</strong>,</p>
+              
+              <p style="font-size: 16px; color: #0f172a;">
+                Thank you for your generous contribution! Your donation has been received and is currently <strong style="color: #f59e0b;">under review</strong> by our NGO team.
+              </p>
+              
+              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #0f172a; margin-top: 0;">Contribution Details:</h3>
+                <p style="margin: 10px 0;"><strong>Type:</strong> ${contribution.donation_type}</p>
+                <p style="margin: 10px 0;"><strong>Quantity/Amount:</strong> ${contribution.quantity_or_amount}</p>
+                <p style="margin: 10px 0;"><strong>NGO:</strong> ${contribution.ngo_name}</p>
+                <p style="margin: 10px 0;"><strong>Status:</strong> <span style="color: #f59e0b; font-weight: bold;">UNDER REVIEW</span></p>
+              </div>
+              
+              <p style="font-size: 16px; color: #0f172a;">
+                Our team will review your contribution and you will receive an update via email once the review is complete.
+              </p>
+              
+              <p style="font-size: 16px; color: #0f172a;">
+                Thank you for joining us in making a positive impact!
+              </p>
+              
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+              
+              <p style="font-size: 14px; color: #64748b; margin: 0;">
+                Regards,<br>
+                <strong>Donation & Charity Platform Team</strong>
+              </p>
+              
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+              
+              <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+                This is an automated email. Please do not reply to this message.<br>
+                © ${new Date().getFullYear()} Donation & Charity Management Portal
+              </p>
+            </div>
+          </body>
+          </html>
+        `;
+                await (0, email_service_1.sendEmail)({
+                    to: contribution.donor_email,
+                    subject: emailSubject,
+                    html: emailHtml,
+                });
+                console.log(`[Donation Request] Thank you email sent to donor: ${contribution.donor_email}`);
+            }
+            catch (emailError) {
+                console.error('[Donation Request] Failed to send thank you email:', emailError);
+                // Don't fail the request if email fails
+            }
+        }
+        // Emit real-time updates to both NGO and Donor dashboards
+        try {
+            // Update NGO stats (get ngo_id from request)
+            const ngoId = request.ngo_id;
+            const ngoStats = await Promise.all([
+                (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM donation_requests WHERE ngo_id = ?', [ngoId]),
+                (0, mysql_1.queryOne)(`SELECT COUNT(DISTINCT drc.donor_id) as count
+           FROM donation_request_contributions drc
+           INNER JOIN donation_requests dr ON drc.request_id = dr.id
+           WHERE dr.ngo_id = ?`, [ngoId]),
+            ]);
+            (0, socket_server_1.emitToNgo)(ngoId, 'ngo:stats:updated', {
+                totalDonationRequests: ((_a = ngoStats[0]) === null || _a === void 0 ? void 0 : _a.count) || 0,
+                totalDonors: ((_b = ngoStats[1]) === null || _b === void 0 ? void 0 : _b.count) || 0,
+            });
+            // Emit donation_created event to NGO with contribution details
+            const donationDetails = {
+                contributionId: contributionWithDetails.id,
+                donor: {
+                    id: contributionWithDetails.donor_id,
+                    name: contributionWithDetails.donor_name,
+                    email: contributionWithDetails.donor_email,
+                },
+                donationType: contributionWithDetails.donation_type,
+                quantityOrAmount: parseFloat(contributionWithDetails.quantity_or_amount),
+                donationDate: contributionWithDetails.created_at,
+                requestId: contributionWithDetails.request_id,
+            };
+            (0, socket_server_1.emitToNgo)(ngoId, 'donation:created', donationDetails);
+            // Update Donor stats
+            const donorStats = await (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM donation_request_contributions WHERE donor_id = ?', [donorId]);
+            const donorIdNum = typeof donorId === 'string' ? parseInt(donorId) : donorId;
+            console.log(`[Donation Request] Emitting donor:stats:updated to donor ${donorIdNum} with stats:`, {
+                totalDonations: (donorStats === null || donorStats === void 0 ? void 0 : donorStats.count) || 0,
+            });
+            (0, socket_server_1.emitToDonor)(donorIdNum, 'donor:stats:updated', {
+                totalDonations: (donorStats === null || donorStats === void 0 ? void 0 : donorStats.count) || 0,
+            });
+        }
+        catch (socketError) {
+            console.error('Error emitting socket event:', socketError);
+            // Don't fail the request if socket fails
+        }
         return (0, response_1.sendSuccess)(res, contributionWithDetails, 'Donation submitted successfully', 201);
     }
     catch (error) {
