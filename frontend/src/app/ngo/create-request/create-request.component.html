@@ -57,10 +57,18 @@
         </div>
 
         <!-- Info Box -->
-        <div class="info-box">
+        <div class="info-box" *ngIf="donationType">
           <mat-icon>info</mat-icon>
           <div>
-            <p><strong>Note:</strong> You are creating a donation request. Donors will fill in their donation details (pickup location, date, time) when they contribute.</p>
+            <p *ngIf="donationType === 'FUNDS'">
+              <strong>Note:</strong> For FUNDS donations, donors will send money directly to your bank account. Please provide your bank details below (recommended).
+            </p>
+            <p *ngIf="donationType === 'FOOD' || donationType === 'CLOTHES'">
+              <strong>Note:</strong> For {{ donationType }} donations, donors will provide pickup location, date, and time when they contribute.
+            </p>
+            <p *ngIf="donationType !== 'FUNDS' && donationType !== 'FOOD' && donationType !== 'CLOTHES'">
+              <strong>Note:</strong> You are creating a donation request. Donors will fill in their donation details when they contribute.
+            </p>
           </div>
         </div>
 

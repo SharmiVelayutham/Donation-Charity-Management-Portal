@@ -9,9 +9,9 @@
         <p><strong>Address:</strong> {{ dashboardData.profile.fullAddress || 'Not set' }}</p>
         <div class="profile-actions">
           <button class="btn" (click)="editProfile()">Edit Profile</button>
-          <button class="btn" (click)="shareMyLocation()">Share My Location</button>
+          <!-- <button class="btn" (click)="shareMyLocation()">Share My Location</button> -->
         </div>
-        <div *ngIf="shareLocationStatus" class="muted">{{ shareLocationStatus }}</div>
+        <!-- <div *ngIf="shareLocationStatus" class="muted">{{ shareLocationStatus }}</div> -->
       </div>
 
       <div *ngIf="isEditingProfile" class="edit-form">
@@ -35,20 +35,55 @@
           <p class="subtitle">Track your contributions and upcoming pickups</p>
         </div>
         <div class="actions">
+          <button class="primary" routerLink="/leaderboard">🏆 Leaderboard</button>
           <button class="primary" (click)="viewDonations()">Browse Donations</button>
           <button class="btn" (click)="logout()">Logout</button>
         </div>
       </header>
 
       <section class="stats">
-        <div class="stat">
+        <!-- Real-Time Stats: Total Donations -->
+        <div class="stat real-time-stat">
+          <div class="label">
+            Total Donations
+            <span class="live-badge">Live</span>
+          </div>
+          <div class="value">{{ realTimeStats.totalDonations || 0 }}</div>
+        </div>
+        <!-- Legacy stat (for backward compatibility) -->
+        <!-- <div class="stat">
           <div class="label">Total Contributions</div>
           <div class="value">{{ dashboardData.totalContributions || 0 }}</div>
-        </div>
+        </div> -->
       </section>
 
       <section class="list-section">
-        <h2>Recent Contributions</h2>
+        <h2>My Donations</h2>
+        <div *ngIf="isLoadingContributions">Loading...</div>
+        <div *ngIf="!isLoadingContributions && donationRequestContributions.length === 0" class="empty">No donations yet.</div>
+        <div *ngIf="!isLoadingContributions && donationRequestContributions.length > 0" class="list">
+          <div *ngFor="let contribution of donationRequestContributions" class="list-item">
+            <div class="item-main">
+              <div class="title">{{ contribution.donationType || 'Donation' }}</div>
+              <div class="meta">NGO: {{ contribution.ngo?.name || '—' }}</div>
+              <div class="meta" *ngIf="contribution.request?.description">Request: {{ contribution.request.description }}</div>
+              <div class="meta">Quantity/Amount: {{ contribution.donationType === 'MONEY' || contribution.donationType === 'FUNDS' ? '₹' + contribution.quantityOrAmount.toLocaleString('en-IN') : contribution.quantityOrAmount.toLocaleString('en-IN') }}</div>
+              <div class="meta">Date: {{ formatDateTime(contribution.contributionDate) }}</div>
+              <div class="meta" *ngIf="contribution.pickupLocation">Pickup Location: {{ contribution.pickupLocation }}</div>
+              <div class="meta" *ngIf="contribution.pickupDate && contribution.pickupTime">Pickup Time: {{ formatDate(contribution.pickupDate) }} at {{ contribution.pickupTime }}</div>
+              <div class="meta" *ngIf="contribution.notes">Notes: {{ contribution.notes }}</div>
+            </div>
+            <div class="item-side">
+              <div class="status-badge" [class]="getStatusClass(contribution.status)">
+                <strong>{{ contribution.status }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="list-section" *ngIf="dashboardData.contributions?.length > 0">
+        <h2>Legacy Contributions</h2>
         <div *ngIf="isLoading">Loading...</div>
         <div *ngIf="!isLoading && dashboardData.contributions?.length === 0" class="empty">No contributions yet.</div>
         <div *ngIf="!isLoading" class="list">
@@ -67,8 +102,8 @@
       </section>
 
       <section class="list-section">
-        <h2>Upcoming Pickups</h2>
-        <div *ngIf="dashboardData.upcomingPickups?.length === 0" class="empty">No upcoming pickups</div>
+        <!-- <h2>Upcoming Pickups</h2> -->
+        <!-- <div *ngIf="dashboardData.upcomingPickups?.length === 0" class="empty">No upcoming pickups</div> -->
         <div *ngIf="dashboardData.upcomingPickups?.length > 0" class="list">
           <div *ngFor="let p of dashboardData.upcomingPickups" class="list-item small">
             <div>{{ p.donation_category || p.purpose }}</div>

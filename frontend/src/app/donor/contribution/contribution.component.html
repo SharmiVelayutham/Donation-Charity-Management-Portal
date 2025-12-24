@@ -27,6 +27,32 @@
         <strong>Description:</strong>
         <span>{{ request.description }}</span>
       </div>
+      
+      <!-- Bank Details (Only for FUNDS) -->
+      <div *ngIf="isFundsType()" class="bank-details-section" style="margin-top: 16px; padding: 16px; background: #F5F5F5; border-radius: 8px; border: 1px solid #E0E0E0;">
+        <h4 style="margin-top: 0; margin-bottom: 12px;">
+          🏦 Bank Account Details for Transfer
+        </h4>
+        <div class="info-row" *ngIf="request.bank_account_number">
+          <strong>Account Number:</strong>
+          <span>{{ request.bank_account_number }}</span>
+        </div>
+        <div class="info-row" *ngIf="request.bank_name">
+          <strong>Bank Name:</strong>
+          <span>{{ request.bank_name }}</span>
+        </div>
+        <div class="info-row" *ngIf="request.ifsc_code">
+          <strong>IFSC Code:</strong>
+          <span>{{ request.ifsc_code }}</span>
+        </div>
+        <div class="info-row" *ngIf="request.account_holder_name">
+          <strong>Account Holder Name:</strong>
+          <span>{{ request.account_holder_name }}</span>
+        </div>
+        <p style="margin-top: 12px; margin-bottom: 0; color: #666; font-size: 14px; font-style: italic;">
+          Please transfer the funds directly to the above bank account.
+        </p>
+      </div>
     </div>
 
     <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
@@ -34,6 +60,16 @@
     <!-- Donor Form -->
     <form (ngSubmit)="submitContribution()" class="donation-form">
       <h3>Your Donation Details</h3>
+
+      <!-- Info message for FUNDS -->
+      <div *ngIf="isFundsType()" class="info-message" style="padding: 12px; background: #E3F2FD; border-left: 4px solid #2196F3; margin-bottom: 16px; border-radius: 4px;">
+        <strong>💡 Note:</strong> For FUNDS donations, you will transfer money directly to the NGO's bank account shown above. No pickup is required.
+      </div>
+
+      <!-- Info message for FOOD/CLOTHES -->
+      <div *ngIf="requiresPickup()" class="info-message" style="padding: 12px; background: #FFF3E0; border-left: 4px solid #FF9800; margin-bottom: 16px; border-radius: 4px;">
+        <strong>💡 Note:</strong> Please provide pickup location, date, and time so the NGO can collect your donation.
+      </div>
 
       <div class="form-group">
         <label>Quantity/Amount You Want to Donate *</label>
@@ -48,36 +84,39 @@
           required />
       </div>
 
-      <div class="form-group">
-        <label>Pickup Location *</label>
-        <input 
-          type="text" 
-          placeholder="Enter your pickup address"
-          [(ngModel)]="pickupLocation"
-          name="pickupLocation"
-          [disabled]="isLoading"
-          required />
-      </div>
-
-      <div class="form-row">
+      <!-- Pickup Fields (Only for FOOD/CLOTHES) -->
+      <div *ngIf="requiresPickup()">
         <div class="form-group">
-          <label>Pickup Date *</label>
+          <label>Pickup Location *</label>
           <input 
-            type="date" 
-            [(ngModel)]="pickupDate"
-            name="pickupDate"
+            type="text" 
+            placeholder="Enter your pickup address"
+            [(ngModel)]="pickupLocation"
+            name="pickupLocation"
             [disabled]="isLoading"
             required />
         </div>
 
-        <div class="form-group">
-          <label>Pickup Time *</label>
-          <input 
-            type="time" 
-            [(ngModel)]="pickupTime"
-            name="pickupTime"
-            [disabled]="isLoading"
-            required />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Pickup Date *</label>
+            <input 
+              type="date" 
+              [(ngModel)]="pickupDate"
+              name="pickupDate"
+              [disabled]="isLoading"
+              required />
+          </div>
+
+          <div class="form-group">
+            <label>Pickup Time *</label>
+            <input 
+              type="time" 
+              [(ngModel)]="pickupTime"
+              name="pickupTime"
+              [disabled]="isLoading"
+              required />
+          </div>
         </div>
       </div>
 
@@ -89,31 +128,6 @@
           name="notes"
           [disabled]="isLoading"
           rows="4"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label>Images (Optional, up to 5)</label>
-        <input 
-          type="file" 
-          accept="image/*"
-          multiple
-          (change)="onImageSelected($event)"
-          [disabled]="isLoading"
-          id="image-upload"
-          style="display: none;" />
-        <button 
-          type="button"
-          (click)="triggerFileInput()"
-          [disabled]="isLoading"
-          class="btn-upload">
-          Upload Images
-        </button>
-        <div *ngIf="imageFiles.length > 0" class="image-list">
-          <div *ngFor="let file of imageFiles; let i = index" class="image-item">
-            <span>{{ file.name }}</span>
-            <button type="button" (click)="removeImage(i)" [disabled]="isLoading">Remove</button>
-          </div>
-        </div>
       </div>
 
       <button 

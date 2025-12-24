@@ -206,6 +206,65 @@ export class ApiService {
       );
   }
 
+  // ==================== DASHBOARD STATISTICS ====================
+  // Get NGO dashboard statistics (real-time)
+  getNgoDashboardStats(): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/ngo/dashboard-stats`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  // Get Donor dashboard statistics (real-time)
+  getDonorDashboardStats(): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/donor/dashboard-stats`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  // Get Donor donation request contributions (new system)
+  getDonorDonationRequestContributions(): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/donor/dashboard/donation-request-contributions`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  // Get NGO donation details (all contributions with donor info)
+  getNgoDonationDetails(): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/ngo/dashboard/donations/details`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  // Get NGO donation summary (aggregated stats)
+  getNgoDonationSummary(): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/ngo/dashboard/donations/summary`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  // Update contribution status
+  updateContributionStatus(contributionId: number, status: string): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(
+      `${this.apiUrl}/ngo/dashboard/donations/${contributionId}/status`,
+      { status },
+      { headers: this.getHeaders() }
+    )
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
   // ==================== NGO DASHBOARD ====================
   getNgoDashboard(): Observable<ApiResponse> {
     const headers = this.getHeaders();
@@ -364,12 +423,16 @@ export class ApiService {
     return this.http.get<ApiResponse>(`${this.apiUrl}/admin/dashboard/donors/${id}`, { headers: this.getHeaders() });
   }
 
-  blockNgo(id: string): Observable<ApiResponse> {
-    return this.http.put<ApiResponse>(`${this.apiUrl}/admin/dashboard/ngos/${id}/block`, {}, { headers: this.getHeaders() });
+  blockNgo(id: string, blockReason: string): Observable<ApiResponse> {
+    return this.http.patch<ApiResponse>(`${this.apiUrl}/admin/dashboard/ngos/${id}/block`, {
+      blockReason,
+    }, { headers: this.getHeaders() });
   }
 
-  unblockNgo(id: string): Observable<ApiResponse> {
-    return this.http.put<ApiResponse>(`${this.apiUrl}/admin/dashboard/ngos/${id}/unblock`, {}, { headers: this.getHeaders() });
+  unblockNgo(id: string, unblockReason: string): Observable<ApiResponse> {
+    return this.http.patch<ApiResponse>(`${this.apiUrl}/admin/dashboard/ngos/${id}/unblock`, {
+      unblockReason,
+    }, { headers: this.getHeaders() });
   }
 
   blockDonor(id: string): Observable<ApiResponse> {
@@ -386,6 +449,67 @@ export class ApiService {
 
   rejectNgo(id: string, rejectionReason: string): Observable<ApiResponse> {
     return this.http.put<ApiResponse>(`${this.apiUrl}/admin/dashboard/ngos/${id}/reject`, { rejectionReason }, { headers: this.getHeaders() });
+  }
+
+  // ==================== ADMIN DONOR MANAGEMENT ====================
+  getAdminDonors(params?: { page?: number; limit?: number; search?: string }): Observable<ApiResponse> {
+    let url = `${this.apiUrl}/admin/donors`;
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.search) queryParams.append('search', params.search);
+      if (queryParams.toString()) url += `?${queryParams.toString()}`;
+    }
+    return this.http.get<ApiResponse>(url, { headers: this.getHeaders() });
+  }
+
+  getAdminContributions(params?: {
+    donorId?: string;
+    ngoId?: string;
+    donationType?: string;
+    fromDate?: string;
+    toDate?: string;
+    page?: number;
+    limit?: number;
+  }): Observable<ApiResponse> {
+    let url = `${this.apiUrl}/admin/contributions`;
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.donorId) queryParams.append('donorId', params.donorId);
+      if (params.ngoId) queryParams.append('ngoId', params.ngoId);
+      if (params.donationType) queryParams.append('donationType', params.donationType);
+      if (params.fromDate) queryParams.append('fromDate', params.fromDate);
+      if (params.toDate) queryParams.append('toDate', params.toDate);
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (queryParams.toString()) url += `?${queryParams.toString()}`;
+    }
+    return this.http.get<ApiResponse>(url, { headers: this.getHeaders() });
+  }
+
+  getAdminDonorContributions(donorId: string): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/admin/contributions/${donorId}`, { headers: this.getHeaders() });
+  }
+
+  getAdminAnalytics(): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/admin/analytics`, { headers: this.getHeaders() });
+  }
+
+  // ==================== EMAIL TEMPLATES ====================
+  getEmailTemplate(templateType: string): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/admin/email-templates/${templateType}`, { headers: this.getHeaders() });
+  }
+
+  updateEmailTemplate(templateType: string, subject: string, bodyHtml: string): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(`${this.apiUrl}/admin/email-templates/${templateType}`, {
+      subject,
+      bodyHtml,
+    }, { headers: this.getHeaders() });
+  }
+
+  restoreDefaultEmailTemplate(templateType: string): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`${this.apiUrl}/admin/email-templates/${templateType}/restore-default`, {}, { headers: this.getHeaders() });
   }
 
   // ==================== ERROR HANDLING ====================
@@ -435,6 +559,31 @@ export class ApiService {
     
     // For dashboard responses, return as-is
     return res;
+  }
+
+  // ==================== LEADERBOARD ====================
+  /**
+   * Get leaderboard
+   * @param params type: 'donors' | 'ngos', sortBy: 'count' | 'amount', period: 'all' | 'monthly' | 'weekly'
+   */
+  getLeaderboard(params?: { type?: 'donors' | 'ngos'; sortBy?: 'count' | 'amount'; period?: 'all' | 'monthly' | 'weekly' }): Observable<ApiResponse> {
+    let url = `${this.apiUrl}/leaderboard`;
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.type) queryParams.append('type', params.type);
+      if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+      if (params.period) queryParams.append('period', params.period);
+      const queryString = queryParams.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+    }
+    // Leaderboard is public - no auth required
+    return this.http.get<ApiResponse>(url)
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
   }
 }
 

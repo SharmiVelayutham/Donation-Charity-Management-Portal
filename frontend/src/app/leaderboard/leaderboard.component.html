@@ -1,0 +1,85 @@
+<div class="leaderboard-container">
+  <div class="leaderboard-header">
+    <h1>🏆 Leaderboard</h1>
+    <p class="subtitle">Top contributors and organizations making a difference</p>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="filter-group">
+      <label>Type:</label>
+      <select [(ngModel)]="selectedType" (change)="onTypeChange()" [disabled]="isLoading">
+        <option value="donors">Top Donors</option>
+        <option value="ngos">Top NGOs</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Sort By:</label>
+      <select [(ngModel)]="selectedSortBy" (change)="onSortByChange()" [disabled]="isLoading">
+        <option value="count">Number of Contributions</option>
+        <option value="amount">Total Amount</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Period:</label>
+      <select [(ngModel)]="selectedPeriod" (change)="onPeriodChange()" [disabled]="isLoading">
+        <option value="all">All Time</option>
+        <option value="monthly">This Month</option>
+        <option value="weekly">This Week</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading">
+    <p>Loading leaderboard...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="errorMessage && !isLoading" class="error">
+    <p>{{ errorMessage }}</p>
+  </div>
+
+  <!-- Leaderboard Table -->
+  <div *ngIf="!isLoading && !errorMessage" class="leaderboard-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>{{ selectedType === 'donors' ? 'Donor Name' : 'NGO Name' }}</th>
+          <th>{{ selectedType === 'donors' ? 'Total Contributions' : 'Total Donations' }}</th>
+          <th>Total Amount</th>
+          <th *ngIf="selectedType === 'donors'">Last Contribution</th>
+          <th *ngIf="selectedType === 'ngos'">Urgent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of getCurrentLeaderboard()" [class.top-three]="item.rank <= 3">
+          <td>
+            <span [class]="'rank-badge ' + getRankBadgeClass(item.rank)">
+              {{ item.rank }}
+            </span>
+          </td>
+          <td><strong>{{ selectedType === 'donors' ? item.donorName : item.ngoName }}</strong></td>
+          <td>{{ selectedType === 'donors' ? item.totalContributions : item.totalDonations }}</td>
+          <td class="amount">{{ formatAmount(item.totalAmount) }}</td>
+          <td *ngIf="selectedType === 'donors'">{{ formatDate(item.lastContributionDate) }}</td>
+          <td *ngIf="selectedType === 'ngos'">{{ item.urgentDonations || 0 }}</td>
+        </tr>
+        <tr *ngIf="getCurrentLeaderboard().length === 0">
+          <td [attr.colspan]="selectedType === 'donors' ? 5 : 5" class="no-data">
+            No data available for this period
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Back Button -->
+  <div class="actions">
+    <button class="btn-secondary" routerLink="/">Back to Home</button>
+  </div>
+</div>
+

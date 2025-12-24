@@ -1,10 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
+import { SocketService } from '../../services/socket.service';
 import { lastValueFrom } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-donor-dashboard',
@@ -13,10 +15,17 @@ import { lastValueFrom } from 'rxjs';
   templateUrl: './donor-dashboard.component.html',
   styleUrl: './donor-dashboard.component.css'
 })
-export class DonorDashboardComponent implements OnInit {
+export class DonorDashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   dashboardData: any = {
     contributions: [],
     totalContributions: 0
+  };
+  // Donation request contributions (new system)
+  donationRequestContributions: any[] = [];
+  isLoadingContributions: boolean = false;
+  // Real-time dashboard statistics
+  realTimeStats: any = {
+    totalDonations: 0
   };
   isLoading: boolean = false;
   // Profile edit state
@@ -29,15 +38,96 @@ export class DonorDashboardComponent implements OnInit {
     password: ''
   };
   shareLocationStatus: string = '';
+  private routerSubscription: any;
 
   constructor(
     private router: Router,
     private apiService: ApiService,
-    private authService: AuthService
+    private authService: AuthService,
+    private socketService: SocketService
   ) {}
 
   async ngOnInit() {
     await this.loadDashboard();
+    await this.loadRealTimeStats();
+    await this.loadDonationRequestContributions();
+    this.setupSocketConnection();
+
+    // Reload stats when navigating back to this page
+    this.routerSubscription = this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(async (event: any) => {
+        if (event.url === '/dashboard/donor' || event.urlAfterRedirects === '/dashboard/donor') {
+          console.log('[Donor Dashboard] Navigation detected, reloading stats...');
+          await this.loadRealTimeStats();
+          await this.loadDonationRequestContributions();
+        }
+      });
+  }
+
+  ngAfterViewInit() {
+    // Component view initialized
+  }
+
+  ngOnDestroy() {
+    // Clean up socket connection
+    this.socketService.offDonorStatsUpdate();
+    this.socketService.disconnect();
+    // Clean up router subscription
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
+    }
+  }
+
+  /**
+   * Load real-time dashboard statistics
+   */
+  async loadRealTimeStats() {
+    try {
+      const response = await lastValueFrom(this.apiService.getDonorDashboardStats());
+      if (response?.success && response.data) {
+        this.realTimeStats = {
+          totalDonations: response.data.totalDonations || 0,
+        };
+        console.log('[Donor Dashboard] Real-time stats loaded:', this.realTimeStats);
+      }
+    } catch (error: any) {
+      console.error('[Donor Dashboard] Failed to load real-time stats:', error);
+      // Set defaults on error
+      this.realTimeStats = {
+        totalDonations: 0,
+      };
+    }
+  }
+
+  /**
+   * Setup Socket.IO connection for real-time updates
+   */
+  setupSocketConnection() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.warn('[Donor Dashboard] No token found, skipping socket connection');
+      return;
+    }
+
+    // Connect to socket server
+    this.socketService.connect(token);
+
+    // Subscribe to real-time stats updates
+    this.socketService.onDonorStatsUpdate(async (stats) => {
+      console.log('[Donor Dashboard] 🔵 Real-time stats update received via socket:', stats);
+      if (stats && typeof stats.totalDonations !== 'undefined') {
+        this.realTimeStats = {
+          totalDonations: stats.totalDonations || 0,
+        };
+        console.log('[Donor Dashboard] ✅ Updated totalDonations to:', this.realTimeStats.totalDonations);
+        // Also reload contributions list to show the new donation
+        await this.loadDonationRequestContributions();
+        console.log('[Donor Dashboard] ✅ Stats and contributions updated via socket');
+      } else {
+        console.warn('[Donor Dashboard] ⚠️ Invalid stats data received:', stats);
+      }
+    });
   }
 
   async loadDashboard() {
@@ -171,6 +261,64 @@ export class DonorDashboardComponent implements OnInit {
 
   viewDonations() {
     this.router.navigate(['/donations']);
+  }
+
+  /**
+   * Load donation request contributions (new system)
+   */
+  async loadDonationRequestContributions() {
+    this.isLoadingContributions = true;
+    try {
+      const response = await lastValueFrom(this.apiService.getDonorDonationRequestContributions());
+      if (response?.success && response.data) {
+        this.donationRequestContributions = response.data || [];
+        console.log('[Donor Dashboard] Donation request contributions loaded:', this.donationRequestContributions.length);
+      }
+    } catch (error: any) {
+      console.error('[Donor Dashboard] Failed to load donation request contributions:', error);
+      this.donationRequestContributions = [];
+    } finally {
+      this.isLoadingContributions = false;
+    }
+  }
+
+  /**
+   * Get status badge class
+   */
+  getStatusClass(status: string): string {
+    const statusMap: { [key: string]: string } = {
+      'PENDING': 'status-pending',
+      'APPROVED': 'status-approved',
+      'ACCEPTED': 'status-approved',
+      'NOT_RECEIVED': 'status-rejected',
+      'REJECTED': 'status-rejected',
+      'COMPLETED': 'status-completed'
+    };
+    return statusMap[status] || 'status-default';
+  }
+
+  /**
+   * Format date
+   */
+  formatDate(date: any): string {
+    if (!date) return 'Not available';
+    const d = new Date(date);
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  /**
+   * Format date and time
+   */
+  formatDateTime(date: any): string {
+    if (!date) return 'Not available';
+    const d = new Date(date);
+    return d.toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   logout() {

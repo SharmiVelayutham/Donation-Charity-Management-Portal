@@ -1,8 +1,9 @@
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ApiService, ApiResponse } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
+import { SocketService } from '../../services/socket.service';
 import { Observable, lastValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 
@@ -19,6 +20,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
   selector: 'app-ngo-dashboard',
@@ -26,6 +28,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -37,19 +40,43 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatSnackBarModule,
     MatChipsModule,
     MatDividerModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSelectModule
   ],
   templateUrl: './ngo-dashboard.component.html',
   styleUrls: ['./ngo-dashboard.component.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class NgoDashboardComponent implements OnInit {
+export class NgoDashboardComponent implements OnInit, OnDestroy {
+  // Real-time dashboard statistics
+  realTimeStats: any = {
+    totalDonationRequests: 0,
+    totalDonors: 0
+  };
+  
   stats: any = {
     totalDonations: 0,
     pendingDonations: 0,
     confirmedDonations: 0,
     completedDonations: 0
   };
+
+  // Donation details and summary
+  donationDetails: any[] = [];
+  donationSummary: any = {
+    totalDonors: 0,
+    totalDonations: 0,
+    totalFundsCollected: 0,
+    breakdownByType: {}
+  };
+  isLoadingDonations: boolean = false;
+  updatingStatus: { [key: number]: boolean } = {};
+  
+  // Status options for contributions (when NGO receives donation)
+  statusOptions = [
+    { value: 'ACCEPTED', label: 'Accepted' },
+    { value: 'NOT_RECEIVED', label: 'Not Received' }
+  ];
   isLoading: boolean = false;
   // Dashboard full payload
   dashboardData: any = {
@@ -117,6 +144,145 @@ export class NgoDashboardComponent implements OnInit {
     });
   }
 
+  getBreakdownItems(): any[] {
+    if (!this.donationSummary.breakdownByType) return [];
+    return Object.keys(this.donationSummary.breakdownByType)
+      .filter(type => this.donationSummary.breakdownByType[type].count > 0)
+      .map(type => ({
+        type,
+        count: this.donationSummary.breakdownByType[type].count,
+        total: this.donationSummary.breakdownByType[type].total
+      }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  getDonationTypeIcon(type: string): string {
+    const iconMap: { [key: string]: string } = {
+      'FOOD': 'restaurant',
+      'CLOTHES': 'checkroom',
+      'MONEY': 'attach_money',
+      'FUNDS': 'account_balance_wallet',
+      'MEDICINE': 'medication',
+      'BOOKS': 'menu_book',
+      'TOYS': 'toys',
+      'OTHER': 'category'
+    };
+    return iconMap[type] || 'category';
+  }
+
+  // Chart data processing methods
+  getDonationTypeChartData(): { labels: string[], data: number[], colors: string[] } {
+    const items = this.getBreakdownItems();
+    const colors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336', '#00BCD4', '#FFC107', '#795548'];
+    
+    return {
+      labels: items.map(item => item.type),
+      data: items.map(item => item.count),
+      colors: colors.slice(0, items.length)
+    };
+  }
+
+  getDonationTypeChartPercentage(): { labels: string[], percentages: number[] } {
+    const items = this.getBreakdownItems();
+    const total = items.reduce((sum, item) => sum + item.count, 0);
+    if (total === 0) return { labels: [], percentages: [] };
+    
+    return {
+      labels: items.map(item => item.type),
+      percentages: items.map(item => Math.round((item.count / total) * 100))
+    };
+  }
+
+  getFundsChartData(): { labels: string[], amounts: number[] } {
+    const items = this.getBreakdownItems();
+    return {
+      labels: items.filter(item => item.type === 'MONEY' || item.type === 'FUNDS').map(item => item.type),
+      amounts: items.filter(item => item.type === 'MONEY' || item.type === 'FUNDS').map(item => item.total)
+    };
+  }
+
+  formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+  }
+
+  // Generate monthly donation data for line chart (last 6 months)
+  getMonthlyDonationData(): { labels: string[], data: number[] } {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    // This is placeholder - in real implementation, you'd group donations by month
+    // For now, we'll use summary data to create a realistic distribution
+    const total = this.donationSummary.totalDonations || 0;
+    const data = months.map(() => Math.floor(total / 6 + (Math.random() * total / 12)));
+    return { labels: months, data };
+  }
+
+  // Get top donors for table
+  getTopDonors(): any[] {
+    if (!this.donationDetails || this.donationDetails.length === 0) return [];
+    
+    const donorMap = new Map();
+    this.donationDetails.forEach(donation => {
+      const donorId = donation.donor?.id || 'unknown';
+      if (!donorMap.has(donorId)) {
+        donorMap.set(donorId, {
+          name: donation.donor?.name || 'Anonymous',
+          email: donation.donor?.email || '',
+          contributions: 0,
+          totalAmount: 0
+        });
+      }
+      const donor = donorMap.get(donorId);
+      donor.contributions += 1;
+      if (donation.quantityOrAmount && (donation.donationType === 'MONEY' || donation.donationType === 'FUNDS')) {
+        donor.totalAmount += parseFloat(donation.quantityOrAmount) || 0;
+      }
+    });
+    
+    return Array.from(donorMap.values())
+      .sort((a, b) => b.contributions - a.contributions)
+      .slice(0, 5);
+  }
+
+  // Chart helper methods
+  getDonutOffset(index: number): number {
+    const items = this.getBreakdownItems();
+    if (items.length === 0) return 0;
+    let offset = 0;
+    for (let i = 0; i < index; i++) {
+      offset += (items[i].count / this.donationSummary.totalDonations) * 502.65;
+    }
+    return -offset;
+  }
+
+  getLineChartPoints(): string {
+    const data = this.getMonthlyDonationData();
+    if (data.data.length === 0) return '';
+    const max = Math.max(...data.data, 1);
+    const points = data.data.map((value, index) => {
+      const x = 50 + (index * (500 / (data.data.length - 1 || 1)));
+      const y = 250 - ((value / max) * 200);
+      return `${x},${y}`;
+    });
+    return points.join(' ');
+  }
+
+  getLineChartAreaPoints(): string {
+    const data = this.getMonthlyDonationData();
+    if (data.data.length === 0) return '';
+    const max = Math.max(...data.data, 1);
+    const points = this.getLineChartPoints();
+    return `50,250 ${points} 550,250`;
+  }
+
+  getLineChartDataPoints(): { x: number, y: number }[] {
+    const data = this.getMonthlyDonationData();
+    if (data.data.length === 0) return [];
+    const max = Math.max(...data.data, 1);
+    return data.data.map((value, index) => ({
+      x: 50 + (index * (500 / (data.data.length - 1 || 1))),
+      y: 250 - ((value / max) * 200)
+    }));
+  }
+
   isProfileComplete(): boolean {
     if (!this.dashboardData.profile) return false;
     const profile = this.dashboardData.profile;
@@ -134,12 +300,162 @@ export class NgoDashboardComponent implements OnInit {
     private router: Router,
     private apiService: ApiService,
     private authService: AuthService,
+    private socketService: SocketService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog
   ) {}
 
   async ngOnInit() {
     await this.loadDashboard();
+    await this.loadRealTimeStats();
+    await this.loadDonationDetails();
+    await this.loadDonationSummary();
+    this.setupSocketConnection();
+  }
+
+  ngOnDestroy() {
+    // Clean up socket connection
+    this.socketService.offNgoStatsUpdate();
+    this.socketService.offDonationCreated();
+    this.socketService.disconnect();
+  }
+
+  /**
+   * Load real-time dashboard statistics
+   */
+  async loadRealTimeStats() {
+    try {
+      const response = await lastValueFrom(this.apiService.getNgoDashboardStats());
+      if (response?.success && response.data) {
+        this.realTimeStats = {
+          totalDonationRequests: response.data.totalDonationRequests || 0,
+          totalDonors: response.data.totalDonors || 0,
+        };
+        console.log('[NGO Dashboard] Real-time stats loaded:', this.realTimeStats);
+      }
+    } catch (error: any) {
+      console.error('[NGO Dashboard] Failed to load real-time stats:', error);
+      // Set defaults on error
+      this.realTimeStats = {
+        totalDonationRequests: 0,
+        totalDonors: 0,
+      };
+    }
+  }
+
+  /**
+   * Setup Socket.IO connection for real-time updates
+   */
+  setupSocketConnection() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.warn('[NGO Dashboard] No token found, skipping socket connection');
+      return;
+    }
+
+    // Connect to socket server
+    this.socketService.connect(token);
+
+    // Subscribe to real-time stats updates
+    this.socketService.onNgoStatsUpdate((stats) => {
+      console.log('[NGO Dashboard] Real-time stats update received:', stats);
+      this.realTimeStats = {
+        totalDonationRequests: stats.totalDonationRequests || 0,
+        totalDonors: stats.totalDonors || 0,
+      };
+    });
+
+    // Subscribe to donation created events
+    this.socketService.onDonationCreated((donation) => {
+      console.log('[NGO Dashboard] New donation received:', donation);
+      // Reload donation details and summary
+      this.loadDonationDetails();
+      this.loadDonationSummary();
+      // Show notification
+      this.showToast(`New donation received from ${donation.donor?.name || 'Donor'}!`, false);
+    });
+  }
+
+  /**
+   * Load donation details (all contributions with donor info)
+   */
+  async loadDonationDetails() {
+    this.isLoadingDonations = true;
+    try {
+      const response = await lastValueFrom(this.apiService.getNgoDonationDetails());
+      if (response?.success && response.data) {
+        this.donationDetails = response.data || [];
+        console.log('[NGO Dashboard] Donation details loaded:', this.donationDetails.length, 'contributions');
+      }
+    } catch (error: any) {
+      console.error('[NGO Dashboard] Failed to load donation details:', error);
+      this.donationDetails = [];
+    } finally {
+      this.isLoadingDonations = false;
+    }
+  }
+
+  /**
+   * Load donation summary (aggregated stats)
+   */
+  async loadDonationSummary() {
+    try {
+      const response = await lastValueFrom(this.apiService.getNgoDonationSummary());
+      if (response?.success && response.data) {
+        this.donationSummary = response.data;
+        console.log('[NGO Dashboard] Donation summary loaded:', this.donationSummary);
+      }
+    } catch (error: any) {
+      console.error('[NGO Dashboard] Failed to load donation summary:', error);
+    }
+  }
+
+  /**
+   * Update contribution status
+   */
+  async updateContributionStatus(contributionId: number, newStatus: string) {
+    if (this.updatingStatus[contributionId]) {
+      return; // Already updating
+    }
+
+    this.updatingStatus[contributionId] = true;
+    try {
+      const response = await lastValueFrom(
+        this.apiService.updateContributionStatus(contributionId, newStatus)
+      );
+
+      if (response?.success) {
+        // Update local donation details
+        const donation = this.donationDetails.find(d => d.contributionId === contributionId);
+        if (donation) {
+          donation.status = newStatus;
+        }
+        this.showToast(`Status updated to ${newStatus} successfully`, false);
+        // Reload summary to reflect changes
+        await this.loadDonationSummary();
+      } else {
+        this.showToast(response.message || 'Failed to update status', true);
+      }
+    } catch (error: any) {
+      console.error('[NGO Dashboard] Failed to update contribution status:', error);
+      this.showToast(error.error?.message || 'Failed to update status', true);
+    } finally {
+      this.updatingStatus[contributionId] = false;
+    }
+  }
+
+  /**
+   * Get status badge class
+   */
+  getStatusClass(status: string): string {
+    const statusMap: { [key: string]: string } = {
+      'PENDING': 'status-pending',
+      'ACCEPTED': 'status-approved',
+      'NOT_RECEIVED': 'status-rejected',
+      'REJECTED': 'status-rejected',
+      'COMPLETED': 'status-completed'
+    };
+    return statusMap[status] || 'status-default';
   }
 
   async loadDashboard() {

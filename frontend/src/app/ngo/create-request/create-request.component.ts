@@ -122,13 +122,23 @@ export class CreateRequestComponent {
   onDonationTypeChange() {
     // Show account details only for FUNDS type
     this.showAccountDetails = this.donationType === 'FUNDS';
-    // Clear account details if type changes
+    // Clear account details if type changes away from FUNDS
     if (!this.showAccountDetails) {
       this.bankAccountNumber = '';
       this.bankName = '';
       this.ifscCode = '';
       this.accountHolderName = '';
     }
+  }
+
+  // Helper method to check if donation type requires pickup
+  requiresPickup(): boolean {
+    return this.donationType === 'FOOD' || this.donationType === 'CLOTHES';
+  }
+
+  // Helper method to check if donation type is FUNDS
+  isFundsType(): boolean {
+    return this.donationType === 'FUNDS';
   }
 
   triggerImageUpload() {
@@ -155,6 +165,13 @@ export class CreateRequestComponent {
     if (!this.quantityOrAmount || this.quantityOrAmount <= 0) {
       this.errorMessage = 'Please enter a valid Quantity/Amount (must be greater than 0)';
       return;
+    }
+
+    // For FUNDS type, bank details are recommended but not mandatory
+    // (Backend will handle this, but we can show a warning)
+    if (this.donationType === 'FUNDS') {
+      // Bank details are optional but recommended
+      // No validation error, just proceed
     }
 
     this.isLoading = true;

@@ -1,80 +1,87 @@
 <div class="ngo-dashboard-container">
-  <!-- Top Navigation Bar -->
-  <header class="top-navbar">
-    <div class="nav-container">
-      <!-- Logo Section -->
-      <div class="nav-logo">
-        <mat-icon class="logo-icon">volunteer_activism</mat-icon>
-        <span class="logo-text">NGO Portal</span>
+  <!-- Backdrop overlay for mobile -->
+  <div class="sidebar-backdrop" [class.mobile-open]="mobileMenuOpen" (click)="toggleMobileMenu()"></div>
+  
+  <!-- Left Sidebar Navigation -->
+  <aside class="sidebar" [class.mobile-open]="mobileMenuOpen">
+    <!-- Logo Section -->
+    <div class="sidebar-logo">
+      <mat-icon class="logo-icon">volunteer_activism</mat-icon>
+      <span class="logo-text">NGO Portal</span>
+    </div>
+
+    <!-- User Profile Section -->
+    <div class="sidebar-user" *ngIf="dashboardData?.profile">
+      <div class="user-avatar">
+        <mat-icon>business</mat-icon>
       </div>
-
-      <!-- Mobile Menu Toggle -->
-      <button mat-icon-button class="mobile-menu-toggle" (click)="toggleMobileMenu()" *ngIf="!mobileMenuOpen">
-        <mat-icon>menu</mat-icon>
-      </button>
-      <button mat-icon-button class="mobile-menu-toggle" (click)="toggleMobileMenu()" *ngIf="mobileMenuOpen">
-        <mat-icon>close</mat-icon>
-      </button>
-
-      <!-- Navigation Items -->
-      <nav class="nav-menu" [class.mobile-open]="mobileMenuOpen">
-        <button 
-          mat-button 
-          class="nav-item" 
-          [class.active]="currentView === 'dashboard'"
-          (click)="showDashboard()">
-          <mat-icon>dashboard</mat-icon>
-          <span>Dashboard</span>
-        </button>
-        <button 
-          mat-button 
-          class="nav-item" 
-          [class.active]="currentView === 'profile'"
-          (click)="showProfile()">
-          <mat-icon>person</mat-icon>
-          <span>Profile</span>
-        </button>
-        <button 
-          mat-button 
-          class="nav-item"
-          (click)="goToCreateRequest()">
-          <mat-icon>add_circle</mat-icon>
-          <span>Create Request</span>
-        </button>
-        <button 
-          mat-button 
-          class="nav-item"
-          (click)="goToRequests()">
-          <mat-icon>list</mat-icon>
-          <span>My Requests</span>
-        </button>
-      </nav>
-
-      <!-- User Section -->
-      <div class="nav-user">
-        <div class="user-info" *ngIf="dashboardData?.profile">
-          <div class="user-avatar">
-            <mat-icon>business</mat-icon>
-          </div>
-          <div class="user-details">
-            <span class="user-name">{{ dashboardData.profile.name || 'NGO' }}</span>
-            <mat-chip 
-              [class.verified-chip]="dashboardData.profile.verified" 
-              [class.pending-chip]="!dashboardData.profile.verified"
-              class="status-chip">
-              {{ dashboardData.profile.verified ? 'Verified' : 'Pending' }}
-            </mat-chip>
-          </div>
-        </div>
-        <button mat-icon-button class="logout-btn" (click)="logout()" matTooltip="Logout">
-          <mat-icon>logout</mat-icon>
-        </button>
+      <div class="user-details">
+        <span class="user-name">{{ dashboardData.profile.name || 'NGO' }}</span>
+        <mat-chip 
+          [class.verified-chip]="dashboardData.profile.verified" 
+          [class.pending-chip]="!dashboardData.profile.verified"
+          class="status-chip">
+          {{ dashboardData.profile.verified ? 'Verified' : 'Pending' }}
+        </mat-chip>
       </div>
     </div>
-  </header>
+
+    <!-- Navigation Menu -->
+    <nav class="sidebar-nav">
+      <button 
+        mat-button 
+        class="nav-item" 
+        [class.active]="currentView === 'dashboard'"
+        (click)="showDashboard()">
+        <mat-icon>dashboard</mat-icon>
+        <span>Dashboard</span>
+      </button>
+      <button 
+        mat-button 
+        class="nav-item" 
+        [class.active]="currentView === 'profile'"
+        (click)="showProfile()">
+        <mat-icon>person</mat-icon>
+        <span>Profile</span>
+      </button>
+      <button 
+        mat-button 
+        class="nav-item"
+        (click)="goToCreateRequest()">
+        <mat-icon>add_circle</mat-icon>
+        <span>Create Request</span>
+      </button>
+      <button 
+        mat-button 
+        class="nav-item"
+        (click)="goToRequests()">
+        <mat-icon>list</mat-icon>
+        <span>My Requests</span>
+      </button>
+      <button 
+        mat-button 
+        class="nav-item"
+        routerLink="/leaderboard">
+        <mat-icon>emoji_events</mat-icon>
+        <span>Leaderboard</span>
+      </button>
+      <button 
+        mat-button 
+        class="nav-item logout-item"
+        (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Logout</span>
+      </button>
+    </nav>
+  </aside>
 
   <!-- Main Content Area -->
   <main class="main-content-wrapper">
+    <!-- Mobile Menu Toggle (only visible on mobile) -->
+    <button mat-icon-button class="mobile-menu-toggle" (click)="toggleMobileMenu()">
+      <mat-icon>{{ mobileMenuOpen ? 'close' : 'menu' }}</mat-icon>
+    </button>
+    
     <!-- Loading State -->
     <div *ngIf="isLoading" class="loading-container">
       <mat-spinner diameter="50"></mat-spinner>
@@ -94,54 +101,196 @@
       <!-- Statistics Cards -->
       <section class="stats-section">
         <div class="stats-grid">
-          <mat-card class="stat-card">
+          <!-- Real-Time Stats: Donation Requests -->
+          <mat-card class="stat-card real-time-stat">
             <div class="stat-content">
               <div class="stat-icon-wrapper stat-primary">
-                <mat-icon>monetization_on</mat-icon>
+                <mat-icon>campaign</mat-icon>
               </div>
-              <div class="stat-info">
-                <div class="stat-label">Total Donations</div>
-                <div class="stat-value">{{ stats.totalDonations || 0 }}</div>
-              </div>
-            </div>
-          </mat-card>
-
-          <mat-card class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon-wrapper stat-warning">
-                <mat-icon>pending</mat-icon>
-              </div>
-              <div class="stat-info">
-                <div class="stat-label">Pending Requests</div>
-                <div class="stat-value">{{ stats.pendingDonations || 0 }}</div>
+              <div class="">
+                <div class="stat-label">Total Donation Requests</div>
+                <div class="stat-value">{{ realTimeStats.totalDonationRequests || 0 }}</div>
+                <div class="stat-badge">Live</div>
               </div>
             </div>
           </mat-card>
 
-          <mat-card class="stat-card">
-            <div class="stat-content">
-              <div class="stat-icon-wrapper stat-info">
-                <mat-icon>check_circle</mat-icon>
-              </div>
-              <div class="stat-info">
-                <div class="stat-label">Approved Requests</div>
-                <div class="stat-value">{{ stats.confirmedDonations || 0 }}</div>
-              </div>
-            </div>
-          </mat-card>
-
-          <mat-card class="stat-card">
+          <!-- Real-Time Stats: Total Donors -->
+          <mat-card class="stat-card real-time-stat">
             <div class="stat-content">
               <div class="stat-icon-wrapper stat-success">
-                <mat-icon>done_all</mat-icon>
+                <mat-icon>people</mat-icon>
               </div>
-              <div class="stat-info">
-                <div class="stat-label">Completed Pickups</div>
-                <div class="stat-value">{{ stats.completedDonations || 0 }}</div>
+              <div class="">
+                <div class="stat-label">Total Donors</div>
+                <div class="stat-value">{{ realTimeStats.totalDonors || 0 }}</div>
+                <div class="stat-badge">Live</div>
               </div>
             </div>
           </mat-card>
         </div>
+      </section>
+
+      <!-- Charts Section - Analytics -->
+      <section class="charts-section" *ngIf="getBreakdownItems().length > 0">
+        <!-- Donation Type Donut Chart -->
+        <mat-card class="chart-card">
+          <h3 class="chart-title">Donation Types Distribution</h3>
+          <div class="donut-chart-container">
+            <svg class="donut-chart" viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r="80" fill="none" stroke="#334155" stroke-width="40"/>
+              <circle *ngFor="let item of getBreakdownItems(); let i = index" 
+                      [attr.cx]="100" [attr.cy]="100" r="80" 
+                      fill="none" 
+                      [attr.stroke]="['#10B981', '#3B82F6', '#FBBF24', '#8B5CF6', '#EF4444'][i % 5]"
+                      stroke-width="40"
+                      [attr.stroke-dasharray]="(item.count / donationSummary.totalDonations) * 502.65 + ' 502.65'"
+                      [attr.stroke-dashoffset]="getDonutOffset(i)"
+                      transform="rotate(-90 100 100)"/>
+            </svg>
+            <div class="donut-chart-center">
+              <span class="donut-center-value">{{ donationSummary.totalDonations || 0 }}</span>
+              <span class="donut-center-label">Total</span>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item" *ngFor="let item of getBreakdownItems(); let i = index">
+              <span class="legend-color" [style.background-color]="['#10B981', '#3B82F6', '#FBBF24', '#8B5CF6', '#EF4444'][i % 5]"></span>
+              <span>{{ item.type }} ({{ item.count }})</span>
+            </div>
+          </div>
+        </mat-card>
+
+        <!-- Monthly Donations Line Chart -->
+        <mat-card class="chart-card">
+          <h3 class="chart-title">Monthly Donations Trend</h3>
+          <div class="line-chart-container">
+            <svg viewBox="0 0 600 300" style="width: 100%; height: 100%;">
+              <!-- Grid lines -->
+              <line x1="50" y1="50" x2="50" y2="250" stroke="#475569" stroke-width="1"/>
+              <line x1="50" y1="250" x2="550" y2="250" stroke="#475569" stroke-width="1"/>
+              <!-- Chart line -->
+              <polyline *ngIf="getMonthlyDonationData().data.length > 0"
+                        [attr.points]="getLineChartPoints()"
+                        fill="none"
+                        stroke="#10B981"
+                        stroke-width="3"
+                        stroke-linecap="round"/>
+              <!-- Area fill -->
+              <polygon *ngIf="getMonthlyDonationData().data.length > 0"
+                       [attr.points]="getLineChartAreaPoints()"
+                       fill="url(#gradient)"
+                       opacity="0.3"/>
+              <defs>
+                <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:#10B981;stop-opacity:0.5" />
+                  <stop offset="100%" style="stop-color:#10B981;stop-opacity:0" />
+                </linearGradient>
+              </defs>
+              <!-- Data points -->
+              <circle *ngFor="let point of getLineChartDataPoints()"
+                      [attr.cx]="point.x"
+                      [attr.cy]="point.y"
+                      r="5"
+                      fill="#10B981"/>
+              <!-- Labels -->
+              <text *ngFor="let label of getMonthlyDonationData().labels; let i = index"
+                    [attr.x]="50 + (i * 83.33) + 41.66"
+                    [attr.y]="270"
+                    fill="#94A3B8"
+                    font-size="12"
+                    text-anchor="middle">{{ label }}</text>
+            </svg>
+          </div>
+        </mat-card>
+      </section>
+
+      <!-- Top Donors Table -->
+      <section class="customer-table-card" *ngIf="getTopDonors().length > 0">
+        <h2 class="section-title">Top Donors</h2>
+        <table class="customer-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Contributions</th>
+              <th>Total Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let donor of getTopDonors()">
+              <td>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <div class="customer-avatar">{{ donor.name.charAt(0).toUpperCase() }}</div>
+                  <div>
+                    <div style="font-weight: 600; color: var(--text-primary);">{{ donor.name }}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">{{ donor.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="font-weight: 600; color: var(--text-primary);">{{ donor.contributions }}</td>
+              <td style="font-weight: 600; color: var(--green-primary);">{{ formatCurrency(donor.totalAmount) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Donation Summary Section -->
+      <section class="summary-section">
+        <h2 class="section-title">Donation Summary</h2>
+        <div class="summary-grid">
+          <mat-card class="summary-card">
+            <div class="summary-content">
+              <div class="summary-icon-wrapper summary-primary">
+                <mat-icon>people</mat-icon>
+              </div>
+              <div class="summary-info">
+                <div class="summary-label">Total Donors</div>
+                <div class="summary-value">{{ donationSummary.totalDonors || 0 }}</div>
+              </div>
+            </div>
+          </mat-card>
+
+          <mat-card class="summary-card">
+            <div class="summary-content">
+              <div class="summary-icon-wrapper summary-success">
+                <mat-icon>inventory</mat-icon>
+              </div>
+              <div class="summary-info">
+                <div class="summary-label">Total Donations</div>
+                <div class="summary-value">{{ donationSummary.totalDonations || 0 }}</div>
+              </div>
+            </div>
+          </mat-card>
+
+          <mat-card class="summary-card">
+            <div class="summary-content">
+              <div class="summary-icon-wrapper summary-warning">
+                <mat-icon>account_balance_wallet</mat-icon>
+              </div>
+              <div class="summary-info">
+                <div class="summary-label">Total Funds Collected</div>
+                <div class="summary-value">₹{{ (donationSummary.totalFundsCollected || 0).toLocaleString('en-IN') }}</div>
+              </div>
+            </div>
+          </mat-card>
+        </div>
+
+        <!-- Donation Breakdown by Type -->
+        <mat-card class="breakdown-card">
+          <h3 class="breakdown-title">Donation Breakdown by Type</h3>
+          <div class="breakdown-list">
+            <div class="breakdown-item" *ngFor="let item of getBreakdownItems()">
+              <div class="breakdown-type">
+                <mat-icon class="breakdown-icon">{{ getDonationTypeIcon(item.type) }}</mat-icon>
+                <span class="breakdown-type-name">{{ item.type }}</span>
+              </div>
+              <div class="breakdown-stats">
+                <span class="breakdown-count">{{ item.count }} donations</span>
+                <span class="breakdown-total">{{ item.total > 0 ? (item.type === 'MONEY' || item.type === 'FUNDS' ? '₹' + item.total.toLocaleString('en-IN') : item.total.toLocaleString('en-IN')) : '0' }}</span>
+              </div>
+            </div>
+          </div>
+        </mat-card>
       </section>
 
       <!-- Quick Actions -->
@@ -190,6 +339,98 @@
             </div>
           </mat-card-content>
         </mat-card>
+      </section>
+
+      <!-- Donor Contributions Section -->
+      <section class="donations-section">
+        <h2 class="section-title">Donor Contributions</h2>
+        <div *ngIf="isLoadingDonations" class="loading-container">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Loading donations...</p>
+        </div>
+        <div *ngIf="!isLoadingDonations && donationDetails.length === 0" class="empty-state">
+          <mat-icon class="empty-icon">inbox</mat-icon>
+          <p>No donations received yet</p>
+        </div>
+        <div *ngIf="!isLoadingDonations && donationDetails.length > 0" class="donations-list">
+          <mat-card class="donation-item" *ngFor="let donation of donationDetails">
+            <div class="donation-header">
+              <div class="donor-info">
+                <mat-icon class="donor-avatar">person</mat-icon>
+                <div class="donor-details">
+                  <div class="donor-name">{{ donation.donor?.name || 'Anonymous Donor' }}</div>
+                  <div class="donor-contact">
+                    <span *ngIf="donation.donor?.email">
+                      <mat-icon class="contact-icon">email</mat-icon>
+                      {{ donation.donor.email }}
+                    </span>
+                    <span *ngIf="donation.donor?.contact || donation.donor?.phone" class="donor-phone">
+                      <mat-icon class="contact-icon">phone</mat-icon>
+                      {{ donation.donor?.contact || donation.donor?.phone }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="donation-status">
+                <mat-form-field appearance="outline" class="status-select-field">
+                  <mat-label>Status</mat-label>
+                  <mat-select 
+                    [value]="donation.status"
+                    (selectionChange)="updateContributionStatus(donation.contributionId, $event.value)"
+                    [disabled]="updatingStatus[donation.contributionId]">
+                    <mat-option *ngFor="let option of statusOptions" [value]="option.value">
+                      {{ option.label }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <mat-spinner 
+                  *ngIf="updatingStatus[donation.contributionId]"
+                  diameter="20"
+                  class="status-spinner">
+                </mat-spinner>
+              </div>
+            </div>
+            <div class="donation-body">
+              <div class="donation-info-row">
+                <div class="info-item">
+                  <mat-icon class="info-icon">category</mat-icon>
+                  <span class="info-label">Type:</span>
+                  <span class="info-value">{{ donation.donationType }}</span>
+                </div>
+                <div class="info-item">
+                  <mat-icon class="info-icon">scale</mat-icon>
+                  <span class="info-label">Quantity/Amount:</span>
+                  <span class="info-value">
+                    {{ donation.donationType === 'MONEY' || donation.donationType === 'FUNDS' 
+                      ? '₹' + donation.quantityOrAmount.toLocaleString('en-IN')
+                      : donation.quantityOrAmount.toLocaleString('en-IN') }}
+                  </span>
+                </div>
+                <div class="info-item">
+                  <mat-icon class="info-icon">event</mat-icon>
+                  <span class="info-label">Date:</span>
+                  <span class="info-value">{{ formatDateTime(donation.donationDate) }}</span>
+                </div>
+              </div>
+              <div class="donation-info-row" *ngIf="donation.pickupLocation">
+                <div class="info-item">
+                  <mat-icon class="info-icon">location_on</mat-icon>
+                  <span class="info-label">Pickup Location:</span>
+                  <span class="info-value">{{ donation.pickupLocation }}</span>
+                </div>
+                <div class="info-item" *ngIf="donation.pickupDate && donation.pickupTime">
+                  <mat-icon class="info-icon">schedule</mat-icon>
+                  <span class="info-label">Pickup Time:</span>
+                  <span class="info-value">{{ formatDate(donation.pickupDate) }} at {{ donation.pickupTime }}</span>
+                </div>
+              </div>
+              <div class="donation-notes" *ngIf="donation.notes">
+                <mat-icon class="notes-icon">note</mat-icon>
+                <span>{{ donation.notes }}</span>
+              </div>
+            </div>
+          </mat-card>
+        </div>
       </section>
     </div>
 

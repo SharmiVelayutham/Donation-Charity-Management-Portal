@@ -83,6 +83,15 @@ export class ContributionComponent implements OnInit {
     this.imageFiles.splice(index, 1);
   }
 
+  // Helper methods
+  isFundsType(): boolean {
+    return this.request?.donation_type === 'FUNDS';
+  }
+
+  requiresPickup(): boolean {
+    return this.request?.donation_type === 'FOOD' || this.request?.donation_type === 'CLOTHES';
+  }
+
   async submitContribution() {
     this.errorMessage = '';
 
@@ -92,28 +101,37 @@ export class ContributionComponent implements OnInit {
       return;
     }
 
-    if (!this.pickupLocation || !this.pickupDate || !this.pickupTime) {
-      this.errorMessage = 'Please fill all required fields (Pickup Location, Date, and Time)';
-      return;
+    // For FOOD/CLOTHES, pickup fields are required
+    if (this.requiresPickup()) {
+      if (!this.pickupLocation || !this.pickupDate || !this.pickupTime) {
+        this.errorMessage = 'Please fill all required fields (Pickup Location, Date, and Time)';
+        return;
+      }
     }
+
+    // For FUNDS, pickup fields are not required
+    // Donors will transfer funds directly to the bank account
 
     this.isLoading = true;
 
     try {
       const formData = new FormData();
       formData.append('quantityOrAmount', this.quantityOrAmount.toString());
-      formData.append('pickupLocation', this.pickupLocation.trim());
-      formData.append('pickupDate', this.pickupDate);
-      formData.append('pickupTime', this.pickupTime);
+      
+      // Only add pickup fields if donation type requires pickup
+      // For FUNDS, don't send pickup fields at all
+      if (this.requiresPickup()) {
+        formData.append('pickupLocation', this.pickupLocation.trim());
+        formData.append('pickupDate', this.pickupDate);
+        formData.append('pickupTime', this.pickupTime);
+      }
+      // For FUNDS: pickup fields are not sent (backend will set them to NULL)
       
       if (this.notes) {
         formData.append('notes', this.notes.trim());
       }
       
-      // Add images
-      this.imageFiles.forEach(file => {
-        formData.append('images', file);
-      });
+      // Images removed - no longer needed
 
       const resp$: Observable<ApiResponse> = this.apiService.contributeToDonationRequest(this.donationId, formData);
       const response = await lastValueFrom(resp$);

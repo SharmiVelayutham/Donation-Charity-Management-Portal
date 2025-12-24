@@ -1,145 +1,684 @@
-<div class="admin-dashboard">
-  <header class="dashboard-header">
-    <h1>Admin Dashboard</h1>
-    <button class="logout-btn" (click)="logout()">Logout</button>
-  </header>
+<div class="admin-dashboard-container">
+  <!-- Backdrop overlay for mobile -->
+  <div class="sidebar-backdrop" [class.mobile-open]="mobileMenuOpen" (click)="toggleMobileMenu()"></div>
+  
+  <!-- Left Sidebar Navigation -->
+  <aside class="sidebar" [class.mobile-open]="mobileMenuOpen">
+    <!-- Logo Section -->
+    <div class="sidebar-logo">
+      <mat-icon class="logo-icon">admin_panel_settings</mat-icon>
+      <span class="logo-text">Admin Portal</span>
+    </div>
 
-  <div class="tabs">
-    <button 
-      class="tab-btn" 
-      [class.active]="activeTab === 'ngos'"
-      (click)="switchTab('ngos')">
-      NGOs ({{ ngos.length }})
+    <!-- User Profile Section -->
+    <div class="sidebar-user">
+      <div class="user-avatar">
+        <mat-icon>account_circle</mat-icon>
+      </div>
+      <div class="user-details">
+        <span class="user-name">Admin</span>
+        <mat-chip class="status-chip verified-chip">
+          Administrator
+        </mat-chip>
+      </div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="sidebar-nav">
+      <button 
+        mat-button 
+        class="nav-item" 
+        [class.active]="currentView === 'dashboard'"
+        (click)="showDashboard()">
+        <mat-icon>dashboard</mat-icon>
+        <span>Dashboard</span>
+      </button>
+      <button 
+        mat-button 
+        class="nav-item" 
+        [class.active]="currentView === 'contributions'"
+        (click)="showContributions()">
+        <mat-icon>donate</mat-icon>
+        <span>Contributions</span>
+      </button>
+      <button 
+        mat-button 
+        class="nav-item" 
+        [class.active]="currentView === 'ngos'"
+        (click)="showNgos()">
+        <mat-icon>business</mat-icon>
+        <span>NGOs</span>
+      </button>
+      <button 
+        mat-button 
+        class="nav-item" 
+        [class.active]="currentView === 'email-templates'"
+        (click)="showEmailTemplates()">
+        <mat-icon>email</mat-icon>
+        <span>Email Templates</span>
+      </button>
+      <button 
+        mat-button 
+        class="nav-item"
+        routerLink="/leaderboard">
+        <mat-icon>emoji_events</mat-icon>
+        <span>Leaderboard</span>
+      </button>
+      <button 
+        mat-button 
+        class="nav-item logout-item"
+        (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Logout</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="main-content-wrapper">
+    <!-- Mobile Menu Toggle -->
+    <button mat-icon-button class="mobile-menu-toggle" (click)="toggleMobileMenu()">
+      <mat-icon>{{ mobileMenuOpen ? 'close' : 'menu' }}</mat-icon>
     </button>
-    <button 
-      class="tab-btn" 
-      [class.active]="activeTab === 'donors'"
-      (click)="switchTab('donors')">
-      Donors ({{ donors.length }})
-    </button>
-  </div>
+    
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading...</p>
+    </div>
 
-  <div class="filters">
-    <input 
-      type="text" 
-      placeholder="Search..." 
-      [(ngModel)]="searchTerm"
-      (keyup.enter)="onSearch()" />
-    <select [(ngModel)]="filterBlocked" (change)="onSearch()">
-      <option value="">All</option>
-      <option value="true">Blocked</option>
-      <option value="false">Active</option>
-    </select>
-    <button (click)="onSearch()">Search</button>
-  </div>
+    <!-- Dashboard View -->
+    <div *ngIf="!isLoading && currentView === 'dashboard'" class="dashboard-view">
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-content">
+          <h1 class="hero-title">Admin Dashboard</h1>
+          <p class="hero-subtitle">Platform analytics and insights</p>
+        </div>
+      </section>
 
-  <div *ngIf="errorMessage" class="error-message">
-    {{ errorMessage }}
-  </div>
-
-  <div *ngIf="isLoading" class="loading">Loading...</div>
-
-  <!-- NGOs Tab -->
-  <div *ngIf="activeTab === 'ngos' && !isLoading" class="table-container">
-    <table>
-      <thead>
-        <tr>
-          <th>NGO ID</th>
-          <th>NGO Name</th>
-          <th>Registration Number</th>
-          <th>Email</th>
-          <th>Contact Person</th>
-          <th>Verification Status</th>
-          <th>Created Date</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let ngo of ngos">
-          <td><strong>{{ ngo.ngo_id || 'N/A' }}</strong></td>
-          <td>{{ ngo.name }}</td>
-          <td>{{ ngo.registrationNumber || 'N/A' }}</td>
-          <td>{{ ngo.email }}</td>
-          <td>{{ ngo.contactPersonName || ngo.contactInfo || 'N/A' }}</td>
-          <td>
-            <span [class]="getVerificationStatusClass(ngo.verificationStatus)">
-              {{ getVerificationStatusText(ngo.verificationStatus) }}
-            </span>
-            <div *ngIf="ngo.verificationStatus === 'REJECTED' && ngo.rejectionReason" 
-                 class="rejection-reason" 
-                 [title]="ngo.rejectionReason">
-              Reason: {{ ngo.rejectionReason }}
+      <!-- Statistics Cards -->
+      <section class="stats-section">
+        <div class="stats-grid">
+          <!-- Total Donations -->
+          <mat-card class="stat-card">
+            <div class="stat-content">
+              <div class="stat-icon-wrapper stat-primary">
+                <mat-icon>volunteer_activism</mat-icon>
+              </div>
+              <div>
+                <div class="stat-label">Total Contributions</div>
+                <div class="stat-value">{{ analytics?.donations?.totalContributions || 0 }}</div>
+                <div class="stat-sublabel">Total Funds: {{ formatCurrency(analytics?.donations?.totalFunds || 0) }}</div>
+              </div>
             </div>
-          </td>
-          <td>{{ ngo.createdAt | date:'short' }}</td>
-          <td class="action-buttons">
-            <div class="verification-actions" *ngIf="ngo.verificationStatus === 'PENDING'">
-              <button class="approve-btn" (click)="approveNgo(ngo)" title="Approve NGO">
-                ✅ Approve
-              </button>
-              <button class="reject-btn" (click)="rejectNgo(ngo)" title="Reject NGO">
-                ❌ Reject
-              </button>
-            </div>
-            <div class="block-actions">
-              <button 
-                [class.block-btn]="!ngo.isBlocked"
-                [class.unblock-btn]="ngo.isBlocked"
-                (click)="toggleBlockNgo(ngo)">
-                {{ ngo.isBlocked ? 'Unblock' : 'Block' }}
-              </button>
-            </div>
-          </td>
-        </tr>
-        <tr *ngIf="ngos.length === 0">
-          <td colspan="8" class="no-data">No NGOs found</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+          </mat-card>
 
-  <!-- Donors Tab -->
-  <div *ngIf="activeTab === 'donors' && !isLoading" class="table-container">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Contact</th>
-          <th>Total Contributions</th>
-          <th>Approved</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let donor of donors">
-          <td>{{ donor.id }}</td>
-          <td>{{ donor.name }}</td>
-          <td>{{ donor.email }}</td>
-          <td>{{ donor.contactInfo }}</td>
-          <td>{{ donor.statistics?.totalContributions || 0 }}</td>
-          <td>{{ donor.statistics?.approvedContributions || 0 }}</td>
-          <td>
-            <span [class.blocked]="donor.isBlocked">
-              {{ donor.isBlocked ? 'Blocked' : 'Active' }}
-            </span>
-          </td>
-          <td>
-            <button 
-              [class.block-btn]="!donor.isBlocked"
-              [class.unblock-btn]="donor.isBlocked"
-              (click)="toggleBlockDonor(donor)">
-              {{ donor.isBlocked ? 'Unblock' : 'Block' }}
+          <!-- Total NGOs -->
+          <mat-card class="stat-card">
+            <div class="stat-content">
+              <div class="stat-icon-wrapper stat-success">
+                <mat-icon>business</mat-icon>
+              </div>
+              <div>
+                <div class="stat-label">Total NGOs</div>
+                <div class="stat-value">{{ analytics?.ngos?.total || 0 }}</div>
+                <div class="stat-sublabel">Active: {{ analytics?.ngos?.active || 0 }}</div>
+              </div>
+            </div>
+          </mat-card>
+
+          <!-- Total Donors -->
+          <mat-card class="stat-card">
+            <div class="stat-content">
+              <div class="stat-icon-wrapper stat-info">
+                <mat-icon>people</mat-icon>
+              </div>
+              <div>
+                <div class="stat-label">Total Donors</div>
+                <div class="stat-value">{{ analytics?.donors?.total || 0 }}</div>
+                <div class="stat-sublabel">Active: {{ analytics?.donors?.active || 0 }}</div>
+              </div>
+            </div>
+          </mat-card>
+
+          <!-- Verified NGOs -->
+          <mat-card class="stat-card">
+            <div class="stat-content">
+              <div class="stat-icon-wrapper stat-accent">
+                <mat-icon>verified</mat-icon>
+              </div>
+              <div>
+                <div class="stat-label">Verified NGOs</div>
+                <div class="stat-value">{{ analytics?.ngos?.verified || 0 }}</div>
+                <div class="stat-sublabel">Pending: {{ analytics?.ngos?.pending || 0 }}</div>
+              </div>
+            </div>
+          </mat-card>
+        </div>
+      </section>
+
+      <!-- Charts Section -->
+      <section class="charts-section" *ngIf="getDonationBreakdownItems().length > 0">
+        <!-- Donation Type Donut Chart -->
+        <mat-card class="chart-card">
+          <h3 class="chart-title">Donation Types Distribution</h3>
+          <div class="donut-chart-container">
+            <svg class="donut-chart" viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r="80" fill="none" stroke="#334155" stroke-width="40"/>
+              <circle *ngFor="let item of getDonationBreakdownItems(); let i = index" 
+                      [attr.cx]="100" [attr.cy]="100" r="80" 
+                      fill="none" 
+                      [attr.stroke]="['#10B981', '#3B82F6', '#FBBF24', '#8B5CF6', '#EF4444'][i % 5]"
+                      stroke-width="40"
+                      [attr.stroke-dasharray]="(item.count / getTotalDonations()) * 502.65 + ' 502.65'"
+                      [attr.stroke-dashoffset]="getDonutOffset(i)"
+                      transform="rotate(-90 100 100)"/>
+            </svg>
+            <div class="donut-chart-center">
+              <span class="donut-center-value">{{ getTotalDonations() }}</span>
+              <span class="donut-center-label">Total</span>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item" *ngFor="let item of getDonationBreakdownItems(); let i = index">
+              <span class="legend-color" [style.background-color]="['#10B981', '#3B82F6', '#FBBF24', '#8B5CF6', '#EF4444'][i % 5]"></span>
+              <span>{{ item.type }} ({{ item.count }})</span>
+            </div>
+          </div>
+        </mat-card>
+
+        <!-- Monthly Trends Line Chart -->
+        <mat-card class="chart-card" *ngIf="getMonthlyTrendData().counts.length > 0">
+          <h3 class="chart-title">Monthly Contributions Trend</h3>
+          <div class="line-chart-container">
+            <svg viewBox="0 0 600 300" style="width: 100%; height: 100%;">
+              <!-- Grid lines -->
+              <line x1="50" y1="50" x2="50" y2="250" stroke="#475569" stroke-width="1"/>
+              <line x1="50" y1="250" x2="550" y2="250" stroke="#475569" stroke-width="1"/>
+              <!-- Chart line -->
+              <polyline *ngIf="getMonthlyTrendData().counts.length > 0"
+                        [attr.points]="getLineChartPoints()"
+                        fill="none"
+                        stroke="#10B981"
+                        stroke-width="3"
+                        stroke-linecap="round"/>
+              <!-- Area fill -->
+              <polygon *ngIf="getMonthlyTrendData().counts.length > 0"
+                       [attr.points]="getLineChartAreaPoints()"
+                       fill="url(#gradient)"
+                       opacity="0.3"/>
+              <defs>
+                <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:#10B981;stop-opacity:0.5" />
+                  <stop offset="100%" style="stop-color:#10B981;stop-opacity:0" />
+                </linearGradient>
+              </defs>
+              <!-- Data points -->
+              <circle *ngFor="let point of getLineChartDataPoints()"
+                      [attr.cx]="point.x"
+                      [attr.cy]="point.y"
+                      r="5"
+                      fill="#10B981"/>
+              <!-- Labels -->
+              <text *ngFor="let label of getMonthlyTrendData().labels; let i = index"
+                    [attr.x]="50 + (i * (500 / (getMonthlyTrendData().labels.length - 1 || 1))) + (500 / (getMonthlyTrendData().labels.length - 1 || 1) / 2)"
+                    [attr.y]="270"
+                    fill="#94A3B8"
+                    font-size="12"
+                    text-anchor="middle">{{ label }}</text>
+            </svg>
+          </div>
+        </mat-card>
+      </section>
+
+      <!-- NGO Statistics Section -->
+      <section class="summary-section">
+        <h2 class="section-title">NGO Statistics</h2>
+        <div class="summary-grid">
+          <mat-card class="summary-card">
+            <div class="summary-content">
+              <div class="summary-icon-wrapper summary-primary">
+                <mat-icon>check_circle</mat-icon>
+              </div>
+              <div class="summary-info">
+                <div class="summary-label">Verified</div>
+                <div class="summary-value">{{ analytics?.ngos?.verified || 0 }}</div>
+              </div>
+            </div>
+          </mat-card>
+          <mat-card class="summary-card">
+            <div class="summary-content">
+              <div class="summary-icon-wrapper summary-warning">
+                <mat-icon>pending</mat-icon>
+              </div>
+              <div class="summary-info">
+                <div class="summary-label">Pending</div>
+                <div class="summary-value">{{ analytics?.ngos?.pending || 0 }}</div>
+              </div>
+            </div>
+          </mat-card>
+          <mat-card class="summary-card">
+            <div class="summary-content">
+              <div class="summary-icon-wrapper summary-danger">
+                <mat-icon>block</mat-icon>
+              </div>
+              <div class="summary-info">
+                <div class="summary-label">Blocked</div>
+                <div class="summary-value">{{ analytics?.ngos?.blocked || 0 }}</div>
+              </div>
+            </div>
+          </mat-card>
+          <!-- <mat-card class="summary-card">
+            <div class="summary-content">
+              <div class="summary-icon-wrapper summary-success">
+                <mat-icon>cancel</mat-icon>
+              </div>
+               <div class="summary-info">
+                <div class="summary-label">Rejected</div>
+                <div class="summary-value">{{ analytics?.ngos?.rejected || 0 }}</div>
+              </div> 
+            </div>
+          </mat-card> -->
+        </div>
+      </section>
+
+      <!-- Top NGOs Table -->
+      <section class="customer-table-card" *ngIf="analytics?.ngos?.topNgos?.length > 0">
+        <h2 class="section-title">Top NGOs by Contributions</h2>
+        <table class="customer-table">
+          <thead>
+            <tr>
+              <th>NGO Name</th>
+              <th>Contributions</th>
+              <th>Total Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let ngo of analytics.ngos.topNgos">
+              <td>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <div class="customer-avatar">{{ ngo.name.charAt(0).toUpperCase() }}</div>
+                  <div>
+                    <div style="font-weight: 600; color: var(--text-primary);">{{ ngo.name }}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="font-weight: 600; color: var(--text-primary);">{{ ngo.contributionCount }}</td>
+              <td style="font-weight: 600; color: var(--primary-color);">{{ formatCurrency(ngo.totalAmount) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Top Donors Table -->
+      <section class="customer-table-card" *ngIf="analytics?.donors?.topDonors?.length > 0">
+        <h2 class="section-title">Top Donors</h2>
+        <table class="customer-table">
+          <thead>
+            <tr>
+              <th>Donor Name</th>
+              <th>Contributions</th>
+              <th>Total Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let donor of analytics.donors.topDonors">
+              <td>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <div class="customer-avatar">{{ donor.name.charAt(0).toUpperCase() }}</div>
+                  <div>
+                    <div style="font-weight: 600; color: var(--text-primary);">{{ donor.name }}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">{{ donor.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="font-weight: 600; color: var(--text-primary);">{{ donor.contributionCount }}</td>
+              <td style="font-weight: 600; color: var(--primary-color);">{{ formatCurrency(donor.totalAmount) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- Contributions View -->
+    <div *ngIf="!isLoading && currentView === 'contributions'" class="dashboard-view">
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-content">
+          <h1 class="hero-title">Contributions Management</h1>
+          <p class="hero-subtitle">View and manage all donor contributions across the platform</p>
+        </div>
+        <div class="hero-actions">
+          <button mat-raised-button color="primary" (click)="downloadReport('csv')">
+            <mat-icon>download</mat-icon>
+            Download CSV
+          </button>
+          <button mat-raised-button color="primary" (click)="downloadReport('excel')">
+            <mat-icon>download</mat-icon>
+            Download Excel
+          </button>
+          <button mat-raised-button color="primary" (click)="downloadReport('pdf')">
+            <mat-icon>picture_as_pdf</mat-icon>
+            Download PDF
+          </button>
+        </div>
+      </section>
+
+      <!-- Filters Section -->
+      <section class="filters-section">
+        <mat-card class="filters-card">
+          <h3 class="filters-title">Filter Contributions</h3>
+          <div class="filters-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Donor</mat-label>
+              <select matNativeControl [(ngModel)]="filterDonorId" (change)="applyFilters()">
+                <option value="">All Donors</option>
+                <option *ngFor="let donor of donors" [value]="donor.donorId || donor.id">
+                  {{ donor.name }}
+                </option>
+              </select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>NGO</mat-label>
+              <select matNativeControl [(ngModel)]="filterNgoId" (change)="applyFilters()">
+                <option value="">All NGOs</option>
+                <option *ngFor="let ngo of allNgos" [value]="ngo.id">
+                  {{ ngo.name }}
+                </option>
+              </select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Donation Type</mat-label>
+              <select matNativeControl [(ngModel)]="filterDonationType" (change)="applyFilters()">
+                <option value="">All Types</option>
+                <option value="FOOD">Food</option>
+                <option value="CLOTHES">Clothes</option>
+                <option value="FUNDS">Funds</option>
+                <option value="MONEY">Money</option>
+              </select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>From Date</mat-label>
+              <input matInput type="date" [(ngModel)]="filterFromDate" (change)="applyFilters()">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>To Date</mat-label>
+              <input matInput type="date" [(ngModel)]="filterToDate" (change)="applyFilters()">
+            </mat-form-field>
+
+            <div class="filter-actions">
+              <button mat-raised-button color="accent" (click)="clearFilters()">
+                <mat-icon>clear</mat-icon>
+                Clear Filters
+              </button>
+            </div>
+          </div>
+        </mat-card>
+      </section>
+
+      <!-- Error Message -->
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <!-- Contributions Table -->
+      <section class="contributions-section" *ngIf="!isLoadingContributions">
+        <mat-card class="table-card">
+          <div class="table-header">
+            <h2 class="section-title">All Contributions</h2>
+            <div class="table-stats">
+              Total: {{ totalContributions }} contributions
+            </div>
+          </div>
+          
+          <div class="table-wrapper">
+            <table class="contributions-table">
+              <thead>
+                <tr>
+                  <th>Donor Name</th>
+                  <th>Donor Email</th>
+                  <th>NGO Name</th>
+                  <th>Donation Type</th>
+                  <th>Quantity/Amount</th>
+                  <th>Contribution Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let contribution of contributions">
+                  <td>
+                    <div class="donor-info">
+                      <div class="donor-avatar">{{ (contribution.donorName || 'D')[0].toUpperCase() }}</div>
+                      <span>{{ contribution.donorName || 'N/A' }}</span>
+                    </div>
+                  </td>
+                  <td>{{ contribution.donorEmail || 'N/A' }}</td>
+                  <td>{{ contribution.ngoName || 'N/A' }}</td>
+                  <td>
+                    <mat-chip [class]="'chip-' + (contribution.donationType || '').toLowerCase()">
+                      {{ contribution.donationType || 'N/A' }}
+                    </mat-chip>
+                  </td>
+                  <td>
+                    <strong>{{ contribution.quantityOrAmount || 0 }}</strong>
+                  </td>
+                  <td>{{ formatDate(contribution.contributedDate) }}</td>
+                  <td>
+                    <span [class]="getStatusClass(contribution.contributionStatus)">
+                      {{ contribution.contributionStatus || 'N/A' }}
+                    </span>
+                  </td>
+                </tr>
+                <tr *ngIf="contributions.length === 0">
+                  <td colspan="7" class="no-data">
+                    <div class="no-data-content">
+                      <mat-icon>inbox</mat-icon>
+                      <p>No contributions found</p>
+                      <p class="no-data-subtitle">Try adjusting your filters</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination" *ngIf="totalContributions > pageSize">
+            <button mat-button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">
+              <mat-icon>chevron_left</mat-icon>
+              Previous
             </button>
-          </td>
-        </tr>
-        <tr *ngIf="donors.length === 0">
-          <td colspan="8" class="no-data">No Donors found</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
+            <span class="page-info">
+              Page {{ currentPage }} of {{ Math.ceil(totalContributions / pageSize) }}
+            </span>
+            <button mat-button [disabled]="currentPage >= Math.ceil(totalContributions / pageSize)" (click)="onPageChange(currentPage + 1)">
+              Next
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+        </mat-card>
+      </section>
 
+      <!-- Loading Contributions -->
+      <div *ngIf="isLoadingContributions" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Loading contributions...</p>
+      </div>
+    </div>
+
+    <!-- NGOs View -->
+    <div *ngIf="!isLoading && currentView === 'ngos'" class="dashboard-view">
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-content">
+          <h1 class="hero-title">NGO Management</h1>
+          <p class="hero-subtitle">Manage NGO accounts and verifications</p>
+        </div>
+      </section>
+
+      <!-- Filters -->
+      <section class="filters-section">
+        <mat-card class="filters-card">
+          <div class="filters-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Search</mat-label>
+              <input matInput type="text" placeholder="Search NGOs..." [(ngModel)]="searchTerm" (keyup.enter)="onSearch()">
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Status</mat-label>
+              <select matNativeControl [(ngModel)]="filterBlocked" (change)="onSearch()">
+                <option value="">All</option>
+                <option value="false">Active</option>
+                <option value="true">Blocked</option>
+              </select>
+            </mat-form-field>
+            <button mat-raised-button color="primary" (click)="onSearch()">
+              <mat-icon>search</mat-icon>
+              Search
+            </button>
+          </div>
+        </mat-card>
+      </section>
+
+      <!-- NGOs Table -->
+      <section class="ngos-section">
+        <mat-card class="table-card">
+          <h2 class="section-title">NGOs List ({{ ngos.length }})</h2>
+          <div class="table-wrapper">
+            <table class="contributions-table">
+              <thead>
+                <tr>
+                  <th>NGO ID</th>
+                  <th>NGO Name</th>
+                  <th>Registration Number</th>
+                  <th>Email</th>
+                  <th>Contact Person</th>
+                  <th>Verification Status</th>
+                  <th>Created Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let ngo of ngos">
+                  <td><strong>{{ ngo.ngo_id || 'N/A' }}</strong></td>
+                  <td>{{ ngo.name }}</td>
+                  <td>{{ ngo.registrationNumber || 'N/A' }}</td>
+                  <td>{{ ngo.email }}</td>
+                  <td>{{ ngo.contactPersonName || ngo.contactInfo || 'N/A' }}</td>
+                  <td>
+                    <span [class]="getVerificationStatusClass(ngo.verificationStatus)">
+                      {{ getVerificationStatusText(ngo.verificationStatus) }}
+                    </span>
+                    <div *ngIf="ngo.verificationStatus === 'REJECTED' && ngo.rejectionReason" 
+                         class="rejection-reason" 
+                         [title]="ngo.rejectionReason">
+                      Reason: {{ ngo.rejectionReason }}
+                    </div>
+                  </td>
+                  <td>{{ ngo.createdAt | date:'short' }}</td>
+                  <td class="action-buttons">
+                    <div class="verification-actions" *ngIf="ngo.verificationStatus === 'PENDING'">
+                      <button mat-raised-button color="primary" (click)="approveNgo(ngo)" title="Approve NGO">
+                        <mat-icon>check</mat-icon>
+                        Approve
+                      </button>
+                      <button mat-raised-button color="warn" (click)="rejectNgo(ngo)" title="Reject NGO">
+                        <mat-icon>close</mat-icon>
+                        Reject
+                      </button>
+                    </div>
+                    <div class="block-actions">
+                      <button mat-raised-button 
+                              [color]="ngo.isBlocked ? 'accent' : 'warn'"
+                              (click)="toggleBlockNgo(ngo)">
+                        {{ ngo.isBlocked ? 'Unblock' : 'Block' }}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="ngos.length === 0">
+                  <td colspan="8" class="no-data">
+                    <div class="no-data-content">
+                      <mat-icon>business</mat-icon>
+                      <p>No NGOs found</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </mat-card>
+      </section>
+    </div>
+
+    <!-- Email Templates View -->
+    <div *ngIf="!isLoading && currentView === 'email-templates'" class="dashboard-view">
+      <section class="hero-section">
+        <div class="hero-content">
+          <h1 class="hero-title">Email Templates</h1>
+          <p class="hero-subtitle">Manage email templates for NGO notifications</p>
+        </div>
+      </section>
+
+      <div *ngIf="isLoadingTemplate" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Loading template...</p>
+      </div>
+
+      <div *ngIf="!isLoadingTemplate" class="template-view">
+        <mat-card class="template-card">
+          <div class="template-header">
+            <h2 class="template-title">NGO Unblock Email Template</h2>
+            <div class="template-actions">
+              <button *ngIf="!isEditingTemplate" mat-raised-button color="primary" (click)="startEditingTemplate()">
+                <mat-icon>edit</mat-icon>
+                Edit Template
+              </button>
+              <button *ngIf="!isEditingTemplate && !emailTemplate.isDefault" mat-stroked-button (click)="restoreDefaultTemplate()">
+                <mat-icon>restore</mat-icon>
+                Restore Default
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="!isEditingTemplate" class="template-preview">
+            <div class="template-info">
+              <p><strong>Template Type:</strong> NGO_UNBLOCK</p>
+              <p><strong>Status:</strong> {{ emailTemplate.isDefault ? 'Default Template' : 'Custom Template' }}</p>
+            </div>
+            <div class="template-content">
+              <h3>Subject:</h3>
+              <p class="template-subject">{{ emailTemplate.subject }}</p>
+              
+              <h3>Body Preview:</h3>
+              <div class="template-body-preview" [innerHTML]="emailTemplate.bodyHtml"></div>
+            </div>
+          </div>
+
+          <div *ngIf="isEditingTemplate" class="template-edit-form">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Email Subject</mat-label>
+              <input matInput [(ngModel)]="emailTemplate.subject" placeholder="Email subject line">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Email Body (HTML)</mat-label>
+              <textarea matInput [(ngModel)]="emailTemplate.bodyHtml" rows="20" placeholder="Email body HTML content"></textarea>
+              <mat-hint>{{ placeholderHint }}</mat-hint>
+            </mat-form-field>
+
+            <div class="template-form-actions">
+              <button mat-stroked-button (click)="cancelEditTemplate()">Cancel</button>
+              <button mat-raised-button color="primary" (click)="saveEmailTemplate()">Save Template</button>
+            </div>
+          </div>
+        </mat-card>
+      </div>
+    </div>
+  </main>
+</div>

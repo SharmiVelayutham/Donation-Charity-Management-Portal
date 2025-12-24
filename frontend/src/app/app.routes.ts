@@ -12,6 +12,14 @@ export const routes: Routes = [
       import('./home/home.component')
         .then(m => m.HomeComponent)
   },
+
+  // ---------------- LEADERBOARD (Public) ---------------- 
+  {
+    path: 'leaderboard',
+    loadComponent: () =>
+      import('./leaderboard/leaderboard.component')
+        .then(m => m.LeaderboardComponent)
+  },
   
   // ---------------- AUTH ---------------- 
   { path: 'login', component: LoginComponent },
