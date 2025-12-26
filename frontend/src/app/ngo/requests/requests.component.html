@@ -7,24 +7,39 @@
 
     <button class="primary-btn" (click)="goToCreate()" style="margin-bottom: 20px;">Create New Request</button>
 
-    <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
+    <div *ngIf="errorMessage" class="error-message">
+      <strong>Error:</strong> {{ errorMessage }}
+    </div>
     <div *ngIf="isLoading" class="loading">Loading requests...</div>
 
-    <div *ngIf="!isLoading && donations.length === 0" class="no-donations">
+    <div *ngIf="!isLoading && !errorMessage && donations.length === 0" class="no-donations">
       <p>No donation requests yet. <a (click)="goToCreate()" style="cursor: pointer; color: #4f46e5;">Create one now</a></p>
     </div>
+    
 
-    <div class="request-card" *ngFor="let donation of donations">
-      <h2>{{ donation.purpose || donation.donationCategory }}</h2>
-      <p><strong>Category:</strong> {{ donation.donationCategory || donation.donationType }}</p>
-      <p><strong>Quantity/Amount:</strong> {{ donation.quantityOrAmount }}</p>
-      <p><strong>Status:</strong> {{ donation.status }}</p>
-      <p><strong>Priority:</strong> {{ donation.priority }}</p>
-      <p *ngIf="donation.pickupDateTime"><strong>Pickup Date:</strong> {{ formatDate(donation.pickupDateTime) }}</p>
+    <div class="requests-grid" *ngIf="!isLoading && donations.length > 0">
+      <div class="request-card" *ngFor="let donation of donations">
+        <h2>{{ donation.purpose || 'Donation Request' }}</h2>
+        <div class="request-info">
+          <p><strong>Type:</strong> {{ donation.donationCategory || donation.donationType || 'N/A' }}</p>
+          <p><strong>{{ getQuantityOrAmountLabel(donation.donationCategory || donation.donationType) }}:</strong> {{ getFormattedQuantityOrAmount(donation.quantityOrAmount, donation.donationCategory || donation.donationType) }}</p>
+          <p><strong>Status:</strong> <span [class]="'status-badge status-' + (donation.status || 'ACTIVE').toLowerCase()">{{ donation.status || 'ACTIVE' }}</span></p>
+          <p *ngIf="donation.pickupDateTime"><strong>Pickup Date:</strong> {{ formatDateTime(donation.pickupDateTime) }}</p>
+          <p *ngIf="donation.locationAddress"><strong>Location:</strong> {{ donation.locationAddress }}</p>
+          <p><strong>Contributions:</strong> {{ donation.approvedContributions || 0 }} / {{ donation.contributionCount || 0 }}</p>
+          <p *ngIf="donation.createdAt"><strong>Created:</strong> {{ formatDateTime(donation.createdAt) }}</p>
+        </div>
 
-      <div class="actions">
-        <button class="edit-btn" [disabled]="donation.status === 'COMPLETED' || donation.status === 'CANCELLED'">Edit</button>
-        <button class="cancel-btn" [disabled]="donation.status === 'COMPLETED' || donation.status === 'CANCELLED'">Cancel</button>
+        <div class="actions">
+          <button class="edit-btn" [disabled]="donation.status === 'CLOSED'" (click)="editRequest(donation.id)">Edit</button>
+          <button 
+            class="cancel-btn" 
+            [disabled]="donation.status === 'CLOSED' || cancelingRequestId === donation.id" 
+            (click)="cancelRequest(donation.id)">
+            <span *ngIf="cancelingRequestId === donation.id">Closing...</span>
+            <span *ngIf="cancelingRequestId !== donation.id">Close Request</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

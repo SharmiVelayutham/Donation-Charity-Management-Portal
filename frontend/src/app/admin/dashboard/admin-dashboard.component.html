@@ -1,91 +1,75 @@
 <div class="admin-dashboard-container">
-  <!-- Backdrop overlay for mobile -->
-  <div class="sidebar-backdrop" [class.mobile-open]="mobileMenuOpen" (click)="toggleMobileMenu()"></div>
-  
-  <!-- Left Sidebar Navigation -->
-  <aside class="sidebar" [class.mobile-open]="mobileMenuOpen">
-    <!-- Logo Section -->
-    <div class="sidebar-logo">
-      <mat-icon class="logo-icon">admin_panel_settings</mat-icon>
-      <span class="logo-text">Admin Portal</span>
-    </div>
-
-    <!-- User Profile Section -->
-    <div class="sidebar-user">
-      <div class="user-avatar">
-        <mat-icon>account_circle</mat-icon>
+  <!-- Header Section (Profile at Top - Full Width) -->
+  <div class="header-section">
+    <div class="profile-header">
+      <div class="profile-avatar">
+        <mat-icon class="avatar-icon">admin_panel_settings</mat-icon>
       </div>
-      <div class="user-details">
-        <span class="user-name">Admin</span>
-        <mat-chip class="status-chip verified-chip">
-          Administrator
-        </mat-chip>
+      <div class="profile-info">
+        <h1 class="profile-name">Admin</h1>
+      </div>
+      <div class="header-actions">
+        <app-notification-bell [userRole]="'ADMIN'"></app-notification-bell>
       </div>
     </div>
+  </div>
 
-    <!-- Navigation Menu -->
-    <nav class="sidebar-nav">
-      <button 
-        mat-button 
-        class="nav-item" 
-        [class.active]="currentView === 'dashboard'"
-        (click)="showDashboard()">
-        <mat-icon>dashboard</mat-icon>
-        <span>Dashboard</span>
-      </button>
-      <button 
-        mat-button 
-        class="nav-item" 
-        [class.active]="currentView === 'contributions'"
-        (click)="showContributions()">
-        <mat-icon>donate</mat-icon>
-        <span>Contributions</span>
-      </button>
-      <button 
-        mat-button 
-        class="nav-item" 
-        [class.active]="currentView === 'ngos'"
-        (click)="showNgos()">
-        <mat-icon>business</mat-icon>
-        <span>NGOs</span>
-      </button>
-      <button 
-        mat-button 
-        class="nav-item" 
-        [class.active]="currentView === 'email-templates'"
-        (click)="showEmailTemplates()">
-        <mat-icon>email</mat-icon>
-        <span>Email Templates</span>
-      </button>
-      <button 
-        mat-button 
-        class="nav-item"
-        routerLink="/leaderboard">
-        <mat-icon>emoji_events</mat-icon>
-        <span>Leaderboard</span>
-      </button>
-      <button 
-        mat-button 
-        class="nav-item logout-item"
-        (click)="logout()">
-        <mat-icon>logout</mat-icon>
-        <span>Logout</span>
-      </button>
-    </nav>
-  </aside>
+  <div class="dashboard-body">
+    <!-- Sidebar Navigation (Left) -->
+    <aside class="sidebar">
+      <nav class="sidebar-nav">
+        <button 
+          class="nav-item" 
+          [class.active]="currentView === 'dashboard'"
+          (click)="showDashboard()">
+          <mat-icon>dashboard</mat-icon>
+          <span>Dashboard</span>
+        </button>
+        <button 
+          class="nav-item" 
+          [class.active]="currentView === 'contributions'"
+          (click)="showContributions()">
+          <mat-icon>payments</mat-icon>
+          <span>Contributions</span>
+        </button>
+        <button 
+          class="nav-item" 
+          [class.active]="currentView === 'ngos'"
+          (click)="showNgos()">
+          <mat-icon>business</mat-icon>
+          <span>NGOs</span>
+        </button>
+        <button 
+          class="nav-item" 
+          [class.active]="currentView === 'email-templates'"
+          (click)="showEmailTemplates()">
+          <mat-icon>email</mat-icon>
+          <span>Email Templates</span>
+        </button>
+        <button 
+          class="nav-item"
+          [class.active]="currentView === 'leaderboard'"
+          (click)="showLeaderboard()">
+          <mat-icon>emoji_events</mat-icon>
+          <span>Leaderboard</span>
+        </button>
+        <button 
+          class="nav-item logout-item"
+          (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          <span>Logout</span>
+        </button>
+      </nav>
+    </aside>
 
-  <!-- Main Content Area -->
-  <main class="main-content-wrapper">
-    <!-- Mobile Menu Toggle -->
-    <button mat-icon-button class="mobile-menu-toggle" (click)="toggleMobileMenu()">
-      <mat-icon>{{ mobileMenuOpen ? 'close' : 'menu' }}</mat-icon>
-    </button>
+    <!-- Main Content Area (Right) -->
+    <main class="main-content">
     
     <!-- Loading State -->
     <div *ngIf="isLoading" class="loading-container">
       <mat-spinner diameter="50"></mat-spinner>
       <p>Loading...</p>
-    </div>
+  </div>
 
     <!-- Dashboard View -->
     <div *ngIf="!isLoading && currentView === 'dashboard'" class="dashboard-view">
@@ -109,7 +93,7 @@
               <div>
                 <div class="stat-label">Total Contributions</div>
                 <div class="stat-value">{{ analytics?.donations?.totalContributions || 0 }}</div>
-                <div class="stat-sublabel">Total Funds: {{ formatCurrency(analytics?.donations?.totalFunds || 0) }}</div>
+                <div class="stat-sublabel">Total Funds: ₹{{ (analytics?.donations?.totalFunds || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</div>
               </div>
             </div>
           </mat-card>
@@ -159,77 +143,136 @@
       </section>
 
       <!-- Charts Section -->
-      <section class="charts-section" *ngIf="getDonationBreakdownItems().length > 0">
-        <!-- Donation Type Donut Chart -->
-        <mat-card class="chart-card">
-          <h3 class="chart-title">Donation Types Distribution</h3>
-          <div class="donut-chart-container">
-            <svg class="donut-chart" viewBox="0 0 200 200">
-              <circle cx="100" cy="100" r="80" fill="none" stroke="#334155" stroke-width="40"/>
-              <circle *ngFor="let item of getDonationBreakdownItems(); let i = index" 
-                      [attr.cx]="100" [attr.cy]="100" r="80" 
-                      fill="none" 
-                      [attr.stroke]="['#10B981', '#3B82F6', '#FBBF24', '#8B5CF6', '#EF4444'][i % 5]"
-                      stroke-width="40"
-                      [attr.stroke-dasharray]="(item.count / getTotalDonations()) * 502.65 + ' 502.65'"
-                      [attr.stroke-dashoffset]="getDonutOffset(i)"
-                      transform="rotate(-90 100 100)"/>
-            </svg>
-            <div class="donut-chart-center">
-              <span class="donut-center-value">{{ getTotalDonations() }}</span>
-              <span class="donut-center-label">Total</span>
+      <section class="charts-section" *ngIf="getDonationBreakdownItems().length > 0 || getChartData().length > 0">
+        <div class="charts-grid">
+          <!-- Monthly Trends Area Chart (Wave Graph) -->
+          <div class="chart-card donation-trends-card" *ngIf="getChartData().length > 0">
+          <div class="chart-header">
+            <div>
+              <h3 class="chart-title">Donation Trends</h3>
+              <p class="chart-subtitle">Monthly performance vs targets</p>
             </div>
+            <div class="chart-toggle-buttons">
+    <button 
+                class="chart-toggle-btn" 
+                [class.active]="chartViewMode === 'amount'"
+                (click)="setChartViewMode('amount')">
+                Amount
+    </button>
+    <button 
+                class="chart-toggle-btn" 
+                [class.active]="chartViewMode === 'donors'"
+                (click)="setChartViewMode('donors')">
+                Donors
+    </button>
+  </div>
           </div>
-          <div class="chart-legend">
-            <div class="legend-item" *ngFor="let item of getDonationBreakdownItems(); let i = index">
-              <span class="legend-color" [style.background-color]="['#10B981', '#3B82F6', '#FBBF24', '#8B5CF6', '#EF4444'][i % 5]"></span>
-              <span>{{ item.type }} ({{ item.count }})</span>
-            </div>
-          </div>
-        </mat-card>
-
-        <!-- Monthly Trends Line Chart -->
-        <mat-card class="chart-card" *ngIf="getMonthlyTrendData().counts.length > 0">
-          <h3 class="chart-title">Monthly Contributions Trend</h3>
-          <div class="line-chart-container">
-            <svg viewBox="0 0 600 300" style="width: 100%; height: 100%;">
-              <!-- Grid lines -->
-              <line x1="50" y1="50" x2="50" y2="250" stroke="#475569" stroke-width="1"/>
-              <line x1="50" y1="250" x2="550" y2="250" stroke="#475569" stroke-width="1"/>
-              <!-- Chart line -->
-              <polyline *ngIf="getMonthlyTrendData().counts.length > 0"
-                        [attr.points]="getLineChartPoints()"
-                        fill="none"
-                        stroke="#10B981"
-                        stroke-width="3"
-                        stroke-linecap="round"/>
-              <!-- Area fill -->
-              <polygon *ngIf="getMonthlyTrendData().counts.length > 0"
-                       [attr.points]="getLineChartAreaPoints()"
-                       fill="url(#gradient)"
-                       opacity="0.3"/>
-              <defs>
-                <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" style="stop-color:#10B981;stop-opacity:0.5" />
-                  <stop offset="100%" style="stop-color:#10B981;stop-opacity:0" />
-                </linearGradient>
-              </defs>
-              <!-- Data points -->
-              <circle *ngFor="let point of getLineChartDataPoints()"
-                      [attr.cx]="point.x"
-                      [attr.cy]="point.y"
-                      r="5"
-                      fill="#10B981"/>
-              <!-- Labels -->
+          <div class="bar-chart-container">
+            <svg viewBox="0 0 600 280" style="width: 100%; height: 100%;">
+              <!-- Y-axis -->
+              <line x1="70" y1="20" x2="70" y2="220" stroke="#e2e8f0" stroke-width="1.5"/>
+              
+              <!-- X-axis -->
+              <line x1="70" y1="220" x2="570" y2="220" stroke="#e2e8f0" stroke-width="1.5"/>
+              
+              <!-- Y-axis labels and horizontal grid lines -->
+              <g *ngFor="let label of getYAxisLabels(); let i = index">
+                <!-- Grid line -->
+                <line x1="70" 
+                      [attr.y1]="220 - (i * (200 / (getYAxisLabels().length - 1)))" 
+                      x2="570" 
+                      [attr.y2]="220 - (i * (200 / (getYAxisLabels().length - 1)))" 
+                      stroke="#e2e8f0" 
+                      stroke-width="1" 
+                      stroke-dasharray="3,3"/>
+                <!-- Y-axis label -->
+                <text x="65" 
+                      [attr.y]="225 - (i * (200 / (getYAxisLabels().length - 1)))" 
+                      fill="#64748b" 
+                      font-size="12" 
+                      text-anchor="end" 
+                      alignment-baseline="middle">{{ formatChartValue(label) }}</text>
+              </g>
+              
+              <!-- Bar Chart -->
+              <g *ngIf="getChartData().length > 0">
+                <rect *ngFor="let value of getChartData(); let i = index; trackBy: trackByIndex"
+                      [attr.x]="getBarXPosition(i)"
+                      [attr.y]="getBarYPosition(value)"
+                      [attr.width]="getBarWidth()"
+                      [attr.height]="getBarHeight(value)"
+                      fill="#10b981"/>
+              </g>
+              
+              <!-- X-axis labels (Months) -->
               <text *ngFor="let label of getMonthlyTrendData().labels; let i = index"
-                    [attr.x]="50 + (i * (500 / (getMonthlyTrendData().labels.length - 1 || 1))) + (500 / (getMonthlyTrendData().labels.length - 1 || 1) / 2)"
-                    [attr.y]="270"
-                    fill="#94A3B8"
+                    [attr.x]="getBarXPosition(i) + (getBarWidth() / 2)"
+                    y="240"
+                    fill="#64748b"
                     font-size="12"
                     text-anchor="middle">{{ label }}</text>
             </svg>
           </div>
-        </mat-card>
+          </div>
+
+          <!-- Donation Type Donut Chart -->
+          <mat-card class="chart-card" *ngIf="getDonationBreakdownItems().length > 0">
+            <h3 class="chart-title">Donation Types Distribution</h3>
+            <div class="donut-chart-container">
+              <svg class="donut-chart" viewBox="0 0 200 200">
+                <circle cx="100" cy="100" r="80" fill="none" stroke="#334155" stroke-width="40"/>
+                <circle *ngFor="let item of getDonationBreakdownItems(); let i = index" 
+                        [attr.cx]="100" [attr.cy]="100" r="80" 
+                        fill="none" 
+                        [attr.stroke]="['#10B981', '#3B82F6', '#FBBF24', '#8B5CF6', '#EF4444'][i % 5]"
+                        stroke-width="40"
+                        [attr.stroke-dasharray]="(item.count / getTotalDonations()) * 502.65 + ' 502.65'"
+                        [attr.stroke-dashoffset]="getDonutOffset(i)"
+                        transform="rotate(-90 100 100)"/>
+              </svg>
+              <div class="donut-chart-center">
+                <span class="donut-center-value">{{ getTotalDonations() }}</span>
+                <span class="donut-center-label">Total</span>
+              </div>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item" *ngFor="let item of getDonationBreakdownItems(); let i = index">
+                <span class="legend-color" [style.background-color]="['#10B981', '#3B82F6', '#FBBF24', '#8B5CF6', '#EF4444'][i % 5]"></span>
+                <span>{{ item.type }} ({{ item.count }})</span>
+              </div>
+            </div>
+          </mat-card>
+        </div>
+      </section>
+
+      <!-- Funds Summary Section -->
+      <section class="summary-section">
+        <h2 class="section-title">Funds Summary</h2>
+        <div class="summary-grid">
+          <mat-card class="summary-card">
+            <div class="summary-content">
+              <div class="summary-icon-wrapper summary-success">
+                <mat-icon>account_balance_wallet</mat-icon>
+              </div>
+              <div class="summary-info">
+                <div class="summary-label">Funds Received</div>
+                <div class="summary-value">₹{{ (analytics?.donations?.fundsReceived || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</div>
+              </div>
+            </div>
+          </mat-card>
+
+          <mat-card class="summary-card">
+            <div class="summary-content">
+              <div class="summary-icon-wrapper summary-warning">
+                <mat-icon>pending</mat-icon>
+              </div>
+              <div class="summary-info">
+                <div class="summary-label">Funds Pending</div>
+                <div class="summary-value">₹{{ (analytics?.donations?.fundsPending || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</div>
+              </div>
+            </div>
+          </mat-card>
+        </div>
       </section>
 
       <!-- NGO Statistics Section -->
@@ -339,7 +382,7 @@
           </tbody>
         </table>
       </section>
-    </div>
+  </div>
 
     <!-- Contributions View -->
     <div *ngIf="!isLoading && currentView === 'contributions'" class="dashboard-view">
@@ -422,9 +465,9 @@
       </section>
 
       <!-- Error Message -->
-      <div *ngIf="errorMessage" class="error-message">
-        {{ errorMessage }}
-      </div>
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
 
       <!-- Contributions Table -->
       <section class="contributions-section" *ngIf="!isLoadingContributions">
@@ -551,66 +594,70 @@
           <h2 class="section-title">NGOs List ({{ ngos.length }})</h2>
           <div class="table-wrapper">
             <table class="contributions-table">
-              <thead>
-                <tr>
-                  <th>NGO ID</th>
-                  <th>NGO Name</th>
-                  <th>Registration Number</th>
-                  <th>Email</th>
-                  <th>Contact Person</th>
-                  <th>Verification Status</th>
-                  <th>Created Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let ngo of ngos">
-                  <td><strong>{{ ngo.ngo_id || 'N/A' }}</strong></td>
-                  <td>{{ ngo.name }}</td>
-                  <td>{{ ngo.registrationNumber || 'N/A' }}</td>
-                  <td>{{ ngo.email }}</td>
-                  <td>{{ ngo.contactPersonName || ngo.contactInfo || 'N/A' }}</td>
-                  <td>
-                    <span [class]="getVerificationStatusClass(ngo.verificationStatus)">
-                      {{ getVerificationStatusText(ngo.verificationStatus) }}
-                    </span>
-                    <div *ngIf="ngo.verificationStatus === 'REJECTED' && ngo.rejectionReason" 
-                         class="rejection-reason" 
-                         [title]="ngo.rejectionReason">
-                      Reason: {{ ngo.rejectionReason }}
-                    </div>
-                  </td>
-                  <td>{{ ngo.createdAt | date:'short' }}</td>
-                  <td class="action-buttons">
-                    <div class="verification-actions" *ngIf="ngo.verificationStatus === 'PENDING'">
+      <thead>
+        <tr>
+          <th>NGO ID</th>
+          <th>NGO Name</th>
+          <th>Registration Number</th>
+          <th>Contact Person</th>
+          <th>Verification Status</th>
+          <th>Created Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let ngo of ngos">
+          <td><strong>{{ ngo.ngo_id || 'N/A' }}</strong></td>
+          <td>{{ ngo.name }}</td>
+          <td>{{ ngo.registrationNumber || 'N/A' }}</td>
+          <td>{{ ngo.contactPersonName || ngo.contactInfo || 'N/A' }}</td>
+          <td>
+            <span [class]="getVerificationStatusClass(ngo.verificationStatus)">
+              {{ getVerificationStatusText(ngo.verificationStatus) }}
+            </span>
+            <div *ngIf="ngo.verificationStatus === 'REJECTED' && ngo.rejectionReason" 
+                 class="rejection-reason" 
+                 [title]="ngo.rejectionReason">
+              Reason: {{ ngo.rejectionReason }}
+            </div>
+          </td>
+          <td>{{ ngo.createdAt | date:'short' }}</td>
+          <td class="action-buttons">
+            <div class="view-action">
+              <button mat-raised-button color="accent" (click)="viewNgoDetails(ngo)" title="View NGO Details">
+                <mat-icon>visibility</mat-icon>
+                View
+              </button>
+            </div>
+            <div class="verification-actions" *ngIf="ngo.verificationStatus === 'PENDING'">
                       <button mat-raised-button color="primary" (click)="approveNgo(ngo)" title="Approve NGO">
                         <mat-icon>check</mat-icon>
                         Approve
-                      </button>
+              </button>
                       <button mat-raised-button color="warn" (click)="rejectNgo(ngo)" title="Reject NGO">
                         <mat-icon>close</mat-icon>
                         Reject
-                      </button>
-                    </div>
-                    <div class="block-actions">
+              </button>
+            </div>
+            <div class="block-actions">
                       <button mat-raised-button 
                               [color]="ngo.isBlocked ? 'accent' : 'warn'"
-                              (click)="toggleBlockNgo(ngo)">
-                        {{ ngo.isBlocked ? 'Unblock' : 'Block' }}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                <tr *ngIf="ngos.length === 0">
-                  <td colspan="8" class="no-data">
+                (click)="toggleBlockNgo(ngo)">
+                {{ ngo.isBlocked ? 'Unblock' : 'Block' }}
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="ngos.length === 0">
+                  <td colspan="7" class="no-data">
                     <div class="no-data-content">
                       <mat-icon>business</mat-icon>
                       <p>No NGOs found</p>
                     </div>
                   </td>
-                </tr>
-              </tbody>
-            </table>
+        </tr>
+      </tbody>
+    </table>
           </div>
         </mat-card>
       </section>
@@ -621,19 +668,31 @@
       <section class="hero-section">
         <div class="hero-content">
           <h1 class="hero-title">Email Templates</h1>
-          <p class="hero-subtitle">Manage email templates for NGO notifications</p>
+          <p class="hero-subtitle">Manage email templates for system notifications</p>
         </div>
       </section>
+
+      <!-- Template Type Selector -->
+      <mat-card class="template-selector-card" style="margin-bottom: 24px;">
+        <mat-form-field appearance="outline" style="width: 100%;">
+          <mat-label>Select Email Template</mat-label>
+          <mat-select [(ngModel)]="selectedTemplateType" (selectionChange)="onTemplateTypeChange()">
+            <mat-option *ngFor="let template of availableTemplateTypes" [value]="template.value">
+              {{ template.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </mat-card>
 
       <div *ngIf="isLoadingTemplate" class="loading-container">
         <mat-spinner diameter="50"></mat-spinner>
         <p>Loading template...</p>
-      </div>
+  </div>
 
       <div *ngIf="!isLoadingTemplate" class="template-view">
         <mat-card class="template-card">
           <div class="template-header">
-            <h2 class="template-title">NGO Unblock Email Template</h2>
+            <h2 class="template-title">{{ getTemplateLabel() }} Email Template</h2>
             <div class="template-actions">
               <button *ngIf="!isEditingTemplate" mat-raised-button color="primary" (click)="startEditingTemplate()">
                 <mat-icon>edit</mat-icon>
@@ -642,13 +701,13 @@
               <button *ngIf="!isEditingTemplate && !emailTemplate.isDefault" mat-stroked-button (click)="restoreDefaultTemplate()">
                 <mat-icon>restore</mat-icon>
                 Restore Default
-              </button>
-            </div>
-          </div>
+            </button>
+  </div>
+</div>
 
           <div *ngIf="!isEditingTemplate" class="template-preview">
             <div class="template-info">
-              <p><strong>Template Type:</strong> NGO_UNBLOCK</p>
+              <p><strong>Template Type:</strong> {{ emailTemplate.templateType }}</p>
               <p><strong>Status:</strong> {{ emailTemplate.isDefault ? 'Default Template' : 'Custom Template' }}</p>
             </div>
             <div class="template-content">
@@ -669,7 +728,7 @@
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Email Body (HTML)</mat-label>
               <textarea matInput [(ngModel)]="emailTemplate.bodyHtml" rows="20" placeholder="Email body HTML content"></textarea>
-              <mat-hint>{{ placeholderHint }}</mat-hint>
+              <mat-hint>{{ getPlaceholderHint() }}</mat-hint>
             </mat-form-field>
 
             <div class="template-form-actions">
@@ -679,6 +738,17 @@
           </div>
         </mat-card>
       </div>
+    </div>
+
+    <!-- Leaderboard View -->
+    <div *ngIf="!isLoading && currentView === 'leaderboard'" class="dashboard-view">
+      <section class="hero-section">
+        <div class="hero-content">
+          <h1 class="hero-title">Leaderboard</h1>
+          <p class="hero-subtitle">Top contributors and organizations making a difference</p>
+        </div>
+      </section>
+      <app-leaderboard></app-leaderboard>
     </div>
   </main>
 </div>

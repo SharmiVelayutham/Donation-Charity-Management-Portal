@@ -16,18 +16,21 @@
       <div class="nav-dropdown">
         <a routerLink="/donations" class="nav-link">DONATION <span class="dropdown-arrow">▼</span></a>
         <div class="dropdown-menu">
-          <a routerLink="/donations" class="dropdown-item">All Donations</a>
+          <a routerLink="/donations" class="dropdown-item">Browse All Donations</a>
           <a routerLink="/donations" [queryParams]="{category: 'FOOD'}" class="dropdown-item">Food Donations</a>
           <a routerLink="/donations" [queryParams]="{category: 'CLOTHES'}" class="dropdown-item">Clothes Donations</a>
-          <a routerLink="/donations" [queryParams]="{category: 'MONEY'}" class="dropdown-item">Money Donations</a>
+          <a routerLink="/donations" [queryParams]="{category: 'FUNDS'}" class="dropdown-item">Funds Donations</a>
         </div>
       </div>
       <a routerLink="/leaderboard" class="nav-link">🏆 LEADERBOARD</a>
       <a href="#pages" class="nav-link">PAGES <span class="dropdown-arrow">▼</span></a>
     </nav>
     <div class="nav-actions">
-      <button *ngIf="!isAuthenticated" class="btn-donate" routerLink="/signup">DONATE NOW</button>
-      <button *ngIf="isAuthenticated" class="btn-donate" (click)="navigateToDashboard()">DASHBOARD</button>
+      <button *ngIf="!isAuthenticated" class="btn-login" routerLink="/login">LOGIN</button>
+      <div *ngIf="isAuthenticated && userRole === 'DONOR'" class="profile-icon-container" (click)="navigateToDashboard()">
+        <div class="profile-icon">{{ userInitial }}</div>
+      </div>
+      <button *ngIf="isAuthenticated && userRole !== 'DONOR'" class="btn-donate" (click)="navigateToDashboard()">DASHBOARD</button>
       <button class="menu-toggle" (click)="menuOpen = !menuOpen">
         <span></span>
         <span></span>
@@ -158,22 +161,18 @@
     </div>
     <div *ngIf="recentDonations.length > 0" class="donations-grid">
       <div class="donation-card" *ngFor="let donation of recentDonations">
-        <div class="donation-badge" [class.urgent]="donation.priority === 'URGENT'">
-          {{ donation.priority || 'NORMAL' }}
-        </div>
-        <h3>{{ donation.purpose || donation.donation_type }}</h3>
-        <p class="donation-category">{{ donation.donation_category || donation.donation_type }}</p>
+        <h3>{{ donation.description || donation.donation_type }}</h3>
+        <p class="donation-category">{{ donation.donation_type }}</p>
         <div class="donation-info">
           <p><strong>🏢 NGO:</strong> {{ donation.ngo_name || 'N/A' }}</p>
-          <p><strong>📍 Address:</strong> {{ donation.location_address || 'Not specified' }}</p>
-          <p><strong>📦 Type:</strong> {{ donation.donation_category || donation.donation_type }}</p>
-          <p><strong>📊 Quantity/Amount:</strong> {{ donation.quantity_or_amount || 'N/A' }}</p>
-          <p *ngIf="donation.pickup_date_time"><strong>📅 Pickup:</strong> {{ formatDate(donation.pickup_date_time) }}</p>
+          <p><strong>📍 Address:</strong> {{ donation.ngo_address || 'Not specified' }}</p>
+          <p><strong>📦 Type:</strong> {{ donation.donation_type }}</p>
+          <p><strong>📊 {{ getQuantityOrAmountLabel(donation.donation_type) }}:</strong> {{ formatQuantityOrAmount(donation) }}</p>
         </div>
         <p class="donation-description">{{ donation.description || 'Help make a difference' }}</p>
         <div class="donation-footer">
-          <button class="btn-donate-small" (click)="handleDonateClick(donation.id)" *ngIf="isAuthenticated && userRole === 'DONOR'">Donate</button>
-          <button class="btn-donate-small" routerLink="/donations" *ngIf="!isAuthenticated || userRole !== 'DONOR'">View Details</button>
+          <button class="btn-donate-small" routerLink="/donations/{{ donation.id }}" *ngIf="isAuthenticated && userRole === 'DONOR'">Donate</button>
+          <button class="btn-donate-small" routerLink="/donations/{{ donation.id }}" *ngIf="!isAuthenticated || userRole !== 'DONOR'">View Details</button>
         </div>
       </div>
     </div>

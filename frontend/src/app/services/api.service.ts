@@ -148,6 +148,28 @@ export class ApiService {
       );
   }
 
+  // Get my donation requests (NGO)
+  getMyDonationRequests(): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/donation-requests/my-requests`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  // Update donation request status (NGO) - for cancel/close
+  updateDonationRequestStatus(requestId: string, status: 'ACTIVE' | 'CLOSED'): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(
+      `${this.apiUrl}/donation-requests/${requestId}/status`,
+      { status },
+      { headers: this.getHeaders() }
+    )
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
   createNgoDonation(formData: FormData): Observable<ApiResponse> {
     const token = localStorage.getItem('token');
     return this.http.post<ApiResponse>(`${this.apiUrl}/ngo/donations`, formData, {
@@ -218,16 +240,31 @@ export class ApiService {
 
   // Get Donor dashboard statistics (real-time)
   getDonorDashboardStats(): Observable<ApiResponse> {
-    return this.http.get<ApiResponse>(`${this.apiUrl}/donor/dashboard-stats`, { headers: this.getHeaders() })
+    return this.http.get<ApiResponse>(`${this.apiUrl}/donor/dashboard/stats`, { headers: this.getHeaders() })
       .pipe(
         map(res => this.normalizeResponse(res)),
         catchError(err => this.handleError(err))
       );
   }
 
+  // Download receipt for donation request contribution
+  downloadReceipt(contributionId: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/donor/dashboard/donation-request-contributions/${contributionId}/receipt`, {
+      headers: this.getHeaders(),
+      responseType: 'blob'
+    });
+  }
+
   // Get Donor donation request contributions (new system)
   getDonorDonationRequestContributions(): Observable<ApiResponse> {
-    return this.http.get<ApiResponse>(`${this.apiUrl}/donor/dashboard/donation-request-contributions`, { headers: this.getHeaders() })
+    // Add cache-busting parameter to force fresh data
+    const timestamp = new Date().getTime();
+    return this.http.get<ApiResponse>(`${this.apiUrl}/donor/dashboard/donation-request-contributions?t=${timestamp}`, { 
+      headers: this.getHeaders(),
+      // Force bypass cache
+      observe: 'body',
+      responseType: 'json'
+    })
       .pipe(
         map(res => this.normalizeResponse(res)),
         catchError(err => this.handleError(err))
@@ -236,7 +273,14 @@ export class ApiService {
 
   // Get NGO donation details (all contributions with donor info)
   getNgoDonationDetails(): Observable<ApiResponse> {
-    return this.http.get<ApiResponse>(`${this.apiUrl}/ngo/dashboard/donations/details`, { headers: this.getHeaders() })
+    // Add cache-busting parameter to force fresh data
+    const timestamp = new Date().getTime();
+    return this.http.get<ApiResponse>(`${this.apiUrl}/ngo/dashboard/donations/details?t=${timestamp}`, { 
+      headers: this.getHeaders(),
+      // Force bypass cache
+      observe: 'body',
+      responseType: 'json'
+    })
       .pipe(
         map(res => this.normalizeResponse(res)),
         catchError(err => this.handleError(err))
@@ -245,7 +289,14 @@ export class ApiService {
 
   // Get NGO donation summary (aggregated stats)
   getNgoDonationSummary(): Observable<ApiResponse> {
-    return this.http.get<ApiResponse>(`${this.apiUrl}/ngo/dashboard/donations/summary`, { headers: this.getHeaders() })
+    // Add cache-busting parameter to force fresh data
+    const timestamp = new Date().getTime();
+    return this.http.get<ApiResponse>(`${this.apiUrl}/ngo/dashboard/donations/summary?t=${timestamp}`, { 
+      headers: this.getHeaders(),
+      // Force bypass cache
+      observe: 'body',
+      responseType: 'json'
+    })
       .pipe(
         map(res => this.normalizeResponse(res)),
         catchError(err => this.handleError(err))
@@ -451,6 +502,14 @@ export class ApiService {
     return this.http.put<ApiResponse>(`${this.apiUrl}/admin/dashboard/ngos/${id}/reject`, { rejectionReason }, { headers: this.getHeaders() });
   }
 
+  approveNgoProfileUpdate(id: string): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(`${this.apiUrl}/admin/dashboard/ngos/${id}/approve-profile-update`, {}, { headers: this.getHeaders() });
+  }
+
+  rejectNgoProfileUpdate(id: string): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(`${this.apiUrl}/admin/dashboard/ngos/${id}/reject-profile-update`, {}, { headers: this.getHeaders() });
+  }
+
   // ==================== ADMIN DONOR MANAGEMENT ====================
   getAdminDonors(params?: { page?: number; limit?: number; search?: string }): Observable<ApiResponse> {
     let url = `${this.apiUrl}/admin/donors`;
@@ -580,6 +639,62 @@ export class ApiService {
     }
     // Leaderboard is public - no auth required
     return this.http.get<ApiResponse>(url)
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  // ==================== NOTIFICATIONS ====================
+  /**
+   * Get notifications for logged-in user
+   * @param params limit: number, unreadOnly: boolean
+   */
+  getNotifications(params?: { limit?: number; unreadOnly?: boolean }): Observable<ApiResponse> {
+    let url = `${this.apiUrl}/notifications`;
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.unreadOnly) queryParams.append('unreadOnly', params.unreadOnly.toString());
+      const queryString = queryParams.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+    }
+    return this.http.get<ApiResponse>(url, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Mark notification as read
+   */
+  markNotificationAsRead(notificationId: number): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(`${this.apiUrl}/notifications/${notificationId}/read`, {}, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Mark all notifications as read
+   */
+  markAllNotificationsAsRead(): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(`${this.apiUrl}/notifications/read-all`, {}, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Delete notification
+   */
+  deleteNotification(notificationId: number): Observable<ApiResponse> {
+    return this.http.delete<ApiResponse>(`${this.apiUrl}/notifications/${notificationId}`, { headers: this.getHeaders() })
       .pipe(
         map(res => this.normalizeResponse(res)),
         catchError(err => this.handleError(err))

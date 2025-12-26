@@ -38,7 +38,10 @@ export class DonationListComponent implements OnInit {
 
   async ngOnInit() {
     await this.loadDonations();
-    await this.loadDonorProfile();
+    // Only load donor profile if user is authenticated
+    if (this.authService.isAuthenticated()) {
+      await this.loadDonorProfile();
+    }
   }
 
   async loadDonations() {
@@ -113,6 +116,11 @@ export class DonationListComponent implements OnInit {
   }
 
   async loadDonorProfile() {
+    // Only load if user is authenticated
+    if (!this.authService.isAuthenticated()) {
+      return;
+    }
+    
     try {
       const resp$: Observable<ApiResponse> = this.apiService.getDonorProfile();
       const response = await lastValueFrom(resp$);
@@ -122,7 +130,7 @@ export class DonationListComponent implements OnInit {
         this.donorContactNumber = profile.phoneNumber || profile.contactInfo || '';
       }
     } catch {
-      // ignore
+      // ignore - user might not be a donor or not authenticated
     }
   }
 
@@ -158,5 +166,41 @@ export class DonationListComponent implements OnInit {
   formatDate(date: string | Date): string {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString();
+  }
+
+  /**
+   * Get label for quantity/amount field based on donation type
+   */
+  getQuantityOrAmountLabel(donationType: string): string {
+    if (donationType === 'FUNDS') {
+      return 'Required Amount';
+    } else if (donationType === 'FOOD' || donationType === 'CLOTHES') {
+      return 'Required Quantity';
+    }
+    return 'Required Quantity/Amount';
+  }
+
+  /**
+   * Format quantity/amount based on donation type
+   */
+  formatQuantityOrAmount(donation: any): string {
+    const value = donation.quantity_or_amount;
+    if (!value && value !== 0) return 'N/A';
+    
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return 'N/A';
+
+    // For FUNDS: show with ₹ symbol and 2 decimals
+    if (donation.donation_type === 'FUNDS') {
+      return `₹${numValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    
+    // For FOOD/CLOTHES: show as integer (no decimals, no currency)
+    if (donation.donation_type === 'FOOD' || donation.donation_type === 'CLOTHES') {
+      return Math.round(numValue).toLocaleString('en-IN');
+    }
+    
+    // Default: show as number
+    return numValue.toLocaleString('en-IN');
   }
 }

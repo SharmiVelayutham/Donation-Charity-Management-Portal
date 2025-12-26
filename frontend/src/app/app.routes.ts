@@ -55,12 +55,13 @@ export const routes: Routes = [
   },
 
 
+  // ---------------- DONATION REQUESTS (Public - anyone can view, but only donors can contribute) ---------------- 
   {
-    path: 'donations',
+    path: 'donations/:id/contribute',
     loadComponent: () =>
-      import('./donor/donation-list/donation-list.component')
-        .then(m => m.DonationListComponent),
-    canActivate: [authGuard] 
+      import('./donor/contribution/contribution.component')
+        .then(m => m.ContributionComponent),
+    canActivate: [roleGuard(['DONOR'])]
   },
   {
     path: 'donation-requests/:id/contribute',
@@ -70,11 +71,18 @@ export const routes: Routes = [
     canActivate: [roleGuard(['DONOR'])]
   },
   {
-    path: 'donations/:id/contribute',
+    path: 'donations/:id',
     loadComponent: () =>
-      import('./donor/contribution/contribution.component')
-        .then(m => m.ContributionComponent),
-    canActivate: [roleGuard(['DONOR'])]
+      import('./donor/donation-list/donation-list.component')
+        .then(m => m.DonationListComponent)
+    // No auth guard - anyone can view individual donation request
+  },
+  {
+    path: 'donations',
+    loadComponent: () =>
+      import('./donor/donation-list/donation-list.component')
+        .then(m => m.DonationListComponent)
+    // No auth guard - anyone can view donation requests
   },
   {
     path: 'dashboard/donor',

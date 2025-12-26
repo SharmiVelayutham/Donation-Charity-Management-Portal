@@ -100,6 +100,52 @@ export class SocketService {
   }
 
   /**
+   * Subscribe to new notifications
+   */
+  onNotification(callback: (notification: any) => void): () => void {
+    if (!this.socket) {
+      console.error('[Socket] Not connected. Call connect() first.');
+      return () => {};
+    }
+
+    this.socket.on('notification:new', (data: any) => {
+      console.log('[Socket] New notification received:', data);
+      callback(data);
+    });
+
+    // Return unsubscribe function
+    return () => {
+      if (this.socket) {
+        this.socket.off('notification:new');
+      }
+    };
+  }
+
+  /**
+   * Subscribe to contribution status updates (for donors)
+   */
+  onContributionStatusUpdate(callback: (data: { contributionId: number; status: string; message: string }) => void): void {
+    if (!this.socket) {
+      console.error('[Socket] Not connected. Call connect() first.');
+      return;
+    }
+
+    this.socket.on('contribution:status-updated', (data: { contributionId: number; status: string; message: string }) => {
+      console.log('[Socket] Contribution status updated:', data);
+      callback(data);
+    });
+  }
+
+  /**
+   * Unsubscribe from contribution status updates
+   */
+  offContributionStatusUpdate(): void {
+    if (this.socket) {
+      this.socket.off('contribution:status-updated');
+    }
+  }
+
+  /**
    * Unsubscribe from Donor stats updates
    */
   offDonorStatsUpdate(): void {

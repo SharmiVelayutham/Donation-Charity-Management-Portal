@@ -15,9 +15,9 @@
 }
 
 .leaderboard-container {
-  min-height: 100vh;
-  background-color: var(--background-color);
-  padding: 2rem;
+  width: 100%;
+  background-color: transparent;
+  padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
@@ -32,39 +32,42 @@
 }
 
 .leaderboard-header h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--primary-text);
+  font-size: 1.875rem;
+  font-weight: 600;
+  color: #1e293b;
   margin: 0 0 0.5rem 0;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
+  line-height: 1.3;
 }
 
 .leaderboard-header h1::before {
   content: '🏆';
-  font-size: 2.5rem;
+  font-size: 1.875rem;
 }
 
 .subtitle {
-  color: var(--secondary-text);
-  font-size: 1.1rem;
+  color: #64748b;
+  font-size: 1rem;
   margin: 0;
   font-weight: 400;
+  line-height: 1.6;
 }
 
 /* Filters Section */
 .filters {
-  background: var(--card-color);
+  background: #EDEAE0; /* Alabaster SW7008 */
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-bottom: 2rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1.5rem;
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
 }
 
 .filter-group {
@@ -72,43 +75,43 @@
   flex-direction: column;
   gap: 0.5rem;
   flex: 1;
-  min-width: 180px;
+  min-width: 150px;
 }
 
 .filter-group label {
-  color: var(--primary-text);
+  color: #1e293b;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .filter-group select {
   padding: 0.75rem 1rem;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  background: var(--card-color);
-  color: var(--primary-text);
-  font-size: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  color: #1e293b;
+  font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23607D8B' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 1rem center;
   padding-right: 2.5rem;
 }
 
 .filter-group select:hover {
-  border-color: var(--secondary-color);
-  background-color: var(--hover-color);
+  border-color: #3b82f6;
+  background-color: #f8fafc;
 }
 
 .filter-group select:focus {
   outline: none;
-  border-color: var(--secondary-color);
-  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .filter-group select:disabled {
@@ -119,12 +122,13 @@
 /* Loading and Error States */
 .loading,
 .error {
-  background: var(--card-color);
+  background: #EDEAE0; /* Alabaster SW7008 */
   padding: 2rem;
   border-radius: 12px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-bottom: 2rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1.5rem;
 }
 
 .loading p {
@@ -142,11 +146,12 @@
 
 /* Leaderboard Table */
 .leaderboard-table {
-  background: var(--card-color);
+  background: #EDEAE0; /* Alabaster SW7008 */
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
   overflow: hidden;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
 }
 
 .leaderboard-table table {
@@ -155,15 +160,15 @@
 }
 
 .leaderboard-table thead {
-  background: linear-gradient(135deg, var(--primary-color) 0%, #1B5E20 100%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
 .leaderboard-table th {
-  padding: 1.25rem 1rem;
+  padding: 1rem;
   text-align: left;
   color: #FFFFFF;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 2px solid rgba(255, 255, 255, 0.2);
@@ -178,12 +183,17 @@
 }
 
 .leaderboard-table tbody tr {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #e2e8f0;
+  background-color: white;
   transition: background-color 0.2s ease;
 }
 
+.leaderboard-table tbody tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
 .leaderboard-table tbody tr:hover {
-  background-color: var(--hover-color);
+  background-color: #f1f5f9;
 }
 
 .leaderboard-table tbody tr:last-child {
@@ -191,18 +201,19 @@
 }
 
 .leaderboard-table tbody tr.top-three {
-  background: linear-gradient(90deg, var(--gold-light) 0%, transparent 100%);
+  background: linear-gradient(90deg, #fef3c7 0%, transparent 100%);
   font-weight: 500;
 }
 
 .leaderboard-table tbody tr.top-three:hover {
-  background: linear-gradient(90deg, var(--gold-light) 0%, var(--hover-color) 100%);
+  background: linear-gradient(90deg, #fef3c7 0%, #f1f5f9 100%);
 }
 
 .leaderboard-table td {
-  padding: 1.25rem 1rem;
-  color: var(--primary-text);
-  font-size: 1rem;
+  padding: 1rem;
+  color: #1e293b;
+  font-size: 0.9375rem;
+  vertical-align: middle;
 }
 
 .leaderboard-table td:first-child {
@@ -215,106 +226,105 @@
 
 /* Rank Badge */
 .rank-badge {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: 50%;
   font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--primary-text);
-  background: var(--background-color);
-  border: 2px solid var(--border-color);
+  font-size: 0.9375rem;
+  color: #1e293b !important;
+  background: #f1f5f9 !important;
+  border: 2px solid #e2e8f0 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .rank-badge.rank-gold {
-  background: linear-gradient(135deg, var(--accent-color) 0%, #F57F17 100%);
-  color: #FFFFFF;
-  border-color: var(--accent-color);
-  box-shadow: 0 4px 12px rgba(249, 168, 37, 0.3);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
+  color: #FFFFFF !important;
+  border-color: #fbbf24 !important;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
 }
 
 .rank-badge.rank-silver {
-  background: linear-gradient(135deg, #9E9E9E 0%, #616161 100%);
-  color: #FFFFFF;
-  border-color: #9E9E9E;
-  box-shadow: 0 4px 12px rgba(158, 158, 158, 0.3);
+  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%) !important;
+  color: #FFFFFF !important;
+  border-color: #9ca3af !important;
+  box-shadow: 0 4px 12px rgba(156, 163, 175, 0.3);
 }
 
 .rank-badge.rank-bronze {
-  background: linear-gradient(135deg, #FF6F00 0%, #E65100 100%);
-  color: #FFFFFF;
-  border-color: #FF6F00;
-  box-shadow: 0 4px 12px rgba(255, 111, 0, 0.3);
+  background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%) !important;
+  color: #FFFFFF !important;
+  border-color: #fb923c !important;
+  box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3);
 }
 
 .rank-badge.rank-other {
-  background: var(--background-color);
-  color: var(--secondary-text);
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+  border-color: #e2e8f0 !important;
 }
 
 /* Amount Styling */
 .amount {
-  color: var(--primary-color);
+  color: #10b981;
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 1rem;
 }
 
 /* No Data Message */
 .no-data {
   text-align: center;
-  padding: 3rem 1rem !important;
-  color: var(--secondary-text);
-  font-size: 1.1rem;
-}
-
-/* Actions Section */
-.actions {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 2rem;
-}
-
-.btn-secondary {
-  background: var(--card-color);
-  color: var(--secondary-color);
-  border: 2px solid var(--secondary-color);
-  padding: 0.875rem 2rem;
-  border-radius: 8px;
+  padding: 2rem 1rem !important;
+  color: #64748b;
   font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-decoration: none;
-  display: inline-block;
 }
 
-.btn-secondary:hover {
-  background: var(--secondary-color);
-  color: #FFFFFF;
-  box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3);
-  transform: translateY(-2px);
-}
-
-.btn-secondary:active {
-  transform: translateY(0);
-}
+/* Actions Section - Removed for admin dashboard */
 
 /* Responsive Design */
-@media (max-width: 768px) {
-  .leaderboard-container {
-    padding: 1rem;
+@media (max-width: 1024px) {
+  .leaderboard-header {
+    padding: 1.25rem;
   }
 
   .leaderboard-header h1 {
-    font-size: 2rem;
+    font-size: 1.5rem;
+  }
+
+  .filters {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .leaderboard-header {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .leaderboard-header h1 {
+    font-size: 1.375rem;
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .leaderboard-header h1::before {
+    font-size: 1.375rem;
+  }
+
+  .subtitle {
+    font-size: 0.9375rem;
   }
 
   .filters {
     flex-direction: column;
     align-items: stretch;
+    padding: 1rem;
+    gap: 0.75rem;
   }
 
   .filter-group {
@@ -327,28 +337,67 @@
   }
 
   .leaderboard-table table {
-    min-width: 800px;
+    min-width: 700px;
   }
 
   .leaderboard-table th,
   .leaderboard-table td {
-    padding: 0.875rem 0.75rem;
-    font-size: 0.9rem;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .rank-badge {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.875rem;
   }
 }
 
 @media (max-width: 480px) {
   .leaderboard-header {
-    padding: 1.5rem;
+    padding: 1rem;
   }
 
   .leaderboard-header h1 {
-    font-size: 1.75rem;
+    font-size: 1.25rem;
     flex-direction: column;
     gap: 0.5rem;
   }
 
+  .leaderboard-header h1::before {
+    font-size: 1.25rem;
+  }
+
   .subtitle {
-    font-size: 1rem;
+    font-size: 0.875rem;
+  }
+
+  .filters {
+    padding: 0.75rem;
+  }
+
+  .filter-group label {
+    font-size: 0.75rem;
+  }
+
+  .filter-group select {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+  }
+
+  .leaderboard-table table {
+    min-width: 600px;
+  }
+
+  .leaderboard-table th,
+  .leaderboard-table td {
+    padding: 0.625rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .rank-badge {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.8125rem;
   }
 }

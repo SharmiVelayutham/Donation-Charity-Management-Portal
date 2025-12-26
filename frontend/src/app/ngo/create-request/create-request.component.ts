@@ -141,6 +141,42 @@ export class CreateRequestComponent {
     return this.donationType === 'FUNDS';
   }
 
+  /**
+   * Get dynamic label for quantity/amount field
+   */
+  getQuantityOrAmountLabel(): string {
+    if (this.donationType === 'FUNDS') {
+      return 'Amount Required';
+    } else if (this.donationType === 'FOOD' || this.donationType === 'CLOTHES') {
+      return 'Quantity Required';
+    }
+    return 'Quantity/Amount Required';
+  }
+
+  /**
+   * Get dynamic placeholder for quantity/amount field
+   */
+  getQuantityOrAmountPlaceholder(): string {
+    if (this.donationType === 'FUNDS') {
+      return 'Enter amount';
+    } else if (this.donationType === 'FOOD' || this.donationType === 'CLOTHES') {
+      return 'Enter quantity';
+    }
+    return 'Enter quantity or amount';
+  }
+
+  /**
+   * Get dynamic hint for quantity/amount field
+   */
+  getQuantityOrAmountHint(): string {
+    if (this.donationType === 'FUNDS') {
+      return 'Enter the total amount (in ₹) you need';
+    } else if (this.donationType === 'FOOD' || this.donationType === 'CLOTHES') {
+      return 'Enter the total quantity of items you need';
+    }
+    return 'Enter the total quantity (for items) or amount (for funds) you need';
+  }
+
   triggerImageUpload() {
     const fileInput = document.getElementById('image-upload') as HTMLInputElement;
     if (fileInput) {
@@ -163,7 +199,8 @@ export class CreateRequestComponent {
     }
 
     if (!this.quantityOrAmount || this.quantityOrAmount <= 0) {
-      this.errorMessage = 'Please enter a valid Quantity/Amount (must be greater than 0)';
+      const fieldName = this.donationType === 'FUNDS' ? 'Amount' : 'Quantity';
+      this.errorMessage = `Please enter a valid ${fieldName} (must be greater than 0)`;
       return;
     }
 

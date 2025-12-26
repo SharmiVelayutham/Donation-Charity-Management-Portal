@@ -66,9 +66,6 @@
             <p *ngIf="donationType === 'FOOD' || donationType === 'CLOTHES'">
               <strong>Note:</strong> For {{ donationType }} donations, donors will provide pickup location, date, and time when they contribute.
             </p>
-            <p *ngIf="donationType !== 'FUNDS' && donationType !== 'FOOD' && donationType !== 'CLOTHES'">
-              <strong>Note:</strong> You are creating a donation request. Donors will fill in their donation details when they contribute.
-            </p>
           </div>
         </div>
 
@@ -89,40 +86,24 @@
               <mat-icon>checkroom</mat-icon>
               Clothes
             </mat-option>
-            <mat-option value="MEDICINE">
-              <mat-icon>medication</mat-icon>
-              Medicine
-            </mat-option>
-            <mat-option value="BOOKS">
-              <mat-icon>menu_book</mat-icon>
-              Books
-            </mat-option>
-            <mat-option value="TOYS">
-              <mat-icon>toys</mat-icon>
-              Toys
-            </mat-option>
-            <mat-option value="OTHER">
-              <mat-icon>category</mat-icon>
-              Other
-            </mat-option>
           </mat-select>
           <mat-icon matPrefix>category</mat-icon>
           <mat-hint>Select the type of donation you need</mat-hint>
         </mat-form-field>
 
-        <!-- Quantity/Amount Required -->
+        <!-- Quantity/Amount Required (Dynamic Label) -->
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Quantity/Amount Required *</mat-label>
+          <mat-label>{{ getQuantityOrAmountLabel() }} *</mat-label>
           <input matInput 
                  type="number" 
                  [(ngModel)]="quantityOrAmount" 
                  name="quantityOrAmount"
-                 placeholder="Enter quantity or amount"
+                 [placeholder]="getQuantityOrAmountPlaceholder()"
                  min="1"
                  step="0.01"
                  required>
           <mat-icon matPrefix>numbers</mat-icon>
-          <mat-hint>Enter the total quantity (for items) or amount (for funds) you need</mat-hint>
+          <mat-hint>{{ getQuantityOrAmountHint() }}</mat-hint>
         </mat-form-field>
 
         <!-- Account Details for FUNDS (Optional but recommended) -->

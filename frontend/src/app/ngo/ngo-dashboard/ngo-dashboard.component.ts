@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { ApiService, ApiResponse } from '../../services/api.service';
@@ -21,6 +21,8 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
+import { NotificationBellComponent } from '../../shared/notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-ngo-dashboard',
@@ -41,7 +43,9 @@ import { MatSelectModule } from '@angular/material/select';
     MatChipsModule,
     MatDividerModule,
     MatTooltipModule,
-    MatSelectModule
+    MatSelectModule,
+    MatMenuModule,
+    NotificationBellComponent
   ],
   templateUrl: './ngo-dashboard.component.html',
   styleUrls: ['./ngo-dashboard.component.css'],
@@ -63,20 +67,41 @@ export class NgoDashboardComponent implements OnInit, OnDestroy {
 
   // Donation details and summary
   donationDetails: any[] = [];
+  allDonationDetails: any[] = []; // Store all donations
+  showAllContributions: boolean = false; // Toggle between recent and all
   donationSummary: any = {
     totalDonors: 0,
     totalDonations: 0,
     totalFundsCollected: 0,
+    fundsReceived: 0,
+    fundsPending: 0,
     breakdownByType: {}
   };
   isLoadingDonations: boolean = false;
   updatingStatus: { [key: number]: boolean } = {};
+  // Status map for reliable dropdown updates
+  donationStatusMap: { [key: number]: string } = {};
   
   // Status options for contributions (when NGO receives donation)
   statusOptions = [
-    { value: 'ACCEPTED', label: 'Accepted' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'ACCEPTED', label: 'Received' },
     { value: 'NOT_RECEIVED', label: 'Not Received' }
   ];
+  
+  /**
+   * Get available status options for a donation
+   * Once status is changed to ACCEPTED or NOT_RECEIVED, PENDING option is removed
+   */
+  getAvailableStatusOptions(donation: any): any[] {
+    const currentStatus = donation.status || this.donationStatusMap[donation.contributionId] || 'PENDING';
+    // If status is already ACCEPTED or NOT_RECEIVED, don't show PENDING option
+    if (currentStatus === 'ACCEPTED' || currentStatus === 'NOT_RECEIVED') {
+      return this.statusOptions.filter(opt => opt.value !== 'PENDING');
+    }
+    // If status is PENDING, show all options
+    return this.statusOptions;
+  }
   isLoading: boolean = false;
   // Dashboard full payload
   dashboardData: any = {
@@ -130,6 +155,12 @@ export class NgoDashboardComponent implements OnInit, OnDestroy {
     if (!date) return 'Not available';
     const d = new Date(date);
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  formatTime(time: any): string {
+    if (!time) return '';
+    const t = new Date(time);
+    return t.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
   formatDateTime(dateTime: any): string {
@@ -302,6 +333,7 @@ export class NgoDashboardComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private socketService: SocketService,
     private snackBar: MatSnackBar,
+    private cdr: ChangeDetectorRef,
     private dialog: MatDialog
   ) {}
 
@@ -384,8 +416,44 @@ export class NgoDashboardComponent implements OnInit, OnDestroy {
     try {
       const response = await lastValueFrom(this.apiService.getNgoDonationDetails());
       if (response?.success && response.data) {
-        this.donationDetails = response.data || [];
-        console.log('[NGO Dashboard] Donation details loaded:', this.donationDetails.length, 'contributions');
+        // Ensure all donations have a status, default to PENDING if missing, and normalize to uppercase
+        this.donationDetails = (response.data || []).map((d: any) => {
+          // Get status from the response - check multiple possible field names
+          let rawStatus = d.status || d.contribution_status || '';
+          
+          // Default to PENDING if status is missing, null, empty, or invalid
+          let normalizedStatus = 'PENDING';
+          
+          if (rawStatus && typeof rawStatus === 'string' && rawStatus.trim() !== '') {
+            normalizedStatus = rawStatus.toUpperCase().trim();
+          }
+          
+          // Handle empty string, null, or undefined
+          if (!normalizedStatus || normalizedStatus === '' || normalizedStatus === 'NULL' || normalizedStatus === 'UNDEFINED') {
+            normalizedStatus = 'PENDING';
+          }
+          
+          // Only allow PENDING, ACCEPTED, or NOT_RECEIVED
+          if (normalizedStatus !== 'PENDING' && normalizedStatus !== 'ACCEPTED' && normalizedStatus !== 'NOT_RECEIVED') {
+            normalizedStatus = 'PENDING';
+          }
+          
+          console.log(`[NGO Dashboard] Loading contribution ${d.contributionId || d.id}: rawStatus="${rawStatus}" -> normalized="${normalizedStatus}"`);
+          
+          return {
+            ...d,
+            status: normalizedStatus
+          };
+        });
+        // Store all donations
+        this.allDonationDetails = this.donationDetails;
+        // Initialize with recent donations (last 3 days) by default
+        if (!this.showAllContributions) {
+          this.donationDetails = this.getRecentDonationDetails();
+        }
+        console.log('[NGO Dashboard] ✅ Donation details loaded:', this.allDonationDetails.length, 'total contributions,', this.donationDetails.length, 'displayed contributions');
+        // Force change detection to update the UI
+        this.cdr.detectChanges();
       }
     } catch (error: any) {
       console.error('[NGO Dashboard] Failed to load donation details:', error);
@@ -411,33 +479,78 @@ export class NgoDashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Update contribution status
+   * Update contribution status - DIRECT BUTTON CLICK HANDLER
    */
   async updateContributionStatus(contributionId: number, newStatus: string) {
+    // Don't update if already updating
     if (this.updatingStatus[contributionId]) {
-      return; // Already updating
+      console.log(`[NGO Dashboard] Already updating contribution ${contributionId}`);
+      return;
     }
 
+    const normalizedStatus = newStatus.toUpperCase();
+    const donationIndex = this.donationDetails.findIndex(d => d.contributionId === contributionId);
+    if (donationIndex === -1) {
+      console.error(`[NGO Dashboard] Donation not found for contribution ${contributionId}`);
+      return;
+    }
+
+    const donation = this.donationDetails[donationIndex];
+    const currentStatus = (donation?.status || 'PENDING').toUpperCase();
+    
+    // Don't update if status is already the same
+    if (currentStatus === normalizedStatus) {
+      console.log(`[NGO Dashboard] Status already ${normalizedStatus} for contribution ${contributionId}`);
+      return;
+    }
+    
+    console.log(`[NGO Dashboard] 🔄 Button clicked: Updating contribution ${contributionId} from ${currentStatus} to ${normalizedStatus}`);
     this.updatingStatus[contributionId] = true;
+    
+    // Update UI immediately - update both arrays
+    const updatedDonation = {
+      ...donation,
+      status: normalizedStatus
+    };
+    this.donationDetails[donationIndex] = updatedDonation;
+    
+    // Also update in allDonationDetails
+    const allDonationIndex = this.allDonationDetails.findIndex(d => d.contributionId === contributionId);
+    if (allDonationIndex !== -1) {
+      this.allDonationDetails[allDonationIndex] = updatedDonation;
+    }
+    
+    this.cdr.detectChanges();
+    
     try {
       const response = await lastValueFrom(
-        this.apiService.updateContributionStatus(contributionId, newStatus)
+        this.apiService.updateContributionStatus(contributionId, normalizedStatus)
       );
 
       if (response?.success) {
-        // Update local donation details
-        const donation = this.donationDetails.find(d => d.contributionId === contributionId);
-        if (donation) {
-          donation.status = newStatus;
-        }
-        this.showToast(`Status updated to ${newStatus} successfully`, false);
-        // Reload summary to reflect changes
-        await this.loadDonationSummary();
+        const statusLabel = this.getStatusLabel(normalizedStatus);
+        this.showToast(`Status updated to ${statusLabel} successfully`, false);
+        
+        // Status already updated optimistically, no need to reload immediately
+        // The status badge will show the updated status right away
+        // Data will sync on next natural refresh or page reload
       } else {
+        // Revert on error
+        this.donationDetails[donationIndex] = {
+          ...donation,
+          status: currentStatus
+        };
+        this.cdr.detectChanges();
         this.showToast(response.message || 'Failed to update status', true);
       }
     } catch (error: any) {
       console.error('[NGO Dashboard] Failed to update contribution status:', error);
+      // Revert on error
+      this.donationDetails[donationIndex] = {
+        ...donation,
+        status: currentStatus
+      };
+      this.cdr.detectChanges();
       this.showToast(error.error?.message || 'Failed to update status', true);
     } finally {
       this.updatingStatus[contributionId] = false;
@@ -450,12 +563,67 @@ export class NgoDashboardComponent implements OnInit, OnDestroy {
   getStatusClass(status: string): string {
     const statusMap: { [key: string]: string } = {
       'PENDING': 'status-pending',
-      'ACCEPTED': 'status-approved',
+      'ACCEPTED': 'status-approved',  // Received - shows as approved/green
+      'APPROVED': 'status-approved',  // Received - shows as approved/green
       'NOT_RECEIVED': 'status-rejected',
       'REJECTED': 'status-rejected',
       'COMPLETED': 'status-completed'
     };
     return statusMap[status] || 'status-default';
+  }
+
+  /**
+   * Get status label for display
+   */
+  /**
+   * Get recent donations (last 3 days)
+   */
+  getRecentDonationDetails(): any[] {
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    
+    return this.allDonationDetails.filter((donation: any) => {
+      const donationDate = new Date(donation.donationDate);
+      return donationDate >= threeDaysAgo;
+    });
+  }
+
+  /**
+   * Get label for quantity/amount field based on donation type
+   */
+  getQuantityOrAmountLabel(donationType: string): string {
+    if (donationType === 'FUNDS' || donationType === 'MONEY') {
+      return 'Amount';
+    } else if (donationType === 'FOOD' || donationType === 'CLOTHES') {
+      return 'Quantity';
+    }
+    return 'Quantity/Amount';
+  }
+
+  /**
+   * Format quantity/amount based on donation type
+   */
+  getFormattedQuantityOrAmount(amount: number | string, donationType: string): string {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(numAmount)) return 'N/A';
+
+    if (donationType === 'FUNDS' || donationType === 'MONEY') {
+      return `₹${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } else {
+      return Math.round(numAmount).toLocaleString('en-IN');
+    }
+  }
+
+  getStatusLabel(status: string): string {
+    const option = this.statusOptions.find(opt => opt.value === status);
+    return option ? option.label : status;
+  }
+
+  /**
+   * TrackBy function for donation details to help Angular track changes
+   */
+  trackByContributionId(index: number, donation: any): number {
+    return donation.contributionId;
   }
 
   async loadDashboard() {
@@ -578,6 +746,8 @@ export class NgoDashboardComponent implements OnInit, OnDestroy {
     this.currentView = 'dashboard';
     this.isEditingProfile = false;
     this.mobileMenuOpen = false;
+    this.showAllContributions = false;
+    this.donationDetails = this.getRecentDonationDetails();
   }
 
   showProfile() {
@@ -602,6 +772,28 @@ export class NgoDashboardComponent implements OnInit, OnDestroy {
 
   goToRequests() {
     this.router.navigate(['/ngo/requests']);
+  }
+
+  /**
+   * Toggle between showing recent and all contributions
+   */
+  toggleContributionsView() {
+    this.showAllContributions = !this.showAllContributions;
+    if (this.showAllContributions) {
+      this.donationDetails = this.allDonationDetails;
+    } else {
+      this.donationDetails = this.getRecentDonationDetails();
+    }
+  }
+
+  /**
+   * Show all donor contributions
+   */
+  showAllContributionsView() {
+    this.showAllContributions = true;
+    this.currentView = 'dashboard';
+    this.donationDetails = this.allDonationDetails;
+    this.mobileMenuOpen = false;
   }
 
   toggleProfileEdit() {

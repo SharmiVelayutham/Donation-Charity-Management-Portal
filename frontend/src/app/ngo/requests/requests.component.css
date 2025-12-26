@@ -20,11 +20,13 @@
 
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
 
   text-align: center;
-  padding: 20px;
+  padding: 40px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* Page title */
@@ -42,13 +44,27 @@
   margin-bottom: 30px;
 }
 
+/* ===== REQUESTS GRID ===== */
+.requests-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 24px;
+  width: 100%;
+  margin-top: 30px;
+}
+
 /* ===== REQUEST CARD ===== */
 .request-card {
   background: #ffffff;
   padding: 30px;
-  width: 420px;
   border-radius: 14px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.request-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Smaller sentence text */
@@ -57,6 +73,76 @@
   font-weight: 500;
   color: #1e293b;
   margin-bottom: 24px;
+}
+
+.request-info {
+  text-align: left;
+  margin-bottom: 24px;
+}
+
+.request-info p {
+  margin: 12px 0;
+  font-size: 14px;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.request-info strong {
+  color: #1e293b;
+  min-width: 120px;
+  display: inline-block;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.status-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.status-confirmed,
+.status-badge.status-active {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.status-completed {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.status-cancelled,
+.status-badge.status-closed {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.priority-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.priority-badge.priority-normal {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.priority-badge.priority-urgent {
+  background-color: #fee2e2;
+  color: #991b1b;
 }
 
 /* ===== BUTTONS ===== */
@@ -94,4 +180,37 @@
 
 .cancel-btn:hover {
   background: #dc2626;
+}
+
+/* Error message */
+.error-message {
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #fca5a5;
+}
+
+/* Loading state */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #475569;
+  font-size: 16px;
+}
+
+/* No donations message */
+.no-donations {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-top: 30px;
+}
+
+.no-donations p {
+  font-size: 16px;
+  color: #475569;
+  margin: 0;
 }

@@ -22,6 +22,8 @@ export class HomeComponent implements OnInit {
   isLoading = false;
   isAuthenticated = false;
   userRole: string | null = null;
+  userName: string = '';
+  userInitial: string = '';
   recentDonations: any[] = [];
   menuOpen = false;
   currentSlide = 0;
@@ -35,7 +37,21 @@ export class HomeComponent implements OnInit {
   ngOnInit() {
     this.isAuthenticated = this.authService.isAuthenticated();
     this.userRole = this.authService.getCurrentRole();
+    this.loadUserInfo();
     this.loadRecentDonations();
+  }
+
+  loadUserInfo() {
+    if (this.isAuthenticated) {
+      const user = this.authService.getUser();
+      if (user) {
+        this.userName = user.name || '';
+        // Get first letter of name in uppercase
+        if (this.userName) {
+          this.userInitial = this.userName.charAt(0).toUpperCase();
+        }
+      }
+    }
   }
 
   prevSlide() {
@@ -50,20 +66,25 @@ export class HomeComponent implements OnInit {
 
   async loadRecentDonations() {
     try {
-      // Load only ACTIVE donations (no auth required for viewing)
-      const response = await lastValueFrom(this.apiService.getDonations({ status: 'ACTIVE' }));
+      // Load ACTIVE donation requests (no auth required for viewing)
+      const response = await lastValueFrom(this.apiService.getActiveDonationRequests());
       if (response?.success && response.data) {
-        const donations = Array.isArray(response.data) 
-          ? response.data 
-          : (response.data.donations || []);
-        // Show only ACTIVE donations, limit to 6 most recent
-        this.recentDonations = donations
-          .filter((d: any) => d.status === 'ACTIVE')
-          .slice(0, 6);
+        const requests = Array.isArray(response.data) ? response.data : [];
+        
+        // Filter to show only requests from last 3 days
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        
+        this.recentDonations = requests
+          .filter((req: any) => {
+            const requestDate = new Date(req.created_at);
+            return requestDate >= threeDaysAgo;
+          })
+          .slice(0, 6); // Limit to 6 most recent
       }
     } catch (error) {
-      console.error('Failed to load donations:', error);
-      // Use placeholder data if API fails
+      console.error('Failed to load donation requests:', error);
+      // Use empty array if API fails
       this.recentDonations = [];
     }
   }
@@ -83,6 +104,42 @@ export class HomeComponent implements OnInit {
   formatDate(date: string | Date): string {
     if (!date) return 'N/A';
     return new Date(date).toLocaleString();
+  }
+
+  /**
+   * Get label for quantity/amount field based on donation type
+   */
+  getQuantityOrAmountLabel(donationType: string): string {
+    if (donationType === 'FUNDS') {
+      return 'Required Amount';
+    } else if (donationType === 'FOOD' || donationType === 'CLOTHES') {
+      return 'Required Quantity';
+    }
+    return 'Quantity/Amount';
+  }
+
+  /**
+   * Format quantity/amount based on donation type
+   */
+  formatQuantityOrAmount(donation: any): string {
+    const value = donation.quantity_or_amount;
+    if (!value && value !== 0) return 'N/A';
+    
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return 'N/A';
+
+    // For FUNDS: show with ₹ symbol and 2 decimals
+    if (donation.donation_type === 'FUNDS') {
+      return `₹${numValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    
+    // For FOOD/CLOTHES: show as integer (no decimals, no currency)
+    if (donation.donation_type === 'FOOD' || donation.donation_type === 'CLOTHES') {
+      return Math.round(numValue).toLocaleString('en-IN');
+    }
+    
+    // Default: show as number
+    return numValue.toLocaleString('en-IN');
   }
 
   handleDonateClick(donationId: string | number) {

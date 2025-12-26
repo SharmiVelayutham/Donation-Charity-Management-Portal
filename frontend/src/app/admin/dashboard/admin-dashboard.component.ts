@@ -17,8 +17,14 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { UnblockNgoDialogComponent } from './unblock-ngo-dialog.component';
 import { BlockNgoDialogComponent } from './block-ngo-dialog.component';
+import { ViewNgoDialogComponent } from './view-ngo-dialog.component';
+import { NotificationBellComponent } from '../../shared/notification-bell/notification-bell.component';
+import { LeaderboardComponent } from '../../leaderboard/leaderboard.component';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -37,7 +43,12 @@ import { BlockNgoDialogComponent } from './block-ngo-dialog.component';
     MatSelectModule,
     MatChipsModule,
     MatSnackBarModule,
-    MatDialogModule
+    MatDialogModule,
+    MatMenuModule,
+    MatBadgeModule,
+    MatTooltipModule,
+    NotificationBellComponent,
+    LeaderboardComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css'],
@@ -49,8 +60,8 @@ export class AdminDashboardComponent implements OnInit {
   contributions: any[] = [];
   allNgos: any[] = []; // For filter dropdown
   
-  activeTab: 'dashboard' | 'ngos' | 'contributions' | 'email-templates' = 'dashboard';
-  currentView: 'dashboard' | 'contributions' | 'ngos' | 'email-templates' = 'dashboard';
+  activeTab: 'dashboard' | 'ngos' | 'contributions' | 'email-templates' | 'leaderboard' = 'dashboard';
+  currentView: 'dashboard' | 'contributions' | 'ngos' | 'email-templates' | 'leaderboard' = 'dashboard';
   mobileMenuOpen: boolean = false;
   
   isLoading: boolean = false;
@@ -61,6 +72,17 @@ export class AdminDashboardComponent implements OnInit {
   filterBlocked: string = '';
   
   // Email template data
+  availableTemplateTypes = [
+    { value: 'OTP_REGISTRATION', label: 'OTP Registration' },
+    { value: 'OTP_PASSWORD_RESET', label: 'OTP Password Reset' },
+    { value: 'OTP_EMAIL_CHANGE', label: 'OTP Email Change' },
+    { value: 'OTP_ADMIN_REGISTRATION', label: 'OTP Admin Registration' },
+    { value: 'NGO_DONATION_RECEIVED', label: 'NGO Donation Received' },
+    { value: 'DONOR_DONATION_CONFIRMATION', label: 'Donor Donation Confirmation' },
+    { value: 'NGO_UNBLOCK', label: 'NGO Unblock' },
+    { value: 'NGO_BLOCK', label: 'NGO Block' }
+  ];
+  selectedTemplateType: string = 'NGO_UNBLOCK';
   emailTemplate: any = {
     templateType: 'NGO_UNBLOCK',
     subject: '',
@@ -69,7 +91,16 @@ export class AdminDashboardComponent implements OnInit {
   };
   isEditingTemplate: boolean = false;
   isLoadingTemplate: boolean = false;
-  placeholderHint: string = 'Available placeholders: {{NGO_NAME}}, {{UNBLOCK_DATE}}, {{SUPPORT_EMAIL}}, {{UNBLOCK_REASON}}';
+  placeholderHints: { [key: string]: string } = {
+    'OTP_REGISTRATION': 'Available placeholders: {{OTP_CODE}}',
+    'OTP_PASSWORD_RESET': 'Available placeholders: {{OTP_CODE}}',
+    'OTP_EMAIL_CHANGE': 'Available placeholders: {{OTP_CODE}}',
+    'OTP_ADMIN_REGISTRATION': 'Available placeholders: {{OTP_CODE}}',
+    'NGO_DONATION_RECEIVED': 'Available placeholders: {{NGO_NAME}}, {{DONOR_NAME}}, {{DONOR_EMAIL}}, {{DONATION_TYPE}}, {{AMOUNT_OR_QUANTITY}}',
+    'DONOR_DONATION_CONFIRMATION': 'Available placeholders: {{DONOR_NAME}}, {{NGO_NAME}}, {{DONATION_TYPE}}, {{AMOUNT_OR_QUANTITY}}',
+    'NGO_UNBLOCK': 'Available placeholders: {{NGO_NAME}}, {{UNBLOCK_DATE}}, {{SUPPORT_EMAIL}}, {{UNBLOCK_REASON}}',
+    'NGO_BLOCK': 'Available placeholders: {{NGO_NAME}}, {{BLOCK_DATE}}, {{BLOCK_REASON}}, {{SUPPORT_EMAIL}}'
+  };
 
   // Analytics data
   analytics: any = {
@@ -77,6 +108,8 @@ export class AdminDashboardComponent implements OnInit {
       breakdown: [],
       totalContributions: 0,
       totalFunds: 0,
+      fundsReceived: 0,
+      fundsPending: 0,
       monthlyTrends: [],
     },
     ngos: {
@@ -111,6 +144,9 @@ export class AdminDashboardComponent implements OnInit {
   
   // Math reference for template
   Math = Math;
+  
+  // Chart view toggle (Amount or Donors)
+  chartViewMode: 'amount' | 'donors' = 'amount';
 
   constructor(
     private apiService: ApiService,
@@ -176,18 +212,29 @@ export class AdminDashboardComponent implements OnInit {
   showEmailTemplates() {
     this.currentView = 'email-templates';
     this.activeTab = 'email-templates';
-    if (!this.emailTemplate.subject) {
+    if (!this.emailTemplate.subject || this.emailTemplate.templateType !== this.selectedTemplateType) {
       this.loadEmailTemplate();
     }
+  }
+
+  showLeaderboard() {
+    this.currentView = 'leaderboard';
+    this.activeTab = 'leaderboard';
+  }
+  
+  onTemplateTypeChange() {
+    this.emailTemplate.templateType = this.selectedTemplateType;
+    this.isEditingTemplate = false;
+    this.loadEmailTemplate();
   }
   
   async loadEmailTemplate() {
     this.isLoadingTemplate = true;
     try {
-      const response = await lastValueFrom(this.apiService.getEmailTemplate('NGO_UNBLOCK'));
+      const response = await lastValueFrom(this.apiService.getEmailTemplate(this.selectedTemplateType));
       if (response?.success && response.data) {
         this.emailTemplate = {
-          templateType: 'NGO_UNBLOCK',
+          templateType: this.selectedTemplateType,
           subject: response.data.subject || '',
           bodyHtml: response.data.bodyHtml || '',
           isDefault: response.data.isDefault || false,
@@ -199,6 +246,15 @@ export class AdminDashboardComponent implements OnInit {
     } finally {
       this.isLoadingTemplate = false;
     }
+  }
+  
+  getPlaceholderHint(): string {
+    return this.placeholderHints[this.selectedTemplateType] || 'No placeholders available';
+  }
+  
+  getTemplateLabel(): string {
+    const template = this.availableTemplateTypes.find(t => t.value === this.selectedTemplateType);
+    return template ? template.label : this.selectedTemplateType;
   }
   
   startEditingTemplate() {
@@ -290,42 +346,127 @@ export class AdminDashboardComponent implements OnInit {
     };
   }
   
-  getLineChartPoints(): string {
+  getChartData(): number[] {
     const data = this.getMonthlyTrendData();
-    if (data.counts.length === 0) return '';
-    const max = Math.max(...data.counts, 1);
-    const points = data.counts.map((value, index) => {
-      const x = 50 + (index * (500 / (data.counts.length - 1 || 1)));
+    return this.chartViewMode === 'amount' ? data.amounts : data.counts;
+  }
+  
+  getChartMaxValue(): number {
+    const values = this.getChartData();
+    if (values.length === 0) return 1;
+    const max = Math.max(...values);
+    // Round up to nearest nice number
+    const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
+    return Math.ceil(max / magnitude) * magnitude;
+  }
+  
+  getChartPoints(): { x: number, y: number }[] {
+    const values = this.getChartData();
+    if (values.length === 0) return [];
+    const max = this.getChartMaxValue();
+    return values.map((value, index) => {
+      const x = 50 + (index * (500 / (values.length - 1 || 1)));
       const y = 250 - ((value / max) * 200);
-      return `${x},${y}`;
+      return { x, y };
     });
-    return points.join(' ');
   }
   
-  getLineChartAreaPoints(): string {
-    const data = this.getMonthlyTrendData();
-    if (data.counts.length === 0) return '';
-    const points = this.getLineChartPoints();
-    return `50,250 ${points} 550,250`;
+  // Create smooth bezier curve path
+  getSmoothCurvePath(): string {
+    const points = this.getChartPoints();
+    if (points.length === 0) return '';
+    if (points.length === 1) return `M ${points[0].x},${points[0].y}`;
+    
+    let path = `M ${points[0].x},${points[0].y}`;
+    
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = i > 0 ? points[i - 1] : points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = i < points.length - 2 ? points[i + 2] : p2;
+      
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      
+      path += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+    }
+    
+    return path;
   }
   
-  getLineChartDataPoints(): { x: number, y: number }[] {
-    const data = this.getMonthlyTrendData();
-    if (data.counts.length === 0) return [];
-    const max = Math.max(...data.counts, 1);
-    return data.counts.map((value, index) => ({
-      x: 50 + (index * (500 / (data.counts.length - 1 || 1))),
-      y: 250 - ((value / max) * 200)
-    }));
+  // Create smooth area path for filling
+  getSmoothAreaPath(): string {
+    const points = this.getChartPoints();
+    if (points.length === 0) return '';
+    
+    const curvePath = this.getSmoothCurvePath();
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+    
+    return `${curvePath} L ${lastPoint.x},250 L ${firstPoint.x},250 Z`;
+  }
+  
+  getYAxisLabels(): number[] {
+    const max = this.getChartMaxValue();
+    const numLabels = 5;
+    const step = max / (numLabels - 1);
+    const labels: number[] = [];
+    for (let i = 0; i < numLabels; i++) {
+      labels.push(Math.round(step * i));
+    }
+    return labels;
+  }
+  
+  formatChartValue(value: number): string {
+    if (this.chartViewMode === 'amount') {
+      if (value >= 1000) {
+        return `₹${(value / 1000).toFixed(0)}K`;
+      }
+      return `₹${value.toFixed(0)}`;
+    }
+    return value.toString();
+  }
+  
+  setChartViewMode(mode: 'amount' | 'donors') {
+    this.chartViewMode = mode;
+  }
+
+  getBarWidth(): number {
+    const dataLength = this.getChartData().length;
+    if (dataLength === 0) return 0;
+    const totalWidth = 500; // Total available width (570 - 70)
+    const totalSpacing = (dataLength - 1) * 30; // 30px spacing between bars
+    return (totalWidth - totalSpacing) / dataLength;
+  }
+
+  getBarXPosition(index: number): number {
+    const dataLength = this.getChartData().length;
+    if (dataLength === 0) return 70;
+    const barWidth = this.getBarWidth();
+    const spacing = 30;
+    return 70 + (index * (barWidth + spacing));
+  }
+
+  getBarHeight(value: number): number {
+    if (value <= 0) return 0;
+    const max = this.getChartMaxValue();
+    if (max === 0) return 0;
+    return (value / max) * 200;
+  }
+
+  getBarYPosition(value: number): number {
+    const height = this.getBarHeight(value);
+    return 220 - height; // 220 is the x-axis Y position
+  }
+
+  trackByIndex(index: number): number {
+    return index;
   }
   
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(amount || 0);
+    return `₹${(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
   
   async loadContributions() {
@@ -633,8 +774,8 @@ export class AdminDashboardComponent implements OnInit {
             try {
               await lastValueFrom(this.apiService.blockNgo(ngo.id.toString(), result.reason));
               this.snackBar.open(`NGO ${ngo.name} blocked successfully. Email notification sent.`, 'Close', { duration: 3000 });
-              await this.loadNgos();
-            } catch (error: any) {
+      await this.loadNgos();
+    } catch (error: any) {
               this.snackBar.open(error?.error?.message || 'Failed to block NGO', 'Close', { duration: 3000 });
             }
           }
@@ -677,6 +818,51 @@ export class AdminDashboardComponent implements OnInit {
     } catch (error: any) {
       this.errorMessage = error?.error?.message || 'Failed to reject NGO';
     }
+  }
+
+  async approveNgoProfileUpdate(ngo: any) {
+    if (!confirm(`Are you sure you want to approve the profile update for ${ngo.name}?`)) {
+      return;
+    }
+
+    try {
+      const response = await lastValueFrom(this.apiService.approveNgoProfileUpdate(ngo.id.toString()));
+      await this.loadNgos();
+      this.snackBar.open('Profile update approved successfully', 'Close', { duration: 3000 });
+    } catch (error: any) {
+      this.errorMessage = error?.error?.message || 'Failed to approve profile update';
+      this.snackBar.open(this.errorMessage, 'Close', { duration: 3000 });
+    }
+  }
+
+  async rejectNgoProfileUpdate(ngo: any) {
+    if (!confirm(`Are you sure you want to reject the profile update for ${ngo.name}?`)) {
+      return;
+    }
+
+    try {
+      const response = await lastValueFrom(this.apiService.rejectNgoProfileUpdate(ngo.id.toString()));
+      await this.loadNgos();
+      this.snackBar.open('Profile update rejected successfully', 'Close', { duration: 3000 });
+    } catch (error: any) {
+      this.errorMessage = error?.error?.message || 'Failed to reject profile update';
+      this.snackBar.open(this.errorMessage, 'Close', { duration: 3000 });
+    }
+  }
+
+  viewNgoDetails(ngo: any): void {
+    const dialogRef = this.dialog.open(ViewNgoDialogComponent, {
+      width: '700px',
+      maxWidth: '90vw',
+      data: { ngo: ngo }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.reload) {
+        // Reload NGOs list if profile update was approved/rejected
+        this.loadNgos();
+      }
+    });
   }
 
   getVerificationStatusClass(status: string): string {

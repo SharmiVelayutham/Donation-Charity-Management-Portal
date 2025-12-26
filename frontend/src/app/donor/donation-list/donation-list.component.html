@@ -77,8 +77,8 @@
           <span class="detail-value">{{ donation.donation_type || 'N/A' }}</span>
         </div>
         <div class="detail-item">
-          <span class="detail-label">📊 Required Quantity/Amount:</span>
-          <span class="detail-value">{{ donation.quantity_or_amount || 'N/A' }}</span>
+          <span class="detail-label">📊 {{ getQuantityOrAmountLabel(donation.donation_type) }}:</span>
+          <span class="detail-value">{{ formatQuantityOrAmount(donation) }}</span>
         </div>
         <div class="detail-item" *ngIf="donation.created_at">
           <span class="detail-label">📅 Posted On:</span>
