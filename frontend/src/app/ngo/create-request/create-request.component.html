@@ -1,0 +1,238 @@
+<div class="create-request-container">
+  <!-- Header -->
+  <header class="request-header">
+    <button mat-icon-button class="back-button" (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="header-content">
+      <h1 class="page-title">
+        <mat-icon>add_circle</mat-icon>
+        Create Donation Request
+      </h1>
+      <p class="page-subtitle">Specify what you need. Donors will provide their donation details when they contribute.</p>
+    </div>
+  </header>
+
+  <!-- NGO Info Header -->
+  <mat-card class="ngo-info-card" *ngIf="ngoName">
+    <mat-card-content>
+      <div class="ngo-info-header">
+        <div class="ngo-info-item">
+          <mat-icon>business</mat-icon>
+          <div>
+            <h3>NGO Name</h3>
+            <p>{{ ngoName }}</p>
+          </div>
+        </div>
+        <div class="ngo-info-item">
+          <mat-icon>location_on</mat-icon>
+          <div>
+            <h3>NGO Address</h3>
+            <p>{{ ngoAddress }}</p>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Main Form Card -->
+  <mat-card class="form-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>inventory_2</mat-icon>
+        Donation Request Details
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form class="donation-form" (ngSubmit)="onSubmit()">
+        <!-- Error/Success Messages -->
+        <div *ngIf="errorMessage" class="error-message">
+          <mat-icon>error</mat-icon>
+          <span>{{ errorMessage }}</span>
+        </div>
+        <div *ngIf="successMessage" class="success-message">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Info Box -->
+        <div class="info-box">
+          <mat-icon>info</mat-icon>
+          <div>
+            <p><strong>Note:</strong> You are creating a donation request. Donors will fill in their donation details (pickup location, date, time) when they contribute.</p>
+          </div>
+        </div>
+
+        <!-- Donation Type -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Donation Type *</mat-label>
+          <mat-select [(ngModel)]="donationType" name="donationType" (selectionChange)="onDonationTypeChange()" required>
+            <mat-option value="">Select Type</mat-option>
+            <mat-option value="FOOD">
+              <mat-icon>restaurant</mat-icon>
+              Food
+            </mat-option>
+            <mat-option value="FUNDS">
+              <mat-icon>monetization_on</mat-icon>
+              Funds
+            </mat-option>
+            <mat-option value="CLOTHES">
+              <mat-icon>checkroom</mat-icon>
+              Clothes
+            </mat-option>
+            <mat-option value="MEDICINE">
+              <mat-icon>medication</mat-icon>
+              Medicine
+            </mat-option>
+            <mat-option value="BOOKS">
+              <mat-icon>menu_book</mat-icon>
+              Books
+            </mat-option>
+            <mat-option value="TOYS">
+              <mat-icon>toys</mat-icon>
+              Toys
+            </mat-option>
+            <mat-option value="OTHER">
+              <mat-icon>category</mat-icon>
+              Other
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>category</mat-icon>
+          <mat-hint>Select the type of donation you need</mat-hint>
+        </mat-form-field>
+
+        <!-- Quantity/Amount Required -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Quantity/Amount Required *</mat-label>
+          <input matInput 
+                 type="number" 
+                 [(ngModel)]="quantityOrAmount" 
+                 name="quantityOrAmount"
+                 placeholder="Enter quantity or amount"
+                 min="1"
+                 step="0.01"
+                 required>
+          <mat-icon matPrefix>numbers</mat-icon>
+          <mat-hint>Enter the total quantity (for items) or amount (for funds) you need</mat-hint>
+        </mat-form-field>
+
+        <!-- Account Details for FUNDS (Optional but recommended) -->
+        <div *ngIf="showAccountDetails" class="account-details-section" style="margin-top: 24px; padding: 20px; background: #F5F5F5; border-radius: 8px; border: 1px solid #E0E0E0;">
+          <h3 style="margin-top: 0; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+            <mat-icon>account_balance</mat-icon>
+            Account Details (Optional but Recommended for Funds)
+          </h3>
+          <p style="margin-bottom: 16px; color: #666; font-size: 14px;">
+            Providing account details helps donors send funds directly. This information will be visible to donors.
+          </p>
+          
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Bank Account Number</mat-label>
+            <input matInput 
+                   [(ngModel)]="bankAccountNumber" 
+                   name="bankAccountNumber"
+                   placeholder="Enter bank account number">
+            <mat-icon matPrefix>account_balance_wallet</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Bank Name</mat-label>
+            <input matInput 
+                   [(ngModel)]="bankName" 
+                   name="bankName"
+                   placeholder="Enter bank name">
+            <mat-icon matPrefix>business</mat-icon>
+          </mat-form-field>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <mat-form-field appearance="outline">
+              <mat-label>IFSC Code</mat-label>
+              <input matInput 
+                     [(ngModel)]="ifscCode" 
+                     name="ifscCode"
+                     placeholder="Enter IFSC code">
+              <mat-icon matPrefix>code</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Account Holder Name</mat-label>
+              <input matInput 
+                     [(ngModel)]="accountHolderName" 
+                     name="accountHolderName"
+                     placeholder="Enter account holder name">
+              <mat-icon matPrefix>person</mat-icon>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <!-- Description (Optional) -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (Optional)</mat-label>
+          <textarea matInput 
+                    [(ngModel)]="description" 
+                    name="description"
+                    placeholder="Add any additional details about this request (optional)"
+                    rows="3"></textarea>
+          <mat-icon matPrefix>description</mat-icon>
+          <mat-hint>Optional: Provide additional information about the donation need</mat-hint>
+        </mat-form-field>
+
+        <!-- Image Upload (Multiple) -->
+        <div class="image-upload-section">
+          <mat-divider></mat-divider>
+          <label class="upload-label">
+            <mat-icon>image</mat-icon>
+            <span>Donation Images (Optional, up to 5)</span>
+          </label>
+          <div class="image-preview-container" *ngIf="imagePreviews.length > 0">
+            <div *ngFor="let preview of imagePreviews; let i = index" class="image-preview">
+              <img [src]="preview" alt="Donation preview">
+              <button mat-icon-button 
+                      type="button"
+                      class="remove-image-btn" 
+                      (click)="removeImage(i)"
+                      matTooltip="Remove image">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </div>
+          <input type="file" 
+                 accept="image/*" 
+                 multiple
+                 (change)="onImageSelected($event)"
+                 id="image-upload"
+                 style="display: none;">
+          <button mat-stroked-button 
+                  type="button"
+                  (click)="triggerImageUpload()"
+                  class="upload-btn">
+            <mat-icon>upload</mat-icon>
+            {{ imagePreviews.length > 0 ? 'Add More Images' : 'Upload Images' }}
+          </button>
+          <p class="upload-hint">Recommended: JPG or PNG, max 5MB per image. You can upload up to 5 images.</p>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button mat-raised-button 
+                  color="primary" 
+                  type="submit"
+                  [disabled]="isLoading"
+                  class="submit-btn">
+            <mat-icon *ngIf="!isLoading">send</mat-icon>
+            <mat-spinner *ngIf="isLoading" diameter="20" class="button-spinner"></mat-spinner>
+            {{ isLoading ? 'Creating...' : 'Submit Request' }}
+          </button>
+          <button mat-stroked-button 
+                  type="button"
+                  (click)="goBack()"
+                  [disabled]="isLoading">
+            <mat-icon>cancel</mat-icon>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

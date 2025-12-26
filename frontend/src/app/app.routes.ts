@@ -1,0 +1,116 @@
+import { Routes } from '@angular/router';
+import { LoginComponent } from './auth/login/login.component';
+import { SignupComponent } from './auth/signup/signup.component';
+import { authGuard, roleGuard } from './guards/auth.guard';
+import { BlogComponent } from './pages/blog/blog.component';
+
+
+export const routes: Routes = [
+
+  // ---------------- HOME ---------------- 
+  { 
+    path: '', 
+    loadComponent: () =>
+      import('./home/home.component')
+        .then(m => m.HomeComponent)
+  },
+  
+  // ---------------- AUTH ---------------- 
+  { path: 'login', component: LoginComponent },
+  { path: 'signup', component: SignupComponent },
+  {
+    path: 'verify-otp',
+    loadComponent: () =>
+      import('./auth/verify-otp/verify-otp.component')
+        .then(m => m.VerifyOtpComponent)
+  },
+
+  // ---------------- NGO ROUTES (Protected - NGO only) ---------------- 
+  {
+    path: 'dashboard/ngo',
+    loadComponent: () =>
+      import('./ngo/ngo-dashboard/ngo-dashboard.component')
+        .then(m => m.NgoDashboardComponent),
+    canActivate: [roleGuard(['NGO'])]
+  },
+  {
+    path: 'ngo/create-request',
+    loadComponent: () =>
+      import('./ngo/create-request/create-request.component')
+        .then(m => m.CreateRequestComponent),
+    canActivate: [roleGuard(['NGO'])]
+  },
+  {
+    path: 'ngo/requests',
+    loadComponent: () =>
+      import('./ngo/requests/requests.component')
+        .then(m => m.RequestsComponent),
+    canActivate: [roleGuard(['NGO'])]
+  },
+
+
+  {
+    path: 'donations',
+    loadComponent: () =>
+      import('./donor/donation-list/donation-list.component')
+        .then(m => m.DonationListComponent),
+    canActivate: [authGuard] 
+  },
+  {
+    path: 'donation-requests/:id/contribute',
+    loadComponent: () =>
+      import('./donor/contribution/contribution.component')
+        .then(m => m.ContributionComponent),
+    canActivate: [roleGuard(['DONOR'])]
+  },
+  {
+    path: 'donations/:id/contribute',
+    loadComponent: () =>
+      import('./donor/contribution/contribution.component')
+        .then(m => m.ContributionComponent),
+    canActivate: [roleGuard(['DONOR'])]
+  },
+  {
+    path: 'dashboard/donor',
+    loadComponent: () =>
+      import('./donor/donor-dashboard/donor-dashboard.component')
+        .then(m => m.DonorDashboardComponent),
+    canActivate: [roleGuard(['DONOR'])]
+  },
+
+  // ---------------- ADMIN ROUTES (Protected - ADMIN only) ---------------- 
+  {
+    path: 'admin/login',
+    loadComponent: () =>
+      import('./admin/login/admin-login.component')
+        .then(m => m.AdminLoginComponent)
+  },
+  {
+    path: 'admin/register',
+    loadComponent: () =>
+      import('./admin/register/admin-register.component')
+        .then(m => m.AdminRegisterComponent)
+  },
+  {
+    path: 'admin/verify-otp',
+    loadComponent: () =>
+      import('./admin/verify-otp/admin-verify-otp.component')
+        .then(m => m.AdminVerifyOtpComponent)
+  },
+  {
+    path: 'admin/dashboard',
+    loadComponent: () =>
+      import('./admin/dashboard/admin-dashboard.component')
+        .then(m => m.AdminDashboardComponent),
+    canActivate: [roleGuard(['ADMIN'])]
+  },
+  {
+    path: 'blog',
+    component: BlogComponent
+  },
+
+
+  // ---------------- FALLBACK (ALWAYS LAST) ---------------- 
+  { path: '**', redirectTo: '' }
+
+];

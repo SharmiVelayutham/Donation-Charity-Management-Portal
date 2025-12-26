@@ -1,0 +1,50 @@
+<div class="auth-wrapper">
+
+  <div class="auth-image">
+    <div class="image-overlay">
+      <h1>Admin Portal</h1>
+      <p>Manage NGOs and Donors</p>
+    </div>
+  </div>
+
+  <div class="auth-form login-bg">
+    <div class="auth-card">
+
+      <h2>Admin Login</h2>
+
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <input 
+        type="email" 
+        placeholder="Email*" 
+        [(ngModel)]="email"
+        [disabled]="isLoading"
+        required />
+
+      <input 
+        type="password" 
+        placeholder="Password*" 
+        [(ngModel)]="password"
+        [disabled]="isLoading"
+        required />
+
+      <button 
+        type="button" 
+        class="login-btn" 
+        (click)="onLogin()"
+        [disabled]="isLoading">
+        {{ isLoading ? 'Logging in...' : 'Login' }}
+      </button>
+
+      <p class="signup-text">
+        Don't have an admin account?
+        <a routerLink="/admin/register">Register</a>
+      </p>
+
+    </div>
+  </div>
+
+</div>
+

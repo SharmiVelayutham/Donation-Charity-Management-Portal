@@ -1,0 +1,59 @@
+<div class="auth-wrapper">
+
+  <div class="auth-image">
+    <div class="image-overlay">
+      <h1>Admin Portal</h1>
+      <p>Verify Your Email</p>
+    </div>
+  </div>
+
+  <div class="auth-form login-bg">
+    <div class="auth-card">
+
+      <h2>Verify OTP</h2>
+
+      <p class="info-text">
+        We've sent a 6-digit OTP code to <strong>{{ email }}</strong>
+      </p>
+
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      <input 
+        type="text" 
+        placeholder="Enter 6-digit OTP*" 
+        [(ngModel)]="otp"
+        [disabled]="isLoading"
+        maxlength="6"
+        pattern="[0-9]{6}"
+        required />
+
+      <button 
+        type="button" 
+        class="login-btn" 
+        (click)="verifyOTP()"
+        [disabled]="isLoading || !otp || otp.length !== 6">
+        {{ isLoading ? 'Verifying...' : 'Verify OTP' }}
+      </button>
+
+      <div class="resend-section">
+        <p>Didn't receive the OTP?</p>
+        <button 
+          type="button" 
+          class="resend-btn" 
+          (click)="resendOTP()"
+          [disabled]="isLoading">
+          Resend OTP
+        </button>
+      </div>
+
+      <p class="signup-text">
+        <a (click)="goToRegister()">Back to Registration</a>
+      </p>
+
+    </div>
+  </div>
+
+</div>
+
