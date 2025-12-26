@@ -15,8 +15,8 @@ const VALID_DONATION_TYPES = ['FOOD', 'FUNDS', 'CLOTHES', 'MEDICINE', 'BOOKS', '
 const createDonation = async (req, res) => {
     var _a, _b;
     const { donationType, quantityOrAmount, location, pickupDateTime, timezone, status, priority } = req.body;
-    if (!donationType || !quantityOrAmount || !location || !pickupDateTime) {
-        return res.status(400).json({ success: false, message: 'Missing required fields' });
+    if (!donationType || !quantityOrAmount) {
+        return res.status(400).json({ success: false, message: 'Missing required fields: donationType, quantityOrAmount' });
     }
     // Validate donation type
     const normalizedType = donationType.toUpperCase();
@@ -30,21 +30,38 @@ const createDonation = async (req, res) => {
     if (Number.isNaN(quantity) || quantity <= 0) {
         return res.status(400).json({ success: false, message: 'Quantity/Amount must be greater than 0' });
     }
-    // Validate and normalize location
+    const isFunds = normalizedType === 'FUNDS';
+    const requiresPickup = !isFunds;
+    // For FUNDS: location and pickupDateTime are not required
+    // For FOOD/CLOTHES: location and pickupDateTime are required
+    if (requiresPickup) {
+        if (!location || !pickupDateTime) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields for FOOD/CLOTHES donations: location, pickupDateTime'
+            });
+        }
+    }
+    // Validate and normalize location (only for non-FUNDS)
     let normalizedLocation;
-    try {
-        normalizedLocation = (0, location_1.normalizeLocation)(location);
+    if (requiresPickup) {
+        try {
+            normalizedLocation = (0, location_1.normalizeLocation)(location);
+        }
+        catch (error) {
+            return res.status(400).json({ success: false, message: error.message || 'Invalid location format' });
+        }
     }
-    catch (error) {
-        return res.status(400).json({ success: false, message: error.message || 'Invalid location format' });
-    }
-    // Validate pickup date/time
-    const pickupDate = new Date(pickupDateTime);
-    if (isNaN(pickupDate.getTime())) {
-        return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
-    }
-    if (!isFutureDate(pickupDate)) {
-        return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
+    // Validate pickup date/time (only for non-FUNDS)
+    let pickupDate = null;
+    if (requiresPickup) {
+        pickupDate = new Date(pickupDateTime);
+        if (isNaN(pickupDate.getTime())) {
+            return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
+        }
+        if (!isFutureDate(pickupDate)) {
+            return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
+        }
     }
     // Validate timezone if provided
     if (timezone && !(0, location_1.isValidTimezone)(timezone)) {
@@ -57,10 +74,10 @@ const createDonation = async (req, res) => {
     const imagePaths = files.map((file) => file.path);
     try {
         const ngoId = parseInt(req.user.id);
-        // Extract location details
-        const locationAddress = normalizedLocation.address || '';
-        const locationLat = ((_a = normalizedLocation.coordinates) === null || _a === void 0 ? void 0 : _a.latitude) || null;
-        const locationLng = ((_b = normalizedLocation.coordinates) === null || _b === void 0 ? void 0 : _b.longitude) || null;
+        // Extract location details (only for non-FUNDS)
+        const locationAddress = requiresPickup ? (normalizedLocation.address || '') : null;
+        const locationLat = requiresPickup ? (((_a = normalizedLocation.coordinates) === null || _a === void 0 ? void 0 : _a.latitude) || null) : null;
+        const locationLng = requiresPickup ? (((_b = normalizedLocation.coordinates) === null || _b === void 0 ? void 0 : _b.longitude) || null) : null;
         // Insert donation
         const donationId = await (0, mysql_1.insert)(`INSERT INTO donations (
         ngo_id, donation_type, donation_category, purpose, description,

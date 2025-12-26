@@ -9,6 +9,8 @@ import {
   updateNgoDonation,
   updateNgoDonationPriority,
   cancelNgoDonation,
+  getNgoDonationDetails,
+  updateDonationRequestContributionStatus,
 } from '../controllers/ngo-dashboard.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
@@ -42,6 +44,12 @@ router.post('/', upload.array('images', 5), createNgoDonation);
 
 // Get all donations created by logged-in NGO
 router.get('/', getNgoDonations);
+
+// Get donation request contributions with donor details
+router.get('/details', getNgoDonationDetails);
+
+// Update donation request contribution status (must be before /:id to avoid route conflicts)
+router.put('/:id/status', updateDonationRequestContributionStatus);
 
 // Get donation details (only own donation)
 router.get('/:id', getNgoDonationById);

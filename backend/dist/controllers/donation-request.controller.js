@@ -308,16 +308,18 @@ const contributeToDonationRequest = async (req, res) => {
         }
         // Validate based on donation type
         const donationType = request.donation_type.toUpperCase();
-        const requiresPickup = donationType === 'FOOD' || donationType === 'CLOTHES';
         const isFunds = donationType === 'FUNDS';
+        // Pickup is required for all donation types EXCEPT FUNDS (money)
+        // For FUNDS, donors transfer money directly, so no pickup needed
+        const requiresPickup = !isFunds;
         console.log('[Contribute] Donation type:', donationType, 'requiresPickup:', requiresPickup, 'isFunds:', isFunds);
-        // For FOOD/CLOTHES: Pickup fields are REQUIRED
+        // For non-FUNDS donations (FOOD, CLOTHES, MEDICINE, BOOKS, TOYS, OTHER): Pickup fields are REQUIRED
         if (requiresPickup) {
             // Check for empty strings as well
             if (!pickupLocation || pickupLocation.trim() === '' || !pickupDate || pickupDate.trim() === '' || !pickupTime || pickupTime.trim() === '') {
                 return res.status(400).json({
                     success: false,
-                    message: 'Missing required fields for FOOD/CLOTHES donations: pickupLocation, pickupDate, pickupTime'
+                    message: `Missing required fields for ${donationType} donations: pickupLocation, pickupDate, pickupTime`
                 });
             }
             // Validate pickup date/time
@@ -335,7 +337,7 @@ const contributeToDonationRequest = async (req, res) => {
                 });
             }
         }
-        // For FUNDS: Pickup fields should be NULL/empty (donors transfer directly)
+        // For FUNDS: Pickup fields should be NULL (donors transfer money directly to bank account)
         // We'll set them to NULL in the insert statement
         // Check if donor already contributed to this request
         const existingContribution = await (0, mysql_1.queryOne)('SELECT id FROM donation_request_contributions WHERE request_id = ? AND donor_id = ?', [requestId, donorId]);
@@ -346,8 +348,8 @@ const contributeToDonationRequest = async (req, res) => {
             });
         }
         // Insert contribution
-        // For FUNDS: pickup fields are NULL
-        // For FOOD/CLOTHES: pickup fields are required
+        // For FUNDS: pickup fields are NULL (donors transfer money directly to bank account)
+        // For all other types: pickup fields are required (physical items need pickup)
         const contributionId = await (0, mysql_1.insert)(`INSERT INTO donation_request_contributions (
         request_id, donor_id, quantity_or_amount, pickup_location,
         pickup_date, pickup_time, notes, status

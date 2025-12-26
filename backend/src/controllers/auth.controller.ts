@@ -6,6 +6,11 @@ import { emailExists, findUserWithPasswordByEmail } from '../utils/mysql-auth-he
 import { insert, queryOne } from '../config/mysql';
 import { generateOTP, storeOTP, sendOTPEmail, verifyOTP } from '../utils/otp.service';
 import { generateNgoId } from '../utils/ngo-id-generator';
+import { 
+  notifyNgoOnDonorRegistration, 
+  notifyAdminOnNgoRegistration, 
+  notifyAdminOnDonorRegistration 
+} from '../services/notification.service';
 
 const SALT_ROUNDS = 10;
 
@@ -153,6 +158,17 @@ export const verifyOTPAndRegister = async (req: Request, res: Response) => {
       );
       console.log('DONOR created with ID:', userId);
       userRole = 'DONOR';
+      
+      // Notify NGOs and Admin about new donor registration
+      try {
+        await Promise.all([
+          notifyNgoOnDonorRegistration(userId, name, normalizedEmail),
+          notifyAdminOnDonorRegistration(userId, name, normalizedEmail)
+        ]);
+      } catch (notifError) {
+        console.error('[Registration] Error sending notifications:', notifError);
+        // Don't fail registration if notification fails
+      }
     } else {
       // NGO - stored in users table with full profile
       console.log('Creating NGO user:', { name, email: normalizedEmail });
@@ -214,6 +230,14 @@ export const verifyOTPAndRegister = async (req: Request, res: Response) => {
       );
       console.log('NGO created with ID:', userId, 'NGO ID:', ngoId, 'Status: PENDING, Verified: 0');
       userRole = 'NGO';
+      
+      // Notify Admin about new NGO registration
+      try {
+        await notifyAdminOnNgoRegistration(userId, name, normalizedEmail);
+      } catch (notifError) {
+        console.error('[Registration] Error sending notifications:', notifError);
+        // Don't fail registration if notification fails
+      }
     }
 
     // Fetch created user to return complete data

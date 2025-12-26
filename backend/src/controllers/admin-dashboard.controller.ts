@@ -64,8 +64,16 @@ export const getAllNgos = async (req: AuthRequest, res: Response) => {
           rejectionReason: ngo.rejection_reason,
           role: ngo.role,
           isBlocked: ngo.is_blocked === 1,
-          hasPendingProfileUpdate: !!(ngo.pending_profile_updates && JSON.parse(ngo.pending_profile_updates) && Object.keys(JSON.parse(ngo.pending_profile_updates)).length > 0),
-          pendingProfileUpdate: ngo.pending_profile_updates ? JSON.parse(ngo.pending_profile_updates) : null,
+          hasPendingProfileUpdate: !!(ngo.pending_profile_updates && ngo.pending_profile_updates !== null && ngo.pending_profile_updates !== 'null' && String(ngo.pending_profile_updates).trim() !== ''),
+          pendingProfileUpdate: ngo.pending_profile_updates && ngo.pending_profile_updates !== null && ngo.pending_profile_updates !== 'null' && String(ngo.pending_profile_updates).trim() !== '' ? (() => {
+            try {
+              const parsed = JSON.parse(ngo.pending_profile_updates);
+              return Object.keys(parsed).length > 0 ? parsed : null;
+            } catch (e) {
+              console.error('Error parsing pending_profile_updates:', e);
+              return null;
+            }
+          })() : null,
           createdAt: ngo.created_at,
           statistics: {
             totalDonations: donationCount,
@@ -160,7 +168,11 @@ export const getNgoDetails = async (req: AuthRequest, res: Response) => {
     }
 
     const ngo = await queryOne<any>(
-      'SELECT id, name, email, contact_info, role, is_blocked, created_at FROM users WHERE id = ?',
+      `SELECT id, ngo_id, name, email, contact_info, contact_person_name, phone_number,
+              registration_number, address, city, state, pincode, website_url, about_ngo,
+              verification_status, rejection_reason, pending_profile_updates,
+              role, is_blocked, created_at 
+       FROM users WHERE id = ?`,
       [ngoId]
     );
 
@@ -186,9 +198,30 @@ export const getNgoDetails = async (req: AuthRequest, res: Response) => {
 
     const ngoDetails = {
       id: ngo.id,
+      ngo_id: ngo.ngo_id,
       name: ngo.name,
       email: ngo.email,
       contactInfo: ngo.contact_info,
+      contactPersonName: ngo.contact_person_name,
+      phoneNumber: ngo.phone_number,
+      registrationNumber: ngo.registration_number,
+      address: ngo.address,
+      city: ngo.city,
+      state: ngo.state,
+      pincode: ngo.pincode,
+      websiteUrl: ngo.website_url,
+      aboutNgo: ngo.about_ngo,
+      verificationStatus: ngo.verification_status || 'PENDING',
+      rejectionReason: ngo.rejection_reason,
+      hasPendingProfileUpdate: !!(ngo.pending_profile_updates && ngo.pending_profile_updates !== null && ngo.pending_profile_updates !== 'null' && ngo.pending_profile_updates.trim() !== ''),
+      pendingProfileUpdate: ngo.pending_profile_updates && ngo.pending_profile_updates !== null && ngo.pending_profile_updates !== 'null' && ngo.pending_profile_updates.trim() !== '' ? (() => {
+        try {
+          const parsed = JSON.parse(ngo.pending_profile_updates);
+          return Object.keys(parsed).length > 0 ? parsed : null;
+        } catch (e) {
+          return null;
+        }
+      })() : null,
       role: ngo.role,
       isBlocked: ngo.is_blocked === 1,
       createdAt: ngo.created_at,

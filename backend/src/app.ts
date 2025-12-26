@@ -19,6 +19,7 @@ import adminDonorsRoutes from './routes/admin-donors.routes';
 import emailTemplatesRoutes from './routes/email-templates.routes';
 import donationRequestRoutes from './routes/donation-request.routes';
 import dashboardStatsRoutes from './routes/dashboard-stats.routes';
+import notificationRoutes from './routes/notification.routes';
 // MySQL-based routes
 import userRoutes from './routes/user.routes';
 import contributionsMysqlRoutes, { contributionsRouter } from './routes/contributions-mysql.routes';
@@ -83,23 +84,36 @@ leaderboardRouter.get('/', async (req, res) => {
     }
 
     if (type === 'donors') {
-      // Combine contributions from both contributions and donation_request_contributions tables
+      // Rank donors by received funds only (ACCEPTED status contributions)
+      // Only count contributions with ACCEPTED/COMPLETED status (received funds)
       let sql = `
         SELECT 
           d.id as donor_id,
           d.name as donor_name,
           d.email as donor_email,
-          (COUNT(DISTINCT c.id) + COUNT(DISTINCT drc.id)) as total_contributions,
-          (COALESCE(SUM(COALESCE(dr.quantity_or_amount, 0)), 0) + COALESCE(SUM(COALESCE(drc.quantity_or_amount, 0)), 0)) as total_amount,
-          (SUM(CASE WHEN c.status = 'COMPLETED' THEN 1 ELSE 0 END) + SUM(CASE WHEN drc.status = 'COMPLETED' THEN 1 ELSE 0 END)) as completed_contributions,
+          COUNT(DISTINCT c.id) + COUNT(DISTINCT CASE WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' THEN drc.id END) as total_contributions,
+          COALESCE(SUM(CASE 
+            WHEN c.status = 'COMPLETED' AND dr.donation_category = 'FUNDS' THEN dr.quantity_or_amount 
+            ELSE 0 
+          END), 0) +
+          COALESCE(SUM(CASE 
+            WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' AND dr_new.donation_type IN ('FUNDS', 'MONEY') 
+            THEN drc.quantity_or_amount 
+            ELSE 0 
+          END), 0) as total_amount,
+          SUM(CASE WHEN c.status = 'COMPLETED' THEN 1 ELSE 0 END) +
+          SUM(CASE WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' THEN 1 ELSE 0 END) as completed_contributions,
           GREATEST(COALESCE(MAX(c.created_at), '1970-01-01'), COALESCE(MAX(drc.created_at), '1970-01-01')) as last_contribution_date
         FROM donors d
-        LEFT JOIN contributions c ON d.id = c.donor_id
+        LEFT JOIN contributions c ON d.id = c.donor_id AND c.status = 'COMPLETED'
         LEFT JOIN donations dr ON c.donation_id = dr.id
         LEFT JOIN donation_request_contributions drc ON d.id = drc.donor_id
+        LEFT JOIN donation_requests dr_new ON drc.request_id = dr_new.id
       `;
       const params: any[] = [];
-      const whereConditions: string[] = ['(c.id IS NOT NULL OR drc.id IS NOT NULL)'];
+      const whereConditions: string[] = [
+        '(c.status = \'COMPLETED\' OR UPPER(TRIM(COALESCE(drc.status, \'\'))) = \'ACCEPTED\')'
+      ];
       if (dateFilter) {
         whereConditions.push('(c.created_at >= ? OR drc.created_at >= ?)');
         params.push(dateFilter);
@@ -108,7 +122,7 @@ leaderboardRouter.get('/', async (req, res) => {
       sql += ` WHERE ${whereConditions.join(' AND ')}`;
       sql += `
         GROUP BY d.id, d.name, d.email
-        HAVING (COUNT(DISTINCT c.id) + COUNT(DISTINCT drc.id)) > 0
+        HAVING total_amount > 0
         ORDER BY ${sortBy === 'amount' ? 'total_amount DESC, total_contributions DESC' : 'total_contributions DESC, total_amount DESC'}
         LIMIT 100
       `;
@@ -130,30 +144,45 @@ leaderboardRouter.get('/', async (req, res) => {
         leaderboard: rankedLeaderboard,
       }, 'Leaderboard fetched successfully');
     } else if (type === 'ngos') {
+      // Rank NGOs by received funds only (ACCEPTED status contributions)
+      // Only count contributions with ACCEPTED/COMPLETED status (received funds)
       let sql = `
         SELECT 
           u.id as ngo_id,
           u.name as ngo_name,
           u.email as ngo_email,
           u.contact_info as ngo_contact_info,
-          COUNT(d.id) as total_donations,
-          COALESCE(SUM(d.quantity_or_amount), 0) as total_amount,
-          SUM(CASE WHEN d.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_donations,
+          COUNT(DISTINCT d.id) + COUNT(DISTINCT dr.id) as total_donations,
+          COALESCE(SUM(CASE 
+            WHEN d.status = 'COMPLETED' AND d.donation_category = 'FUNDS' THEN d.quantity_or_amount 
+            ELSE 0 
+          END), 0) +
+          COALESCE(SUM(CASE 
+            WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' AND dr.donation_type IN ('FUNDS', 'MONEY') 
+            THEN drc.quantity_or_amount 
+            ELSE 0 
+          END), 0) as total_amount,
+          SUM(CASE WHEN d.status = 'COMPLETED' THEN 1 ELSE 0 END) +
+          SUM(CASE WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' THEN 1 ELSE 0 END) as completed_donations,
           SUM(CASE WHEN d.priority = 'URGENT' THEN 1 ELSE 0 END) as urgent_donations
         FROM users u
-        LEFT JOIN donations d ON u.id = d.ngo_id
+        LEFT JOIN donations d ON u.id = d.ngo_id AND d.status = 'COMPLETED'
+        LEFT JOIN donation_requests dr ON u.id = dr.ngo_id
+        LEFT JOIN donation_request_contributions drc ON dr.id = drc.request_id
         WHERE u.role = 'NGO'
+          AND (d.status = 'COMPLETED' OR UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED')
       `;
       const params: any[] = [];
       if (dateFilter) {
-        sql += ` AND d.created_at >= ?`;
+        sql += ` AND (d.created_at >= ? OR dr.created_at >= ?)`;
+        params.push(dateFilter);
         params.push(dateFilter);
       }
       sql += `
         GROUP BY u.id, u.name, u.email, u.contact_info
-        HAVING total_donations > 0
+        HAVING total_amount > 0
         ORDER BY ${sortBy === 'amount' ? 'total_amount DESC, total_donations DESC' : 'total_donations DESC, total_amount DESC'}
-        LIMIT 50
+        LIMIT 100
       `;
       const leaderboard = await query<any>(sql, params);
       const rankedLeaderboard = leaderboard.map((ngo: any, index: number) => ({
@@ -211,6 +240,11 @@ console.log('✅ Donation-requests routes registered at /api/donation-requests')
 console.log('📋 Registering dashboard-stats routes...');
 app.use('/api', dashboardStatsRoutes); // Dashboard stats for NGO and Donor
 console.log('✅ Dashboard-stats routes registered');
+
+// Notification routes
+console.log('📋 Registering notification routes...');
+app.use('/api/notifications', notificationRoutes);
+console.log('✅ Notification routes registered at /api/notifications');
 
 // Temporarily disabled - missing model files
 // Pickup management routes

@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { env } from '../config/env';
+import { getEmailTemplate, replaceTemplatePlaceholders } from './email-template.service';
 
 /**
  * Email Service for sending OTP and other emails
@@ -161,11 +162,40 @@ export async function sendOTPEmail(
     </html>
   `;
 
-  await sendEmail({
-    to: email,
-    subject,
-    html,
-  });
+  // Map purpose to template type
+  const templateTypeMap: { [key: string]: string } = {
+    REGISTRATION: 'OTP_REGISTRATION',
+    PASSWORD_RESET: 'OTP_PASSWORD_RESET',
+    EMAIL_CHANGE: 'OTP_EMAIL_CHANGE',
+    ADMIN_REGISTRATION: 'OTP_ADMIN_REGISTRATION',
+  };
+
+  const templateType = templateTypeMap[purpose] || 'OTP_REGISTRATION';
+
+  try {
+    // Get template from database (or default)
+    const template = await getEmailTemplate(templateType);
+    
+    // Replace placeholders
+    const finalSubject = template.subject; // OTP templates don't use placeholders in subject
+    const finalHtml = replaceTemplatePlaceholders(template.bodyHtml, {
+      OTP_CODE: otp
+    });
+    
+    await sendEmail({
+      to: email,
+      subject: finalSubject,
+      html: finalHtml,
+    });
+  } catch (error: any) {
+    console.error(`[Email Service] Error sending OTP email (template: ${templateType}):`, error);
+    // Fallback to original hardcoded email if template fails
+    await sendEmail({
+      to: email,
+      subject,
+      html,
+    });
+  }
 }
 
 /**

@@ -121,60 +121,115 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
     `);
 
     // 5. Total Contributions Summary
-    const totalContributions = await queryOne<any>(`
+    // Count all contributions from both old and new systems
+    const totalContributionsResult = await queryOne<any>(`
       SELECT 
         (SELECT COUNT(*) FROM contributions) +
-        (SELECT COUNT(*) FROM donation_request_contributions) as total_contributions,
-        (SELECT COALESCE(SUM(quantity_or_amount), 0) FROM donations WHERE donation_category = 'FUNDS') +
-        (SELECT COALESCE(SUM(drc.quantity_or_amount), 0) FROM donation_request_contributions drc
-         INNER JOIN donation_requests dr ON drc.request_id = dr.id WHERE dr.donation_type = 'FUNDS') as total_funds
+        (SELECT COUNT(*) FROM donation_request_contributions) as total_contributions
     `);
 
-    // 6. Top NGOs by contributions
+    // Calculate total funds from both old and new systems
+    const totalFundsResult = await queryOne<any>(`
+      SELECT 
+        COALESCE(
+          (SELECT SUM(quantity_or_amount) FROM donations WHERE donation_category IN ('FUNDS', 'MONEY')), 0
+        ) +
+        COALESCE(
+          (SELECT SUM(drc.quantity_or_amount) 
+           FROM donation_request_contributions drc
+           INNER JOIN donation_requests dr ON drc.request_id = dr.id 
+           WHERE dr.donation_type IN ('FUNDS', 'MONEY')), 0
+        ) as total_funds
+    `);
+
+    // 6. Funds Received (ACCEPTED status) and Funds Pending (PENDING status)
+    // Calculate funds from new donation request system only
+    const fundsSummary = await queryOne<any>(`
+      SELECT 
+        COALESCE(SUM(CASE 
+          WHEN UPPER(TRIM(drc.status)) = 'ACCEPTED' AND dr.donation_type IN ('FUNDS', 'MONEY') 
+          THEN drc.quantity_or_amount 
+          ELSE 0 
+        END), 0) as funds_received,
+        COALESCE(SUM(CASE 
+          WHEN (UPPER(TRIM(COALESCE(drc.status, ''))) = 'PENDING' OR drc.status IS NULL OR drc.status = '') 
+          AND dr.donation_type IN ('FUNDS', 'MONEY') 
+          THEN drc.quantity_or_amount 
+          ELSE 0 
+        END), 0) as funds_pending
+      FROM donation_request_contributions drc
+      INNER JOIN donation_requests dr ON drc.request_id = dr.id
+      WHERE dr.donation_type IN ('FUNDS', 'MONEY')
+    `);
+
+    // 7. Top NGOs by received funds only (ACCEPTED status contributions)
+    // Only count contributions with ACCEPTED/COMPLETED status (received funds)
     const topNgos = await query<any>(`
       SELECT 
         u.id,
         u.name,
-        COUNT(DISTINCT c.id) + COUNT(DISTINCT drc.id) as contribution_count,
-        COALESCE(SUM(CASE WHEN d.donation_category = 'FUNDS' THEN d.quantity_or_amount ELSE 0 END), 0) +
-        COALESCE(SUM(CASE WHEN dr.donation_type = 'FUNDS' THEN drc.quantity_or_amount ELSE 0 END), 0) as total_amount
+        COUNT(DISTINCT c.id) + COUNT(DISTINCT CASE WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' THEN drc.id END) as contribution_count,
+        COALESCE(SUM(CASE 
+          WHEN c.status = 'COMPLETED' AND d.donation_category IN ('FUNDS', 'MONEY') 
+          THEN d.quantity_or_amount 
+          ELSE 0 
+        END), 0) +
+        COALESCE(SUM(CASE 
+          WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' AND dr.donation_type IN ('FUNDS', 'MONEY') 
+          THEN drc.quantity_or_amount 
+          ELSE 0 
+        END), 0) as total_amount
       FROM users u
       LEFT JOIN donations d ON u.id = d.ngo_id
-      LEFT JOIN contributions c ON d.id = c.donation_id
+      LEFT JOIN contributions c ON d.id = c.donation_id AND c.status = 'COMPLETED'
       LEFT JOIN donation_requests dr ON u.id = dr.ngo_id
       LEFT JOIN donation_request_contributions drc ON dr.id = drc.request_id
       WHERE u.role = 'NGO'
+        AND (c.status = 'COMPLETED' OR UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED')
       GROUP BY u.id, u.name
-      HAVING contribution_count > 0
-      ORDER BY contribution_count DESC
-      LIMIT 5
+      HAVING total_amount > 0
+      ORDER BY total_amount DESC, contribution_count DESC
+      LIMIT 100
     `);
 
-    // 7. Top Donors by contributions
+    // 8. Top Donors by received funds only (ACCEPTED status contributions)
+    // Only count contributions with ACCEPTED/COMPLETED status (received funds)
     const topDonors = await query<any>(`
       SELECT 
         d.id,
         d.name,
         d.email,
-        COUNT(DISTINCT c.id) + COUNT(DISTINCT drc.id) as contribution_count,
-        COALESCE(SUM(CASE WHEN don.donation_category = 'FUNDS' THEN don.quantity_or_amount ELSE 0 END), 0) +
-        COALESCE(SUM(CASE WHEN dr.donation_type = 'FUNDS' THEN drc.quantity_or_amount ELSE 0 END), 0) as total_amount
+        COUNT(DISTINCT c.id) + COUNT(DISTINCT CASE WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' THEN drc.id END) as contribution_count,
+        COALESCE(SUM(CASE 
+          WHEN c.status = 'COMPLETED' AND don.donation_category IN ('FUNDS', 'MONEY') 
+          THEN don.quantity_or_amount 
+          ELSE 0 
+        END), 0) +
+        COALESCE(SUM(CASE 
+          WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' AND dr.donation_type IN ('FUNDS', 'MONEY') 
+          THEN drc.quantity_or_amount 
+          ELSE 0 
+        END), 0) as total_amount
       FROM donors d
-      LEFT JOIN contributions c ON d.id = c.donor_id
+      LEFT JOIN contributions c ON d.id = c.donor_id AND c.status = 'COMPLETED'
       LEFT JOIN donations don ON c.donation_id = don.id
       LEFT JOIN donation_request_contributions drc ON d.id = drc.donor_id
       LEFT JOIN donation_requests dr ON drc.request_id = dr.id
+      WHERE (c.status = 'COMPLETED' OR UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED')
       GROUP BY d.id, d.name, d.email
-      HAVING contribution_count > 0
-      ORDER BY contribution_count DESC
-      LIMIT 5
+      HAVING total_amount > 0
+      ORDER BY total_amount DESC, contribution_count DESC
+      LIMIT 100
     `);
 
+    // Build comprehensive analytics response object
     const analytics = {
       donations: {
         breakdown: donationsBreakdown,
-        totalContributions: Number(totalContributions?.total_contributions) || 0,
-        totalFunds: Number(totalContributions?.total_funds) || 0,
+        totalContributions: Number(totalContributionsResult?.total_contributions) || 0,
+        totalFunds: Number(totalFundsResult?.total_funds) || 0,
+        fundsReceived: Number(fundsSummary?.funds_received) || 0,
+        fundsPending: Number(fundsSummary?.funds_pending) || 0,
         monthlyTrends: monthlyData,
       },
       ngos: {

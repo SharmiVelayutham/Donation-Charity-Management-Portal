@@ -4,7 +4,14 @@ import { query } from '../config/mysql';
 
 /**
  * MySQL-based Leaderboard Controller
- * Ranks donors and NGOs based on contributions/donations
+ * Ranks donors and NGOs based on received funds only (ACCEPTED status)
+ * 
+ * Features:
+ * - Only counts contributions with ACCEPTED status (received funds)
+ * - Supports both old (contributions) and new (donation_request_contributions) systems
+ * - Returns top 100 ranked entries
+ * - Supports filtering by period (all, monthly, weekly)
+ * - Supports sorting by count or amount
  */
 
 /**
@@ -29,31 +36,48 @@ export const getLeaderboard = async (req: Request, res: Response) => {
     }
 
     if (type === 'donors') {
-      // Rank donors by contributions
+      // Rank donors by received funds only (ACCEPTED status contributions)
+      // Combine old system (contributions) and new system (donation_request_contributions)
       let sql = `
         SELECT 
           d.id as donor_id,
           d.name as donor_name,
           d.email as donor_email,
-          COUNT(c.id) as total_contributions,
-          COALESCE(SUM(dr.quantity_or_amount), 0) as total_amount,
-          SUM(CASE WHEN c.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_contributions,
-          MAX(c.created_at) as last_contribution_date
+          COUNT(DISTINCT c.id) + COUNT(DISTINCT drc.id) as total_contributions,
+          COALESCE(SUM(CASE 
+            WHEN c.status = 'COMPLETED' AND dr.donation_category = 'FUNDS' THEN dr.quantity_or_amount 
+            ELSE 0 
+          END), 0) +
+          COALESCE(SUM(CASE 
+            WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' AND dr_new.donation_type IN ('FUNDS', 'MONEY') 
+            THEN drc.quantity_or_amount 
+            ELSE 0 
+          END), 0) as total_amount,
+          SUM(CASE WHEN c.status = 'COMPLETED' THEN 1 ELSE 0 END) +
+          SUM(CASE WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' THEN 1 ELSE 0 END) as completed_contributions,
+          GREATEST(MAX(c.created_at), MAX(drc.created_at)) as last_contribution_date
         FROM donors d
         LEFT JOIN contributions c ON d.id = c.donor_id
         LEFT JOIN donations dr ON c.donation_id = dr.id
+        LEFT JOIN donation_request_contributions drc ON d.id = drc.donor_id
+        LEFT JOIN donation_requests dr_new ON drc.request_id = dr_new.id
       `;
 
       const params: any[] = [];
+      const whereConditions: string[] = [];
 
       if (dateFilter) {
-        sql += ` WHERE c.created_at >= ?`;
-        params.push(dateFilter);
+        whereConditions.push(`(c.created_at >= ? OR drc.created_at >= ?)`);
+        params.push(dateFilter, dateFilter);
+      }
+
+      if (whereConditions.length > 0) {
+        sql += ` WHERE ${whereConditions.join(' AND ')}`;
       }
 
       sql += `
         GROUP BY d.id, d.name, d.email
-        HAVING total_contributions > 0
+        HAVING total_amount > 0
         ORDER BY ${sortBy === 'amount' ? 'total_amount DESC, total_contributions DESC' : 'total_contributions DESC, total_amount DESC'}
         LIMIT 100
       `;
@@ -78,36 +102,48 @@ export const getLeaderboard = async (req: Request, res: Response) => {
         leaderboard: rankedLeaderboard,
       }, 'Leaderboard fetched successfully');
     } else if (type === 'ngos') {
-      // Rank NGOs by donations posted
+      // Rank NGOs by received funds only (ACCEPTED status contributions)
+      // Combine old system (donations) and new system (donation_request_contributions)
       let sql = `
         SELECT 
           u.id as ngo_id,
           u.name as ngo_name,
           u.email as ngo_email,
           u.contact_info as ngo_contact_info,
-          COUNT(d.id) as total_donations,
-          COALESCE(SUM(d.quantity_or_amount), 0) as total_amount,
-          SUM(CASE WHEN d.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_donations,
+          COUNT(DISTINCT d.id) + COUNT(DISTINCT dr.id) as total_donations,
+          COALESCE(SUM(CASE 
+            WHEN d.status = 'COMPLETED' AND d.donation_category = 'FUNDS' THEN d.quantity_or_amount 
+            ELSE 0 
+          END), 0) +
+          COALESCE(SUM(CASE 
+            WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' AND dr.donation_type IN ('FUNDS', 'MONEY') 
+            THEN drc.quantity_or_amount 
+            ELSE 0 
+          END), 0) as total_amount,
+          SUM(CASE WHEN d.status = 'COMPLETED' THEN 1 ELSE 0 END) +
+          SUM(CASE WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' THEN 1 ELSE 0 END) as completed_donations,
           SUM(CASE WHEN d.priority = 'URGENT' THEN 1 ELSE 0 END) as urgent_donations
         FROM users u
         LEFT JOIN donations d ON u.id = d.ngo_id
+        LEFT JOIN donation_requests dr ON u.id = dr.ngo_id
+        LEFT JOIN donation_request_contributions drc ON dr.id = drc.request_id
       `;
 
       const params: any[] = [];
+      const whereConditions: string[] = ['u.role = \'NGO\''];
 
       if (dateFilter) {
-        sql += ` WHERE d.created_at >= ?`;
-        params.push(dateFilter);
-        sql += ` AND u.role = 'NGO'`;
-      } else {
-        sql += ` WHERE u.role = 'NGO'`;
+        whereConditions.push(`(d.created_at >= ? OR dr.created_at >= ?)`);
+        params.push(dateFilter, dateFilter);
       }
+
+      sql += ` WHERE ${whereConditions.join(' AND ')}`;
 
       sql += `
         GROUP BY u.id, u.name, u.email, u.contact_info
-        HAVING total_donations > 0
+        HAVING total_amount > 0
         ORDER BY ${sortBy === 'amount' ? 'total_amount DESC, total_donations DESC' : 'total_donations DESC, total_amount DESC'}
-        LIMIT 50
+        LIMIT 100
       `;
 
       const leaderboard = await query<any>(sql, params);
@@ -137,7 +173,7 @@ export const getLeaderboard = async (req: Request, res: Response) => {
       });
     }
   } catch (error: any) {
-    console.error('Error fetching leaderboard:', error);
+    console.error('[Leaderboard] Error fetching leaderboard:', error);
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to fetch leaderboard',

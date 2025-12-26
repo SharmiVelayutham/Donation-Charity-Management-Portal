@@ -32,6 +32,10 @@ router.use((0, role_middleware_1.requireRole)(['NGO']));
 router.post('/', upload.array('images', 5), ngo_dashboard_controller_1.createNgoDonation);
 // Get all donations created by logged-in NGO
 router.get('/', ngo_dashboard_controller_1.getNgoDonations);
+// Get donation request contributions with donor details
+router.get('/details', ngo_dashboard_controller_1.getNgoDonationDetails);
+// Update donation request contribution status (must be before /:id to avoid route conflicts)
+router.put('/:id/status', ngo_dashboard_controller_1.updateDonationRequestContributionStatus);
 // Get donation details (only own donation)
 router.get('/:id', ngo_dashboard_controller_1.getNgoDonationById);
 // Update donation request

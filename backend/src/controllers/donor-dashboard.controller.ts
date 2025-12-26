@@ -314,12 +314,113 @@ export const getDonorDonationRequestContributions = async (req: AuthRequest, res
       }
     }));
 
+    // Set cache-control headers to prevent caching
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     return sendSuccess(res, formattedContributions, 'Donation request contributions fetched successfully');
   } catch (error: any) {
     console.error('Error fetching donor donation request contributions:', error);
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to fetch donation request contributions'
+    });
+  }
+};
+
+/**
+ * Get donor dashboard statistics for new design
+ * GET /api/donor/dashboard/stats
+ */
+export const getDonorDashboardStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const donorId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
+
+    // Get donor profile for last donation date and donor since date
+    const donor = await queryOne<any>('SELECT created_at FROM donors WHERE id = ?', [donorId]);
+    
+    // Get statistics from donation_request_contributions (new system)
+    const [
+      totalDonationsResult,
+      totalFundsResult,
+      donationTypesResult,
+      lastDonationResult
+    ] = await Promise.all([
+      // Total number of donations
+      queryOne<{ count: number }>('SELECT COUNT(*) as count FROM donation_request_contributions WHERE donor_id = ?', [donorId]),
+      
+      // Total funds (sum of MONEY/FUNDS donations - all statuses)
+      queryOne<{ total: number }>(`
+        SELECT COALESCE(SUM(drc.quantity_or_amount), 0) as total
+        FROM donation_request_contributions drc
+        INNER JOIN donation_requests dr ON drc.request_id = dr.id
+        WHERE drc.donor_id = ? 
+          AND dr.donation_type IN ('FUNDS', 'MONEY')
+      `, [donorId]),
+      
+      // Donation types with counts
+      query<any>(`
+        SELECT 
+          dr.donation_type,
+          COUNT(*) as count
+        FROM donation_request_contributions drc
+        INNER JOIN donation_requests dr ON drc.request_id = dr.id
+        WHERE drc.donor_id = ?
+        GROUP BY dr.donation_type
+      `, [donorId]),
+      
+      // Last donation date
+      queryOne<{ last_donation: Date }>(`
+        SELECT MAX(drc.created_at) as last_donation
+        FROM donation_request_contributions drc
+        WHERE drc.donor_id = ?
+      `, [donorId])
+    ]);
+
+    // Calculate donor for X months
+    const donorSince = donor?.created_at ? new Date(donor.created_at) : new Date();
+    const monthsDiff = Math.floor((new Date().getTime() - donorSince.getTime()) / (1000 * 60 * 60 * 24 * 30));
+
+    // Calculate last donated X mins/hours/days ago
+    let lastDonatedText = 'Never';
+    if (lastDonationResult?.last_donation) {
+      const lastDonation = new Date(lastDonationResult.last_donation);
+      const now = new Date();
+      const diffMs = now.getTime() - lastDonation.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffMins < 60) {
+        lastDonatedText = `${diffMins} mins ago`;
+      } else if (diffHours < 24) {
+        lastDonatedText = `${diffHours} hours ago`;
+      } else {
+        lastDonatedText = `${diffDays} days ago`;
+      }
+    }
+
+    // Format donation types
+    const donationTypes = (donationTypesResult || []).map((item: any) => ({
+      type: item.donation_type,
+      count: item.count
+    }));
+
+    const stats = {
+      numberOfDonations: totalDonationsResult?.count || 0,
+      totalFunds: totalFundsResult?.total || 0,
+      donationTypes: donationTypes,
+      lastDonated: lastDonatedText,
+      donorForMonths: monthsDiff
+    };
+
+    return sendSuccess(res, stats, 'Donor dashboard stats fetched successfully');
+  } catch (error: any) {
+    console.error('Error fetching donor dashboard stats:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch dashboard stats'
     });
   }
 };
@@ -408,5 +509,162 @@ export const getAvailableDonations = async (req: AuthRequest, res: Response) => 
     );
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message || 'Failed to fetch donations' });
+  }
+};
+
+/**
+ * Generate and download receipt for donation request contribution
+ * GET /api/donor/dashboard/donation-request-contributions/:id/receipt
+ */
+export const downloadReceipt = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const contributionId = parseInt(id);
+    const donorId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
+
+    if (isNaN(contributionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid contribution id' });
+    }
+
+    // Get contribution details
+    const contribution = await queryOne<any>(`
+      SELECT 
+        drc.id as contribution_id,
+        drc.quantity_or_amount,
+        drc.status,
+        drc.created_at as contribution_date,
+        dr.donation_type,
+        dr.description as request_description,
+        dr.ngo_name,
+        u.name as ngo_organization_name,
+        u.email as ngo_email,
+        u.contact_info as ngo_contact,
+        d.name as donor_name,
+        d.email as donor_email
+      FROM donation_request_contributions drc
+      INNER JOIN donation_requests dr ON drc.request_id = dr.id
+      INNER JOIN users u ON dr.ngo_id = u.id
+      INNER JOIN donors d ON drc.donor_id = d.id
+      WHERE drc.id = ? AND drc.donor_id = ?
+    `, [contributionId, donorId]);
+
+    if (!contribution) {
+      return res.status(404).json({ success: false, message: 'Contribution not found' });
+    }
+
+    // Only generate receipt if status is ACCEPTED, APPROVED, or COMPLETED
+    if (!['ACCEPTED', 'APPROVED', 'COMPLETED'].includes(contribution.status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Receipt can only be generated for received donations' 
+      });
+    }
+
+    // Generate simple HTML receipt
+    const receiptDate = new Date(contribution.contribution_date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const receiptHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Donation Receipt #${contribution.contribution_id}</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; }
+    .header { text-align: center; border-bottom: 2px solid #14b8a6; padding-bottom: 20px; margin-bottom: 30px; }
+    .header h1 { color: #14b8a6; margin: 0; }
+    .section { margin-bottom: 25px; }
+    .section-title { font-weight: bold; color: #333; margin-bottom: 10px; font-size: 14px; text-transform: uppercase; }
+    .section-content { color: #666; line-height: 1.6; }
+    .row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .amount { font-size: 24px; font-weight: bold; color: #14b8a6; margin: 20px 0; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #999; font-size: 12px; }
+    .status { display: inline-block; padding: 5px 15px; background: #14b8a6; color: white; border-radius: 20px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>DONATION RECEIPT</h1>
+    <p>Receipt #${contribution.contribution_id}</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Donation Details</div>
+    <div class="section-content">
+      <div class="row">
+        <span>Date:</span>
+        <span><strong>${receiptDate}</strong></span>
+      </div>
+      <div class="row">
+        <span>Type:</span>
+        <span><strong>${contribution.donation_type}</strong></span>
+      </div>
+      <div class="row">
+        <span>${contribution.donation_type === 'FUNDS' ? 'Amount' : 'Quantity'}:</span>
+        <span class="amount">${contribution.donation_type === 'FUNDS' ? `₹${parseFloat(contribution.quantity_or_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : Math.round(parseFloat(contribution.quantity_or_amount)).toLocaleString('en-IN')}</span>
+      </div>
+      <div class="row">
+        <span>Status:</span>
+        <span class="status">Received</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Donor Information</div>
+    <div class="section-content">
+      <div class="row">
+        <span>Name:</span>
+        <span><strong>${contribution.donor_name}</strong></span>
+      </div>
+      <div class="row">
+        <span>Email:</span>
+        <span>${contribution.donor_email}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">NGO Information</div>
+    <div class="section-content">
+      <div class="row">
+        <span>Organization:</span>
+        <span><strong>${contribution.ngo_organization_name || contribution.ngo_name}</strong></span>
+      </div>
+      <div class="row">
+        <span>Contact:</span>
+        <span>${contribution.ngo_contact || 'N/A'}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>This is an official receipt for your donation. Please keep this for your records.</p>
+    <p>Generated on ${new Date().toLocaleString('en-US')}</p>
+  </div>
+</body>
+</html>
+    `;
+
+    // Set response headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="receipt-${contributionId}.pdf"`);
+
+    // For now, return HTML. In production, convert HTML to PDF using a library like puppeteer or pdfkit
+    // For simplicity, we'll return HTML and let the browser handle it
+    // You can install puppeteer or use a service to convert HTML to PDF
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Disposition', `attachment; filename="receipt-${contributionId}.html"`);
+    res.send(receiptHtml);
+  } catch (error: any) {
+    console.error('Error generating receipt:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to generate receipt'
+    });
   }
 };

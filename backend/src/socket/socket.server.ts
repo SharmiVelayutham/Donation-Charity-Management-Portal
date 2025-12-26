@@ -48,6 +48,8 @@ export const initSocketIO = (httpServer: HttpServer): SocketIOServer => {
       socket.join(`ngo:${socket.userId}`);
     } else if (socket.userRole === 'DONOR') {
       socket.join(`donor:${socket.userId}`);
+    } else if (socket.userRole === 'ADMIN') {
+      socket.join('admin:all');
     }
 
     socket.on('disconnect', () => {
@@ -94,5 +96,14 @@ export const emitToAllNgos = (event: string, data: any) => {
   const socketIO = getIO();
   socketIO.emit(event, data);
   console.log(`[Socket] Emitted ${event} to all NGOs`);
+};
+
+/**
+ * Emit event to all Admins
+ */
+export const emitToAdmin = (event: string, data: any) => {
+  const socketIO = getIO();
+  socketIO.to('admin:all').emit(event, data);
+  console.log(`[Socket] Emitted ${event} to all Admins`);
 };
 

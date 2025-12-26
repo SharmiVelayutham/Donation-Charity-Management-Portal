@@ -15,8 +15,8 @@ router.use((0, role_middleware_1.requireRole)(['ADMIN']));
 // NGO Management
 router.get('/ngos', admin_dashboard_controller_1.getAllNgos);
 router.get('/ngos/:id', admin_dashboard_controller_1.getNgoDetails);
-router.put('/ngos/:id/block', admin_dashboard_controller_1.blockNgo);
-router.put('/ngos/:id/unblock', admin_dashboard_controller_1.unblockNgo);
+router.patch('/ngos/:id/block', admin_dashboard_controller_1.blockNgo);
+router.patch('/ngos/:id/unblock', admin_dashboard_controller_1.unblockNgo);
 router.put('/ngos/:id/approve', admin_dashboard_controller_1.approveNgo);
 router.put('/ngos/:id/reject', admin_dashboard_controller_1.rejectNgo);
 router.put('/ngos/:id/approve-profile-update', admin_dashboard_controller_1.approveNgoProfileUpdate);

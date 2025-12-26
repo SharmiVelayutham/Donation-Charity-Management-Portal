@@ -4,6 +4,11 @@ import { sendSuccess } from '../utils/response';
 import { query, queryOne, insert, update } from '../config/mysql';
 import { emitToNgo, emitToDonor } from '../socket/socket.server';
 import { sendEmail } from '../utils/email.service';
+import { 
+  notifyNgoOnDonation, 
+  notifyAdminOnDonation, 
+  sendDonorDonationEmail 
+} from '../services/notification.service';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -300,7 +305,9 @@ export const getMyDonationRequests = async (req: AuthRequest, res: Response) => 
     const { status } = req.query;
 
     let sql = `
-      SELECT dr.*
+      SELECT dr.*,
+        (SELECT COUNT(*) FROM donation_request_contributions drc WHERE drc.request_id = dr.id) as contribution_count,
+        (SELECT COUNT(*) FROM donation_request_contributions drc WHERE drc.request_id = dr.id AND drc.status IN ('APPROVED', 'COMPLETED', 'ACCEPTED')) as approved_contributions
       FROM donation_requests dr
       WHERE dr.ngo_id = ?
     `;
@@ -498,76 +505,7 @@ export const contributeToDonationRequest = async (req: AuthRequest, res: Respons
       images: images.map((img: any) => img.image_path),
     };
 
-    // Send email to donor when they make a donation
-    if (contribution.donor_email) {
-      try {
-        const emailSubject = 'Thank You for Your Contribution';
-        const emailHtml = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Thank You for Your Contribution</title>
-          </head>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">Thank You for Your Contribution!</h1>
-            </div>
-            
-            <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
-              <p style="font-size: 16px; color: #0f172a;">Hello <strong>${contribution.donor_name}</strong>,</p>
-              
-              <p style="font-size: 16px; color: #0f172a;">
-                Thank you for your generous contribution! Your donation has been received and is currently <strong style="color: #f59e0b;">under review</strong> by our NGO team.
-              </p>
-              
-              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                <h3 style="color: #0f172a; margin-top: 0;">Contribution Details:</h3>
-                <p style="margin: 10px 0;"><strong>Type:</strong> ${contribution.donation_type}</p>
-                <p style="margin: 10px 0;"><strong>Quantity/Amount:</strong> ${contribution.quantity_or_amount}</p>
-                <p style="margin: 10px 0;"><strong>NGO:</strong> ${contribution.ngo_name}</p>
-                <p style="margin: 10px 0;"><strong>Status:</strong> <span style="color: #f59e0b; font-weight: bold;">UNDER REVIEW</span></p>
-              </div>
-              
-              <p style="font-size: 16px; color: #0f172a;">
-                Our team will review your contribution and you will receive an update via email once the review is complete.
-              </p>
-              
-              <p style="font-size: 16px; color: #0f172a;">
-                Thank you for joining us in making a positive impact!
-              </p>
-              
-              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-              
-              <p style="font-size: 14px; color: #64748b; margin: 0;">
-                Regards,<br>
-                <strong>Donation & Charity Platform Team</strong>
-              </p>
-              
-              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-              
-              <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
-                This is an automated email. Please do not reply to this message.<br>
-                © ${new Date().getFullYear()} Donation & Charity Management Portal
-              </p>
-            </div>
-          </body>
-          </html>
-        `;
-
-        await sendEmail({
-          to: contribution.donor_email,
-          subject: emailSubject,
-          html: emailHtml,
-        });
-
-        console.log(`[Donation Request] Thank you email sent to donor: ${contribution.donor_email}`);
-      } catch (emailError: any) {
-        console.error('[Donation Request] Failed to send thank you email:', emailError);
-        // Don't fail the request if email fails
-      }
-    }
+    // Email is now sent via notification service (sendDonorDonationEmail)
 
     // Emit real-time updates to both NGO and Donor dashboards
     try {

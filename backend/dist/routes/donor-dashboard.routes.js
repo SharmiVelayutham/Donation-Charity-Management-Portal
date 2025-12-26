@@ -14,6 +14,8 @@ router.use((0, role_middleware_1.requireRole)(['DONOR']));
  */
 // Dashboard overview
 router.get('/', donor_dashboard_controller_1.getDonorDashboard);
+// Dashboard statistics (new design)
+router.get('/stats', donor_dashboard_controller_1.getDonorDashboardStats);
 // Profile management
 router.get('/profile', donor_dashboard_controller_1.getDonorProfile);
 router.put('/profile', donor_dashboard_controller_1.updateDonorProfile);
@@ -21,6 +23,7 @@ router.put('/profile', donor_dashboard_controller_1.updateDonorProfile);
 router.get('/contributions', donor_dashboard_controller_1.getDonorContributions);
 // Donation request contributions (new system)
 router.get('/donation-request-contributions', donor_dashboard_controller_1.getDonorDonationRequestContributions);
+router.get('/donation-request-contributions/:id/receipt', donor_dashboard_controller_1.downloadReceipt);
 // Browse available donations
 router.get('/available-donations', donor_dashboard_controller_1.getAvailableDonations);
 exports.default = router;

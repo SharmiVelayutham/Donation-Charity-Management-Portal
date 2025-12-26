@@ -4,6 +4,7 @@ exports.rejectNgoProfileUpdate = exports.approveNgoProfileUpdate = exports.rejec
 const response_1 = require("../utils/response");
 const mysql_1 = require("../config/mysql");
 const email_service_1 = require("../utils/email.service");
+const email_template_service_1 = require("../utils/email-template.service");
 /**
  * Get all NGOs with detailed information
  * GET /api/admin/dashboard/ngos
@@ -212,62 +213,196 @@ const getDonorDetails = async (req, res) => {
 exports.getDonorDetails = getDonorDetails;
 /**
  * Block an NGO
- * PUT /api/admin/dashboard/ngos/:id/block
+ * PATCH /api/admin/dashboard/ngos/:id/block
  */
 const blockNgo = async (req, res) => {
     try {
         const { id } = req.params;
+        const { blockReason } = req.body;
+        const adminId = req.user.id;
         const ngoId = parseInt(id);
         if (isNaN(ngoId)) {
             return res.status(400).json({ success: false, message: 'Invalid NGO id' });
         }
-        const affectedRows = await (0, mysql_1.update)('UPDATE users SET is_blocked = 1 WHERE id = ?', [ngoId]);
-        if (affectedRows === 0) {
+        if (!blockReason || blockReason.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Block reason is required for admin records',
+            });
+        }
+        // Get NGO details before updating
+        const ngo = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, role, is_blocked FROM users WHERE id = ? AND role = ?', [ngoId, 'NGO']);
+        if (!ngo) {
             return res.status(404).json({ success: false, message: 'NGO not found' });
         }
-        const ngo = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, role, is_blocked, created_at FROM users WHERE id = ?', [ngoId]);
+        if (ngo.is_blocked === 1) {
+            return res.status(400).json({ success: false, message: 'NGO is already blocked' });
+        }
+        // Block the NGO
+        const affectedRows = await (0, mysql_1.update)('UPDATE users SET is_blocked = 1 WHERE id = ?', [ngoId]);
+        if (affectedRows === 0) {
+            return res.status(500).json({ success: false, message: 'Failed to block NGO' });
+        }
+        // Store block history (admin-only reason)
+        const blockDate = new Date();
+        try {
+            await (0, mysql_1.update)(`INSERT INTO ngo_block_history (ngo_id, block_reason, blocked_by, blocked_at, email_template_version) 
+         VALUES (?, ?, ?, ?, 'current')`, [ngoId, blockReason.trim(), adminId, blockDate]);
+        }
+        catch (historyError) {
+            // Log but don't fail if history table doesn't exist yet
+            console.warn('Could not save block history:', historyError.message);
+        }
+        // Get email template and send email
+        try {
+            console.log(`[Block NGO] Fetching email template for NGO: ${ngo.name} (${ngo.email})`);
+            const template = await (0, email_template_service_1.getEmailTemplate)('NGO_BLOCK');
+            console.log(`[Block NGO] Template fetched. Subject: ${template.subject.substring(0, 50)}...`);
+            const supportEmail = (0, email_template_service_1.getSupportEmail)();
+            const blockDateStr = blockDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            });
+            const emailSubject = (0, email_template_service_1.replaceTemplatePlaceholders)(template.subject, {
+                NGO_NAME: ngo.name,
+            });
+            const emailBody = (0, email_template_service_1.replaceTemplatePlaceholders)(template.bodyHtml, {
+                NGO_NAME: ngo.name,
+                BLOCK_DATE: blockDateStr,
+                SUPPORT_EMAIL: supportEmail,
+                BLOCK_REASON: blockReason.trim(),
+            });
+            console.log(`[Block NGO] Sending email to: ${ngo.email}`);
+            await (0, email_service_1.sendEmail)({
+                to: ngo.email,
+                subject: emailSubject,
+                html: emailBody,
+            });
+            console.log(`✅ Block email sent successfully to ${ngo.email}`);
+        }
+        catch (emailError) {
+            console.error('❌ Failed to send block email:', emailError);
+            console.error('Error details:', {
+                message: emailError.message,
+                stack: emailError.stack,
+                ngoEmail: ngo.email,
+                ngoName: ngo.name,
+            });
+            // Don't fail the block if email fails, but log it
+        }
+        // Fetch updated NGO
+        const updatedNgo = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, role, is_blocked, created_at FROM users WHERE id = ?', [ngoId]);
         return (0, response_1.sendSuccess)(res, {
-            id: ngo.id,
-            name: ngo.name,
-            email: ngo.email,
-            contactInfo: ngo.contact_info,
-            role: ngo.role,
+            id: updatedNgo.id,
+            name: updatedNgo.name,
+            email: updatedNgo.email,
+            contactInfo: updatedNgo.contact_info,
+            role: updatedNgo.role,
             isBlocked: true,
-            createdAt: ngo.created_at,
-        }, 'NGO blocked successfully');
+            createdAt: updatedNgo.created_at,
+        }, 'NGO blocked successfully. Notification email sent.');
     }
     catch (error) {
+        console.error('Error blocking NGO:', error);
         return res.status(500).json({ success: false, message: error.message || 'Failed to block NGO' });
     }
 };
 exports.blockNgo = blockNgo;
 /**
  * Unblock an NGO
- * PUT /api/admin/dashboard/ngos/:id/unblock
+ * PATCH /api/admin/dashboard/ngos/:id/unblock
  */
 const unblockNgo = async (req, res) => {
     try {
         const { id } = req.params;
+        const { unblockReason } = req.body;
+        const adminId = req.user.id;
         const ngoId = parseInt(id);
         if (isNaN(ngoId)) {
             return res.status(400).json({ success: false, message: 'Invalid NGO id' });
         }
-        const affectedRows = await (0, mysql_1.update)('UPDATE users SET is_blocked = 0 WHERE id = ?', [ngoId]);
-        if (affectedRows === 0) {
+        if (!unblockReason || unblockReason.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Unblock reason is required for admin records',
+            });
+        }
+        // Get NGO details before updating
+        const ngo = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, role, is_blocked FROM users WHERE id = ? AND role = ?', [ngoId, 'NGO']);
+        if (!ngo) {
             return res.status(404).json({ success: false, message: 'NGO not found' });
         }
-        const ngo = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, role, is_blocked, created_at FROM users WHERE id = ?', [ngoId]);
+        if (ngo.is_blocked === 0) {
+            return res.status(400).json({ success: false, message: 'NGO is already unblocked' });
+        }
+        // Unblock the NGO
+        const affectedRows = await (0, mysql_1.update)('UPDATE users SET is_blocked = 0 WHERE id = ?', [ngoId]);
+        if (affectedRows === 0) {
+            return res.status(500).json({ success: false, message: 'Failed to unblock NGO' });
+        }
+        // Store unblock history (admin-only reason)
+        const unblockDate = new Date();
+        try {
+            await (0, mysql_1.update)(`INSERT INTO ngo_unblock_history (ngo_id, unblock_reason, unblocked_by, unblocked_at, email_template_version) 
+         VALUES (?, ?, ?, ?, 'current')`, [ngoId, unblockReason.trim(), adminId, unblockDate]);
+        }
+        catch (historyError) {
+            // Log but don't fail if history table doesn't exist yet
+            console.warn('Could not save unblock history:', historyError.message);
+        }
+        // Get email template and send email
+        try {
+            console.log(`[Unblock NGO] Fetching email template for NGO: ${ngo.name} (${ngo.email})`);
+            const template = await (0, email_template_service_1.getEmailTemplate)('NGO_UNBLOCK');
+            console.log(`[Unblock NGO] Template fetched. Subject: ${template.subject.substring(0, 50)}...`);
+            const supportEmail = (0, email_template_service_1.getSupportEmail)();
+            const unblockDateStr = unblockDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            });
+            const emailSubject = (0, email_template_service_1.replaceTemplatePlaceholders)(template.subject, {
+                NGO_NAME: ngo.name,
+            });
+            const emailBody = (0, email_template_service_1.replaceTemplatePlaceholders)(template.bodyHtml, {
+                NGO_NAME: ngo.name,
+                UNBLOCK_DATE: unblockDateStr,
+                SUPPORT_EMAIL: supportEmail,
+                UNBLOCK_REASON: unblockReason.trim(),
+            });
+            console.log(`[Unblock NGO] Sending email to: ${ngo.email}`);
+            await (0, email_service_1.sendEmail)({
+                to: ngo.email,
+                subject: emailSubject,
+                html: emailBody,
+            });
+            console.log(`✅ Unblock email sent successfully to ${ngo.email}`);
+        }
+        catch (emailError) {
+            console.error('❌ Failed to send unblock email:', emailError);
+            console.error('Error details:', {
+                message: emailError.message,
+                stack: emailError.stack,
+                ngoEmail: ngo.email,
+                ngoName: ngo.name,
+            });
+            // Don't fail the unblock if email fails, but log it
+        }
+        // Fetch updated NGO
+        const updatedNgo = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, role, is_blocked, created_at FROM users WHERE id = ?', [ngoId]);
         return (0, response_1.sendSuccess)(res, {
-            id: ngo.id,
-            name: ngo.name,
-            email: ngo.email,
-            contactInfo: ngo.contact_info,
-            role: ngo.role,
+            id: updatedNgo.id,
+            name: updatedNgo.name,
+            email: updatedNgo.email,
+            contactInfo: updatedNgo.contact_info,
+            role: updatedNgo.role,
             isBlocked: false,
-            createdAt: ngo.created_at,
-        }, 'NGO unblocked successfully');
+            createdAt: updatedNgo.created_at,
+        }, 'NGO unblocked successfully. Notification email sent.');
     }
     catch (error) {
+        console.error('Error unblocking NGO:', error);
         return res.status(500).json({ success: false, message: error.message || 'Failed to unblock NGO' });
     }
 };

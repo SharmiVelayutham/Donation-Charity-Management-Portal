@@ -215,10 +215,12 @@ export const getNgoDonations = async (req: AuthRequest, res: Response) => {
     const ngoId = parseInt(req.user!.id);
     const { status, priority, donationCategory } = req.query;
 
+    console.log(`[NGO Donations] 🔍 Fetching donations for NGO ID: ${ngoId}`);
+
     let sql = `
       SELECT d.*,
-        (SELECT COUNT(*) FROM contributions c WHERE c.donation_id = d.id) as contribution_count,
-        (SELECT COUNT(*) FROM contributions c WHERE c.donation_id = d.id AND c.status IN ('APPROVED', 'COMPLETED')) as approved_contributions
+        (SELECT COUNT(*) FROM donation_request_contributions drc WHERE drc.donation_request_id = d.id) as contribution_count,
+        (SELECT COUNT(*) FROM donation_request_contributions drc WHERE drc.donation_request_id = d.id AND drc.status IN ('APPROVED', 'COMPLETED', 'ACCEPTED')) as approved_contributions
       FROM donations d
       WHERE d.ngo_id = ?
     `;
@@ -239,7 +241,12 @@ export const getNgoDonations = async (req: AuthRequest, res: Response) => {
 
     sql += ' ORDER BY d.created_at DESC';
 
+    console.log(`[NGO Donations] 📝 SQL Query:`, sql);
+    console.log(`[NGO Donations] 📝 SQL Params:`, params);
+
     const donations = await query<any>(sql, params);
+
+    console.log(`[NGO Donations] 📊 Found ${donations.length} donations in database`);
 
     // Get images for each donation
     const donationsWithImages = await Promise.all(
@@ -255,8 +262,11 @@ export const getNgoDonations = async (req: AuthRequest, res: Response) => {
       })
     );
 
+    console.log(`[NGO Donations] ✅ Returning ${donationsWithImages.length} donations with images`);
+
     return sendSuccess(res, donationsWithImages, 'NGO donations fetched successfully');
   } catch (error: any) {
+    console.error('[NGO Donations] ❌ Error fetching donations:', error);
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to fetch donations',
@@ -322,6 +332,168 @@ export const getNgoDonationById = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to fetch donation details',
+    });
+  }
+};
+
+/**
+ * Get NGO donation request contributions with donor details
+ * GET /api/ngo/dashboard/donations/details
+ */
+export const getNgoDonationDetails = async (req: AuthRequest, res: Response) => {
+  try {
+    const ngoId = parseInt(req.user!.id);
+
+    // Get all donation request contributions for this NGO's requests
+    const contributions = await query<any>(`
+      SELECT 
+        drc.id as contribution_id,
+        drc.quantity_or_amount,
+        drc.status,
+        drc.created_at as contribution_date,
+        drc.pickup_location,
+        drc.pickup_date,
+        drc.pickup_time,
+        drc.notes,
+        dr.id as request_id,
+        dr.donation_type,
+        dr.description as request_description,
+        d.name as donor_name,
+        d.email as donor_email,
+        d.phone_number as donor_phone,
+        d.full_address as donor_address
+      FROM donation_request_contributions drc
+      INNER JOIN donation_requests dr ON drc.request_id = dr.id
+      INNER JOIN donors d ON drc.donor_id = d.id
+      WHERE dr.ngo_id = ?
+      ORDER BY drc.created_at DESC
+    `, [ngoId]);
+
+    // Format the response
+    const formattedContributions = contributions.map((cont: any) => ({
+      contributionId: cont.contribution_id,
+      requestId: cont.request_id,
+      donationType: cont.donation_type,
+      quantityOrAmount: parseFloat(cont.quantity_or_amount),
+      status: cont.status,
+      contributionDate: cont.contribution_date,
+      pickupLocation: cont.pickup_location,
+      pickupDate: cont.pickup_date,
+      pickupTime: cont.pickup_time,
+      notes: cont.notes,
+      donor: {
+        name: cont.donor_name,
+        email: cont.donor_email,
+        phone: cont.donor_phone,
+        address: cont.donor_address
+      },
+      request: {
+        id: cont.request_id,
+        description: cont.request_description
+      }
+    }));
+
+    // Set cache-control headers to prevent caching
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    return sendSuccess(res, formattedContributions, 'Donation details fetched successfully');
+  } catch (error: any) {
+    console.error('Error fetching NGO donation details:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch donation details'
+    });
+  }
+};
+
+/**
+ * Update donation request contribution status
+ * PUT /api/ngo/dashboard/donations/:id/status
+ */
+export const updateDonationRequestContributionStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const contributionId = parseInt(id);
+    const ngoId = parseInt(req.user!.id);
+
+    console.log('[updateContributionStatus] Route hit!');
+    console.log('[updateContributionStatus] Params:', { contributionId });
+    console.log('[updateContributionStatus] Body:', { status });
+    console.log('[updateContributionStatus] User:', req.user);
+
+    if (isNaN(contributionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid contribution id' });
+    }
+
+    if (!status || !['ACCEPTED', 'NOT_RECEIVED'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be ACCEPTED or NOT_RECEIVED'
+      });
+    }
+
+    console.log('[updateContributionStatus] Parsed - NGO ID:', ngoId, 'Contribution ID:', contributionId, 'Status:', status);
+
+    // Verify the contribution belongs to this NGO's donation request
+    const contribution = await queryOne<any>(`
+      SELECT drc.*, dr.ngo_id
+      FROM donation_request_contributions drc
+      INNER JOIN donation_requests dr ON drc.request_id = dr.id
+      WHERE drc.id = ? AND dr.ngo_id = ?
+    `, [contributionId, ngoId]);
+
+    if (!contribution) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contribution not found or you do not have permission to update it'
+      });
+    }
+
+    // Update status
+    await update(
+      'UPDATE donation_request_contributions SET status = ? WHERE id = ?',
+      [status, contributionId]
+    );
+
+    console.log('[NGO Donations] Updated contribution', contributionId, 'status to', status);
+
+    // Get updated contribution with all details
+    const updated = await queryOne<any>(`
+      SELECT 
+        drc.id as contribution_id,
+        drc.quantity_or_amount,
+        drc.status,
+        drc.created_at as contribution_date,
+        dr.id as request_id,
+        dr.donation_type,
+        d.name as donor_name,
+        d.email as donor_email
+      FROM donation_request_contributions drc
+      INNER JOIN donation_requests dr ON drc.request_id = dr.id
+      INNER JOIN donors d ON drc.donor_id = d.id
+      WHERE drc.id = ?
+    `, [contributionId]);
+
+    return sendSuccess(res, {
+      contributionId: updated.contribution_id,
+      requestId: updated.request_id,
+      donationType: updated.donation_type,
+      quantityOrAmount: parseFloat(updated.quantity_or_amount),
+      status: updated.status,
+      contributionDate: updated.contribution_date,
+      donor: {
+        name: updated.donor_name,
+        email: updated.donor_email
+      }
+    }, `Status updated to ${status} successfully`);
+  } catch (error: any) {
+    console.error('Error updating contribution status:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update contribution status'
     });
   }
 };

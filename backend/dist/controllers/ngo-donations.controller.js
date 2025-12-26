@@ -13,6 +13,7 @@ const getNgoDonationDetails = async (req, res) => {
         const ngoId = parseInt(req.user.id);
         console.log(`[NGO Donations] Fetching donation details for NGO ID: ${ngoId}`);
         // Get all contributions to this NGO's donation requests
+        // Use COALESCE to ensure status is never NULL - default to PENDING if NULL
         const contributions = await (0, mysql_1.query)(`
       SELECT 
         drc.id as contribution_id,
@@ -21,7 +22,7 @@ const getNgoDonationDetails = async (req, res) => {
         drc.pickup_date,
         drc.pickup_time,
         drc.notes,
-        drc.status as contribution_status,
+        COALESCE(NULLIF(drc.status, ''), 'PENDING') as contribution_status,
         drc.created_at as donation_date,
         dr.id as request_id,
         dr.donation_type,
@@ -38,6 +39,10 @@ const getNgoDonationDetails = async (req, res) => {
       ORDER BY drc.created_at DESC
     `, [ngoId]);
         console.log(`[NGO Donations] Found ${contributions.length} contributions`);
+        // Log status values from database for debugging
+        contributions.forEach((cont) => {
+            console.log(`[NGO Donations] 🔍 Contribution ${cont.contribution_id} status from DB: "${cont.contribution_status}" (type: ${typeof cont.contribution_status})`);
+        });
         // Format the response
         const formattedContributions = contributions.map((cont) => ({
             contributionId: cont.contribution_id,
@@ -55,12 +60,20 @@ const getNgoDonationDetails = async (req, res) => {
             pickupDate: cont.pickup_date,
             pickupTime: cont.pickup_time,
             notes: cont.notes,
-            status: cont.contribution_status,
+            status: cont.contribution_status ? cont.contribution_status.toUpperCase().trim() : 'PENDING',
             request: {
                 id: cont.request_id,
                 description: cont.request_description
             }
         }));
+        // Log formatted contributions to verify status mapping
+        formattedContributions.forEach((fc) => {
+            console.log(`[NGO Donations] 📋 Formatted contribution ${fc.contributionId} - Final status: "${fc.status}"`);
+        });
+        // Set cache-control headers to prevent caching
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         return (0, response_1.sendSuccess)(res, formattedContributions, 'Donation details fetched successfully');
     }
     catch (error) {
@@ -136,6 +149,10 @@ const getNgoDonationSummary = async (req, res) => {
             breakdownByType: breakdown
         };
         console.log(`[NGO Donations] Summary:`, summary);
+        // Set cache-control headers to prevent caching
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         return (0, response_1.sendSuccess)(res, summary, 'Donation summary fetched successfully');
     }
     catch (error) {
@@ -167,8 +184,8 @@ const updateContributionStatus = async (req, res) => {
                 message: 'Invalid contribution ID'
             });
         }
-        // Validate status - Only ACCEPTED and NOT_RECEIVED are allowed
-        const validStatuses = ['ACCEPTED', 'NOT_RECEIVED'];
+        // Validate status - PENDING, ACCEPTED, and NOT_RECEIVED are allowed
+        const validStatuses = ['PENDING', 'ACCEPTED', 'NOT_RECEIVED'];
         const statusUpper = typeof status === 'string' ? status.toUpperCase() : String(status).toUpperCase();
         if (!validStatuses.includes(statusUpper)) {
             return res.status(400).json({
@@ -178,7 +195,7 @@ const updateContributionStatus = async (req, res) => {
         }
         // Verify that this contribution belongs to an NGO's donation request
         const contribution = await (0, mysql_1.queryOne)(`
-      SELECT drc.id, dr.ngo_id
+      SELECT drc.id, drc.status, dr.ngo_id
       FROM donation_request_contributions drc
       INNER JOIN donation_requests dr ON drc.request_id = dr.id
       WHERE drc.id = ?
@@ -195,12 +212,80 @@ const updateContributionStatus = async (req, res) => {
                 message: 'You do not have permission to update this contribution'
             });
         }
-        // Update status
-        await (0, mysql_1.update)('UPDATE donation_request_contributions SET status = ? WHERE id = ?', [statusUpper, contributionId]);
-        // Fetch updated contribution with donor and request details
+        // Once status is set to ACCEPTED or NOT_RECEIVED, it cannot be changed back to PENDING
+        if (contribution.status === 'ACCEPTED' || contribution.status === 'NOT_RECEIVED') {
+            if (statusUpper === 'PENDING') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot change status back to PENDING once it has been set to Received or Not Received'
+                });
+            }
+        }
+        // Update status - Use explicit column name and verify
+        console.log(`[NGO Donations] 🔄 Executing UPDATE: SET status='${statusUpper}' WHERE id=${contributionId}`);
+        // First check current status before update
+        const beforeUpdate = await (0, mysql_1.queryOne)(`
+      SELECT id, status FROM donation_request_contributions WHERE id = ?
+    `, [contributionId]);
+        console.log(`[NGO Donations] 📋 BEFORE UPDATE - ID: ${beforeUpdate === null || beforeUpdate === void 0 ? void 0 : beforeUpdate.id}, Current Status: "${beforeUpdate === null || beforeUpdate === void 0 ? void 0 : beforeUpdate.status}"`);
+        if (!beforeUpdate) {
+            console.error(`[NGO Donations] ❌ ERROR: Contribution ${contributionId} not found in database!`);
+            return res.status(404).json({
+                success: false,
+                message: 'Contribution not found'
+            });
+        }
+        // Execute UPDATE
+        const affectedRows = await (0, mysql_1.update)('UPDATE donation_request_contributions SET status = ? WHERE id = ?', [statusUpper, contributionId]);
+        console.log(`[NGO Donations] 🔄 UPDATE executed for contribution ${contributionId}`);
+        console.log(`[NGO Donations] 📊 Affected rows: ${affectedRows}, Status set to: ${statusUpper}`);
+        if (affectedRows === 0) {
+            console.error(`[NGO Donations] ❌ ERROR: No rows affected! Contribution ${contributionId} may not exist in database.`);
+            return res.status(404).json({
+                success: false,
+                message: 'Contribution not found or could not be updated'
+            });
+        }
+        // Wait a tiny bit to ensure database commit
+        await new Promise(resolve => setTimeout(resolve, 50));
+        // Immediately verify the update with a direct SELECT - use CAST to get string value
+        const verifyUpdate = await (0, mysql_1.queryOne)(`
+      SELECT id, CAST(status AS CHAR) as status FROM donation_request_contributions WHERE id = ?
+    `, [contributionId]);
+        console.log(`[NGO Donations] 🔍 AFTER UPDATE - ID: ${verifyUpdate === null || verifyUpdate === void 0 ? void 0 : verifyUpdate.id}, Status from DB: "${verifyUpdate === null || verifyUpdate === void 0 ? void 0 : verifyUpdate.status}" (type: ${typeof (verifyUpdate === null || verifyUpdate === void 0 ? void 0 : verifyUpdate.status)})`);
+        console.log(`[NGO Donations] 🔍 Full verify result:`, JSON.stringify(verifyUpdate));
+        if (!verifyUpdate) {
+            console.error(`[NGO Donations] ❌ ERROR: Contribution ${contributionId} not found after update!`);
+            return res.status(404).json({
+                success: false,
+                message: 'Contribution not found after update'
+            });
+        }
+        const dbStatus = verifyUpdate.status ? verifyUpdate.status.toString().toUpperCase().trim() : '';
+        console.log(`[NGO Donations] 🔍 Comparing: Expected="${statusUpper}", Got="${dbStatus}", Match=${dbStatus === statusUpper}`);
+        if (dbStatus !== statusUpper) {
+            console.error(`[NGO Donations] ❌ STATUS MISMATCH! Expected: "${statusUpper}", Got from DB: "${dbStatus}"`);
+            console.error(`[NGO Donations] ❌ Raw status value:`, JSON.stringify(verifyUpdate.status));
+            console.error(`[NGO Donations] ❌ Status length - Expected: ${statusUpper.length}, Got: ${dbStatus.length}`);
+            // Still continue to return response, but use the actual DB status
+            console.log(`[NGO Donations] ⚠️ WARNING: Using DB status "${dbStatus}" instead of expected "${statusUpper}"`);
+        }
+        else {
+            console.log(`[NGO Donations] ✅ Status verified successfully in database: ${statusUpper}`);
+        }
+        // Fetch updated contribution with donor and request details - USE CAST to ensure string status
         const updatedContribution = await (0, mysql_1.queryOne)(`
       SELECT 
-        drc.*, 
+        drc.id,
+        drc.request_id,
+        drc.donor_id,
+        drc.quantity_or_amount,
+        drc.pickup_location,
+        drc.pickup_date,
+        drc.pickup_time,
+        drc.notes,
+        CAST(drc.status AS CHAR) as status,
+        drc.created_at,
         dr.donation_type,
         dr.description as request_description,
         d.name as donor_name,
@@ -210,10 +295,33 @@ const updateContributionStatus = async (req, res) => {
       INNER JOIN donors d ON drc.donor_id = d.id
       WHERE drc.id = ?
     `, [contributionId]);
-        console.log(`[NGO Donations] Updated contribution ${contributionId} status to ${statusUpper}`);
+        console.log(`[NGO Donations] 🔍 Updated contribution query result - status: "${updatedContribution === null || updatedContribution === void 0 ? void 0 : updatedContribution.status}"`);
+        console.log(`[NGO Donations] ✅ Updated contribution ${contributionId} status to ${statusUpper}`);
+        // Emit socket event to notify donor about status update
+        try {
+            const { emitToDonor } = require('../socket/socket.server');
+            // Get donor ID for the contribution
+            const donorInfo = await (0, mysql_1.queryOne)(`
+        SELECT donor_id FROM donation_request_contributions WHERE id = ?
+      `, [contributionId]);
+            if (donorInfo === null || donorInfo === void 0 ? void 0 : donorInfo.donor_id) {
+                emitToDonor(donorInfo.donor_id, 'contribution:status-updated', {
+                    contributionId,
+                    status: statusUpper,
+                    message: `Status updated to ${statusUpper}`
+                });
+                console.log(`[NGO Donations] 📡 Socket event emitted to donor ${donorInfo.donor_id} for contribution ${contributionId}`);
+            }
+        }
+        catch (socketError) {
+            console.error('[NGO Donations] Failed to emit socket event:', socketError);
+            // Don't fail the request if socket emission fails
+        }
         // Send email to donor based on status
+        console.log(`[NGO Donations] 📧 Email check: donor_email = ${updatedContribution.donor_email}, status = ${statusUpper}`);
         if (updatedContribution.donor_email) {
             try {
+                console.log(`[NGO Donations] 📧 Attempting to send email to ${updatedContribution.donor_email} for status ${statusUpper}`);
                 let emailSubject = '';
                 let emailHtml = '';
                 if (statusUpper === 'ACCEPTED') {
@@ -338,9 +446,16 @@ const updateContributionStatus = async (req, res) => {
                 // Don't fail the request if email fails
             }
         }
+        // Use the actual verified status from database
+        const finalStatus = dbStatus || statusUpper;
+        console.log(`[NGO Donations] ✅ Returning updated contribution:`, {
+            contributionId: contributionId,
+            status: finalStatus,
+            verifiedFromDB: dbStatus === statusUpper
+        });
         return (0, response_1.sendSuccess)(res, {
-            contributionId: updatedContribution.id,
-            status: updatedContribution.status
+            contributionId: contributionId,
+            status: finalStatus // Use actual DB status
         }, 'Contribution status updated successfully');
     }
     catch (error) {

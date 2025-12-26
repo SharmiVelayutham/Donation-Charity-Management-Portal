@@ -6,6 +6,8 @@ import {
   getDonorContributions,
   getDonorDonationRequestContributions,
   getAvailableDonations,
+  getDonorDashboardStats,
+  downloadReceipt,
 } from '../controllers/donor-dashboard.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
@@ -24,6 +26,9 @@ router.use(requireRole(['DONOR']));
 // Dashboard overview
 router.get('/', getDonorDashboard);
 
+// Dashboard statistics (new design)
+router.get('/stats', getDonorDashboardStats);
+
 // Profile management
 router.get('/profile', getDonorProfile);
 router.put('/profile', updateDonorProfile);
@@ -33,6 +38,7 @@ router.get('/contributions', getDonorContributions);
 
 // Donation request contributions (new system)
 router.get('/donation-request-contributions', getDonorDonationRequestContributions);
+router.get('/donation-request-contributions/:id/receipt', downloadReceipt);
 
 // Browse available donations
 router.get('/available-donations', getAvailableDonations);
