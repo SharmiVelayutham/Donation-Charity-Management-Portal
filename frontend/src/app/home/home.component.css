@@ -18,6 +18,35 @@
   justify-content: space-between;
   align-items: center;
 }
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Small QR next to Donate button */
+.nav-qr img {
+  width: 42px;
+  height: 42px;
+  padding: 4px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.nav-qr img:hover {
+  transform: scale(1.08);
+}
+
+/* Hide QR on small screens */
+@media (max-width: 768px) {
+  .nav-qr {
+    display: none;
+  }
+}
+
 
 .logo-section {
   display: flex;
@@ -184,56 +213,59 @@
 
 .hero-image {
   position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
+  inset: 0;
   background: linear-gradient(
-      rgba(0, 0, 0, 0.5),
-      rgba(0, 0, 0, 0.5)
-    ),
-    url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1920&q=80') center/cover no-repeat;
-  z-index: 1;
+      rgba(0, 0, 0, 0.55),
+      rgba(0, 0, 0, 0.55)
+    );
 }
 
-.hero-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.55);
+
+.hero-content {
+  animation: fadeUp 1.2s ease-out;
 }
 
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 .hero-content {
   position: relative;
   z-index: 2;
-  text-align: center;
-  color: white;
-  max-width: 800px;
-  padding: 0 20px;
 }
+
+
 
 .hero-tagline {
   font-size: 1.2rem;
   font-style: italic;
   margin-bottom: 1rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .hero-title {
   font-size: 4rem;
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: 1.5rem;
-  line-height: 1.2;
   text-transform: uppercase;
+  color: #ffffff;               
+  text-shadow: 0 4px 12px rgba(0,0,0,0.8);
 }
+
 
 .hero-description {
   font-size: 1.1rem;
   line-height: 1.6;
   margin-bottom: 2.5rem;
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.9);
   max-width: 700px;
   margin-left: auto;
   margin-right: auto;
@@ -295,46 +327,37 @@
   font-weight: bold;
 }
 
-.carousel-prev,
-.carousel-next {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.3);
-  color: white;
-  border: none;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  font-size: 2rem;
-  cursor: pointer;
-  z-index: 3;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.carousel-prev {
-  left: 30px;
-}
-
-.carousel-next {
-  right: 30px;
-}
-
-.carousel-prev:hover,
-.carousel-next:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
 
 /* ============================================
    ABOUT SECTION
    ============================================ */
 .about-section {
-  padding: 80px 20px;
-  background: #f8f9fa;
+  padding: 120px 20px;
+  background:
+    linear-gradient(
+      rgba(0,0,0,0.65),
+      rgba(0,0,0,0.65)
+    ),
+    url('/assets/images/hero-charity.jpg') center/cover no-repeat;
+  color: #fff;
 }
+
+.about-section .section-header h2 {
+  color: #fff;
+  font-size: 3rem;
+}
+
+.about-section .section-header p {
+  color: rgba(255,255,255,0.9);
+  font-size: 1.2rem;
+}
+
+.about-card {
+  background: rgba(255,255,255,0.92);
+  color: #333;
+}
+
+
 
 .container {
   max-width: 1200px;
@@ -356,6 +379,14 @@
   font-size: 1.1rem;
   color: #666;
 }
+.section-soft-bg {
+  background: linear-gradient(
+      rgba(255,255,255,0.92),
+      rgba(255,255,255,0.92)
+    ),
+    url('/assets/images/section-bg.jpg') center/cover no-repeat;
+}
+
 
 .about-grid {
   display: grid;
@@ -396,10 +427,14 @@
    STATS SECTION
    ============================================ */
 .stats-section {
-  padding: 60px 20px;
-  background: #dc3545;
-  color: white;
+  background:
+    linear-gradient(
+      rgba(183, 28, 28, 0.95),
+      rgba(183, 28, 28, 0.95)
+    ),
+    url('/assets/images/stats-bg.webp') center/cover no-repeat;
 }
+
 
 .stats-grid {
   display: grid;
@@ -412,10 +447,20 @@
 }
 
 .stat-number {
-  font-size: 3.5rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
+  animation: popIn 0.8s ease-in;
 }
+
+@keyframes popIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 
 .stat-label {
   font-size: 1.1rem;
@@ -427,9 +472,14 @@
    HELP SECTION
    ============================================ */
 .help-section {
-  padding: 80px 20px;
-  background: white;
+  background:
+    linear-gradient(
+      rgba(255,255,255,0.9),
+      rgba(255,255,255,0.9)
+    ),
+    url('/assets/images/help-bg.jpg') center/cover no-repeat;
 }
+
 
 .help-grid {
   display: grid;
@@ -444,6 +494,77 @@
   position: relative;
   transition: all 0.3s;
 }
+/* IMAGE BACKGROUNDS FOR HELP CARDS */
+.help-card {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+}
+
+.help-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.25;
+  z-index: 0;
+}
+
+
+/* ============================================
+   HELP SECTION
+   ============================================ */
+
+.help-section {
+  padding: 80px 20px;
+}
+
+/* existing help-card styles */
+.help-card {
+  background: #f8f9fa;
+  padding: 2.5rem;
+  border-radius: 8px;
+  position: relative;        /* IMPORTANT */
+  overflow: hidden;          /* IMPORTANT */
+}
+
+/* IMAGE LAYER INSIDE CARD */
+.help-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.25;
+  z-index: 0;
+}
+
+/* STEP 4 STARTS HERE — PER CARD IMAGES */
+
+/* Donor card image */
+.donor-card::before {
+  background-image: url('/assets/images/donation-bg.jpg');
+}
+
+/* NGO card image */
+.ngo-card::before {
+  background-image: url('/assets/images/donations-bg.webp');
+}
+
+
+/* KEEP CONTENT ABOVE IMAGE */
+.help-card * {
+  position: relative;
+  z-index: 1;
+}
+
+
+.help-card {
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(6px);
+}
+
 
 .help-card:hover {
   background: #dc3545;
@@ -479,6 +600,11 @@
   line-height: 1.6;
   margin-bottom: 1.5rem;
 }
+.help-card * {
+  position: relative;
+  z-index: 1;
+}
+
 
 .help-card:hover p {
   color: rgba(255, 255, 255, 0.9);
@@ -494,6 +620,12 @@
   cursor: pointer;
   transition: all 0.3s;
 }
+.btn-yellow:hover,
+.btn-red:hover,
+.btn-donate:hover,
+.btn-donate-small:hover {
+  letter-spacing: 0.5px;
+}
 
 .help-card:hover .btn-read-more {
   background: white;
@@ -504,9 +636,14 @@
    DONATIONS SECTION
    ============================================ */
 .donations-section {
-  padding: 80px 20px;
-  background: #f8f9fa;
+  background:
+    linear-gradient(
+      rgba(248,249,250,0.96),
+      rgba(248,249,250,0.96)
+    ),
+    url('/assets/images/donations-bg.webp') center/cover no-repeat;
 }
+
 
 .empty-donations {
   text-align: center;
@@ -628,11 +765,14 @@
    CTA SECTION
    ============================================ */
 .cta-section {
-  padding: 80px 20px;
-  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-  color: white;
-  text-align: center;
+  background:
+    linear-gradient(
+      rgba(220,53,69,0.92),
+      rgba(200,35,51,0.92)
+    ),
+    url('/assets/images/cta-bg.jpg') center/cover no-repeat;
 }
+
 
 .cta-section h2 {
   font-size: 2.5rem;
@@ -832,5 +972,47 @@
   .cta-section h2 {
     font-size: 2rem;
   }
+}
+.about-card,
+.help-card,
+.donation-card {
+  transition: all 0.35s ease;
+}
+
+.about-card:hover,
+.help-card:hover,
+.donation-card:hover {
+  box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+/* QR MODAL BACKDROP */
+.qr-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+/* MODAL BOX */
+.qr-modal {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  text-align: center;
+  width: 300px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.qr-modal h3 {
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.qr-modal img {
+  width: 220px;
+  height: auto;
+  margin-bottom: 16px;
 }
 

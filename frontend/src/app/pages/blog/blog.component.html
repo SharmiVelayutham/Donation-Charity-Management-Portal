@@ -1,0 +1,28 @@
+<section class="blog-hero">
+  <h1>Our Blog</h1>
+  <p>Stories, awareness, and updates from our donation community</p>
+</section>
+
+<section class="blog-list">
+  <div class="blog-container">
+
+    <div class="blog-card" *ngFor="let blog of blogs; let i = index">
+
+      <div class="blog-header">
+        <span class="blog-category">{{ blog.category }}</span>
+        <span class="blog-date">{{ blog.date }}</span>
+      </div>
+
+      <h2>{{ blog.title }}</h2>
+
+      <p *ngIf="expandedIndex !== i">{{ blog.summary }}</p>
+      <p *ngIf="expandedIndex === i">{{ blog.content }}</p>
+
+      <button (click)="toggleReadMore(i)">
+        {{ expandedIndex === i ? 'Read Less' : 'Read More' }}
+      </button>
+
+    </div>
+
+  </div>
+</section>

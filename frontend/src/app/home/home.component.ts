@@ -32,6 +32,19 @@ export class HomeComponent implements OnInit {
     private router: Router
   ) {}
 
+showQrModal: boolean = false;
+
+// Open QR modal
+openQrModal(): void {
+  this.showQrModal = true;
+}
+
+// Close QR modal
+closeQrModal(): void {
+  this.showQrModal = false;
+}
+
+
   ngOnInit() {
     this.isAuthenticated = this.authService.isAuthenticated();
     this.userRole = this.authService.getCurrentRole();

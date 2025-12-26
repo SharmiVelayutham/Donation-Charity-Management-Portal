@@ -12,7 +12,7 @@
       <a routerLink="/" class="nav-link active">HOME</a>
       <a href="#about" class="nav-link">ABOUT</a>
       <a href="#events" class="nav-link">EVENTS</a>
-      <a href="#blog" class="nav-link">BLOG</a>
+      <a routerLink="/blog" class="nav-link">BLOG</a>
       <div class="nav-dropdown">
         <a routerLink="/donations" class="nav-link">DONATION <span class="dropdown-arrow">▼</span></a>
         <div class="dropdown-menu">
@@ -25,14 +25,23 @@
       <a href="#pages" class="nav-link">PAGES <span class="dropdown-arrow">▼</span></a>
     </nav>
     <div class="nav-actions">
-      <button *ngIf="!isAuthenticated" class="btn-donate" routerLink="/signup">DONATE NOW</button>
-      <button *ngIf="isAuthenticated" class="btn-donate" (click)="navigateToDashboard()">DASHBOARD</button>
-      <button class="menu-toggle" (click)="menuOpen = !menuOpen">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
+      <div class="nav-qr" *ngIf="!isAuthenticated">
+        <img
+          src="assets/images/phonepe-demo-qr.webp"
+          alt="Donate QR"
+          (click)="openQrModal()"
+        />
+      </div>
+    <div class="qr-modal-backdrop" *ngIf="showQrModal" (click)="closeQrModal()">
+      <div class="qr-modal" (click)="$event.stopPropagation()">
+        <h3>Scan to Donate</h3>
+        <img src="assets/images/phonepe-demo-qr.webp" alt="Donate QR Large">
+        <button class="btn-donate" (click)="closeQrModal()">Close</button>
+      </div>
     </div>
+
+    </div>
+
   </div>
 </header>
 
@@ -61,8 +70,6 @@
           </button>
         </div>
       </div>
-      <button class="carousel-prev" (click)="prevSlide()">‹</button>
-      <button class="carousel-next" (click)="nextSlide()">›</button>
     </div>
   </div>
 </section>
@@ -126,19 +133,19 @@
       <p>Our platform makes it easy to make a difference</p>
     </div>
     <div class="help-grid">
-      <div class="help-card">
+      <div class="help-card donor-card">
         <div class="help-number">01</div>
         <h3>For Donors</h3>
         <p>Browse donation requests, contribute easily, and track your impact in real-time.</p>
         <button class="btn-read-more" routerLink="/signup">Get Started</button>
       </div>
       <div class="help-card">
-        <div class="help-number">02</div>
+        <div class="help-number ngo-card">02</div>
         <h3>For NGOs</h3>
         <p>Create donation requests, manage contributions, and connect with generous donors.</p>
         <button class="btn-read-more" routerLink="/signup">Register NGO</button>
       </div>
-      <div class="help-card">
+      <div class="help-card secure-card">
         <div class="help-number">03</div>
         <h3>Secure Platform</h3>
         <p>All transactions are secure, transparent, and verified for complete peace of mind.</p>

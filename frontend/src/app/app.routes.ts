@@ -2,6 +2,8 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './auth/login/login.component';
 import { SignupComponent } from './auth/signup/signup.component';
 import { authGuard, roleGuard } from './guards/auth.guard';
+import { BlogComponent } from './pages/blog/blog.component';
+
 
 export const routes: Routes = [
 
@@ -102,6 +104,11 @@ export const routes: Routes = [
         .then(m => m.AdminDashboardComponent),
     canActivate: [roleGuard(['ADMIN'])]
   },
+  {
+    path: 'blog',
+    component: BlogComponent
+  },
+
 
   // ---------------- FALLBACK (ALWAYS LAST) ---------------- 
   { path: '**', redirectTo: '' }
