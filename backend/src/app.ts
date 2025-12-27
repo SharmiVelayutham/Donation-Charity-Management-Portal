@@ -20,6 +20,8 @@ import emailTemplatesRoutes from './routes/email-templates.routes';
 import donationRequestRoutes from './routes/donation-request.routes';
 import dashboardStatsRoutes from './routes/dashboard-stats.routes';
 import notificationRoutes from './routes/notification.routes';
+import blogRoutes from './routes/blog.routes';
+import sliderRoutes from './routes/slider.routes';
 // MySQL-based routes
 import userRoutes from './routes/user.routes';
 import contributionsMysqlRoutes, { contributionsRouter } from './routes/contributions-mysql.routes';
@@ -33,8 +35,21 @@ import { errorHandler } from './middleware/error.middleware';
 
 const app = express();
 
-app.use(helmet());
-app.use(cors());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "http://localhost:4000", "http://localhost:4200"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+app.use(cors({
+  origin: ['http://localhost:4200', 'http://localhost:4000'],
+  credentials: true
+}));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -245,6 +260,16 @@ console.log('✅ Dashboard-stats routes registered');
 console.log('📋 Registering notification routes...');
 app.use('/api/notifications', notificationRoutes);
 console.log('✅ Notification routes registered at /api/notifications');
+
+// Blog routes
+console.log('📋 Registering blog routes...');
+app.use('/api/blogs', blogRoutes);
+console.log('✅ Blog routes registered at /api/blogs');
+
+// Slider routes
+console.log('📋 Registering slider routes...');
+app.use('/api/sliders', sliderRoutes);
+console.log('✅ Slider routes registered at /api/sliders');
 
 // Temporarily disabled - missing model files
 // Pickup management routes

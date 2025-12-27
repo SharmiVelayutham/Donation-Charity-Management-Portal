@@ -891,3 +891,48 @@ CREATE TABLE IF NOT EXISTS notifications (
     INDEX idx_user_type_read (user_id, user_type, is_read)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- =====================================================
+-- BLOGS TABLE
+-- Stores blog posts created by NGOs
+-- =====================================================
+CREATE TABLE IF NOT EXISTS blogs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(500) NOT NULL,
+    content TEXT NOT NULL,
+    image_url VARCHAR(500),
+    category VARCHAR(100) NOT NULL,
+    author_ngo_id INT NOT NULL,
+    excerpt TEXT, -- Short excerpt for listing page
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (author_ngo_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_author_ngo_id (author_ngo_id),
+    INDEX idx_category (category),
+    INDEX idx_created_at (created_at),
+    FULLTEXT INDEX idx_search (title, content, excerpt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- SLIDERS TABLE
+-- Stores hero slider content for home page
+-- =====================================================
+CREATE TABLE IF NOT EXISTS sliders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    tagline VARCHAR(500),
+    description TEXT,
+    image_url VARCHAR(500) NOT NULL,
+    button1_text VARCHAR(100),
+    button1_link VARCHAR(500),
+    button2_text VARCHAR(100),
+    button2_link VARCHAR(500),
+    is_active BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT,
+    INDEX idx_is_active (is_active),
+    INDEX idx_display_order (display_order),
+    FOREIGN KEY (created_by) REFERENCES admins(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
