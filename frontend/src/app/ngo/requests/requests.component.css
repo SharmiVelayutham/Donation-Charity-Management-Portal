@@ -1,21 +1,47 @@
 /* ===== BACKGROUND ===== */
 .ngo-bg {
   min-height: 100vh;
-  background: url('/assets/images/ngo-bg.jpg') no-repeat center center / cover;
+  background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #eef2ff);
   position: relative;
 }
 
-/* White overlay for readability */
+.ngo-bg::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('/assets/images/ngo-bg.jpg');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.ngo-bg::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.05);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* White overlay for readability - removed, using subtle dark overlay instead */
 .ngo-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.75);
+  display: none;
 }
 
 /* ===== CENTER CONTENT ===== */
 .content-wrapper {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   min-height: 100vh;
 
   display: flex;

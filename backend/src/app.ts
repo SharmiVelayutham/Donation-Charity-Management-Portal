@@ -22,6 +22,7 @@ import dashboardStatsRoutes from './routes/dashboard-stats.routes';
 import notificationRoutes from './routes/notification.routes';
 import blogRoutes from './routes/blog.routes';
 import sliderRoutes from './routes/slider.routes';
+import platformStatsRoutes from './routes/platform-stats.routes';
 // MySQL-based routes
 import userRoutes from './routes/user.routes';
 import contributionsMysqlRoutes, { contributionsRouter } from './routes/contributions-mysql.routes';
@@ -270,6 +271,8 @@ console.log('✅ Blog routes registered at /api/blogs');
 console.log('📋 Registering slider routes...');
 app.use('/api/sliders', sliderRoutes);
 console.log('✅ Slider routes registered at /api/sliders');
+app.use('/api/platform', platformStatsRoutes);
+console.log('✅ Platform stats routes registered at /api/platform');
 
 // Temporarily disabled - missing model files
 // Pickup management routes

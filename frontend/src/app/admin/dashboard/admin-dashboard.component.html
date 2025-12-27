@@ -54,6 +54,13 @@
           <span>Leaderboard</span>
         </button>
         <button 
+          class="nav-item"
+          [class.active]="currentView === 'sliders'"
+          (click)="showSliders()">
+          <mat-icon>slideshow</mat-icon>
+          <span>Slider Management</span>
+        </button>
+        <button 
           class="nav-item logout-item"
           (click)="logout()">
           <mat-icon>logout</mat-icon>
@@ -749,6 +756,86 @@
         </div>
       </section>
       <app-leaderboard></app-leaderboard>
+    </div>
+
+    <!-- Slider Management View -->
+    <div *ngIf="!isLoading && currentView === 'sliders'" class="dashboard-view">
+      <section class="hero-section">
+        <div class="hero-content">
+          <h1 class="hero-title">Slider Management</h1>
+          <p class="hero-subtitle">Manage hero section sliders for the home page</p>
+        </div>
+        <div class="hero-actions">
+          <button mat-raised-button color="primary" (click)="openCreateSliderDialog()">
+            <mat-icon>add</mat-icon>
+            Create New Slider
+          </button>
+        </div>
+      </section>
+
+      <!-- Sliders List -->
+      <section class="sliders-section" *ngIf="!isLoadingSliders">
+        <mat-card class="table-card">
+          <h2 class="section-title">All Sliders ({{ sliders.length }})</h2>
+          <div class="table-wrapper">
+            <table class="contributions-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Title</th>
+                  <th>Tagline</th>
+                  <th>Order</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let slider of sliders">
+                  <td>
+                    <img [src]="getSliderImageUrl(slider.image_url)" [alt]="slider.title" class="slider-thumbnail">
+                  </td>
+                  <td><strong>{{ slider.title }}</strong></td>
+                  <td>{{ slider.tagline || 'N/A' }}</td>
+                  <td>{{ slider.display_order }}</td>
+                  <td>
+                    <span [class]="slider.is_active ? 'status-active' : 'status-inactive'">
+                      {{ slider.is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td class="action-buttons">
+                    <button mat-raised-button color="accent" (click)="editSlider(slider)" title="Edit Slider">
+                      <mat-icon>edit</mat-icon>
+                      Edit
+                    </button>
+                    <button mat-raised-button [color]="slider.is_active ? 'warn' : 'primary'" (click)="toggleSliderStatus(slider)" title="Toggle Status">
+                      <mat-icon>{{ slider.is_active ? 'visibility_off' : 'visibility' }}</mat-icon>
+                      {{ slider.is_active ? 'Deactivate' : 'Activate' }}
+                    </button>
+                    <button mat-raised-button color="warn" (click)="deleteSlider(slider)" title="Delete Slider">
+                      <mat-icon>delete</mat-icon>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="sliders.length === 0">
+                  <td colspan="6" class="no-data">
+                    <div class="no-data-content">
+                      <mat-icon>slideshow</mat-icon>
+                      <p>No sliders found</p>
+                      <p class="no-data-subtitle">Create your first slider to get started</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </mat-card>
+      </section>
+
+      <div *ngIf="isLoadingSliders" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Loading sliders...</p>
+      </div>
     </div>
   </main>
 </div>

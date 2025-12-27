@@ -23,6 +23,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { UnblockNgoDialogComponent } from './unblock-ngo-dialog.component';
 import { BlockNgoDialogComponent } from './block-ngo-dialog.component';
 import { ViewNgoDialogComponent } from './view-ngo-dialog.component';
+import { SliderDialogComponent } from './slider-dialog.component';
 import { NotificationBellComponent } from '../../shared/notification-bell/notification-bell.component';
 import { LeaderboardComponent } from '../../leaderboard/leaderboard.component';
 
@@ -60,8 +61,8 @@ export class AdminDashboardComponent implements OnInit {
   contributions: any[] = [];
   allNgos: any[] = []; // For filter dropdown
   
-  activeTab: 'dashboard' | 'ngos' | 'contributions' | 'email-templates' | 'leaderboard' = 'dashboard';
-  currentView: 'dashboard' | 'contributions' | 'ngos' | 'email-templates' | 'leaderboard' = 'dashboard';
+  activeTab: 'dashboard' | 'ngos' | 'contributions' | 'email-templates' | 'leaderboard' | 'sliders' = 'dashboard';
+  currentView: 'dashboard' | 'contributions' | 'ngos' | 'email-templates' | 'leaderboard' | 'sliders' = 'dashboard';
   mobileMenuOpen: boolean = false;
   
   isLoading: boolean = false;
@@ -148,6 +149,10 @@ export class AdminDashboardComponent implements OnInit {
   // Chart view toggle (Amount or Donors)
   chartViewMode: 'amount' | 'donors' = 'amount';
 
+  // Slider management
+  sliders: any[] = [];
+  isLoadingSliders: boolean = false;
+
   constructor(
     private apiService: ApiService,
     private authService: AuthService,
@@ -220,6 +225,95 @@ export class AdminDashboardComponent implements OnInit {
   showLeaderboard() {
     this.currentView = 'leaderboard';
     this.activeTab = 'leaderboard';
+  }
+
+  showSliders() {
+    this.currentView = 'sliders';
+    this.activeTab = 'sliders';
+    this.loadSliders();
+  }
+
+  async loadSliders() {
+    this.isLoadingSliders = true;
+    try {
+      const response: any = await lastValueFrom(this.apiService.getSlidersAdmin());
+      if (response?.success && response.data) {
+        this.sliders = response.data.sort((a: any, b: any) => a.display_order - b.display_order);
+      }
+    } catch (error: any) {
+      console.error('Error loading sliders:', error);
+      this.snackBar.open('Failed to load sliders', 'Close', { duration: 3000 });
+    } finally {
+      this.isLoadingSliders = false;
+    }
+  }
+
+  getSliderImageUrl(imageUrl: string): string {
+    if (!imageUrl) return '';
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+    const baseUrl = 'http://localhost:4000';
+    return `${baseUrl}${imageUrl}`;
+  }
+
+  openCreateSliderDialog() {
+    const dialogRef = this.dialog.open(SliderDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+      data: { slider: null }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.loadSliders();
+      }
+    });
+  }
+
+  editSlider(slider: any) {
+    const dialogRef = this.dialog.open(SliderDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+      data: { slider: slider }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.loadSliders();
+      }
+    });
+  }
+
+  async toggleSliderStatus(slider: any) {
+    try {
+      const response = await lastValueFrom(
+        this.apiService.updateSlider(slider.id, { is_active: !slider.is_active })
+      );
+      if (response?.success) {
+        slider.is_active = !slider.is_active;
+        this.snackBar.open('Slider status updated', 'Close', { duration: 2000 });
+      }
+    } catch (error: any) {
+      console.error('Error updating slider status:', error);
+      this.snackBar.open('Failed to update slider status', 'Close', { duration: 3000 });
+    }
+  }
+
+  async deleteSlider(slider: any) {
+    if (!confirm(`Are you sure you want to delete "${slider.title}"?`)) {
+      return;
+    }
+    try {
+      const response = await lastValueFrom(this.apiService.deleteSlider(slider.id));
+      if (response?.success) {
+        this.sliders = this.sliders.filter(s => s.id !== slider.id);
+        this.snackBar.open('Slider deleted successfully', 'Close', { duration: 2000 });
+      }
+    } catch (error: any) {
+      console.error('Error deleting slider:', error);
+      this.snackBar.open('Failed to delete slider', 'Close', { duration: 3000 });
+    }
   }
   
   onTemplateTypeChange() {

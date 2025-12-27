@@ -8,7 +8,7 @@
       <div class="profile-info">
         <h1 class="profile-name">{{ dashboardData?.profile?.name || 'NGO' }}</h1>
       </div>
-      <div class="header-actions">
+      <div class="header-actions" style="color: green;">
         <app-notification-bell [userRole]="'NGO'"></app-notification-bell>
       </div>
     </div>
@@ -43,6 +43,12 @@
           (click)="goToRequests()">
           <mat-icon>list</mat-icon>
           <span>My Requests</span>
+        </button>
+        <button 
+          class="nav-item"
+          (click)="goToCreateBlog()">
+          <mat-icon>article</mat-icon>
+          <span>Create Blog</span>
         </button>
         <button 
           class="nav-item"
@@ -102,7 +108,6 @@
               <div class="">
                 <div class="stat-label">Total Donation Requests</div>
                 <div class="stat-value">{{ realTimeStats.totalDonationRequests || 0 }}</div>
-                <div class="stat-badge">Live</div>
               </div>
             </div>
           </mat-card>
@@ -116,7 +121,6 @@
               <div class="">
                 <div class="stat-label">Total Donors</div>
                 <div class="stat-value">{{ realTimeStats.totalDonors || 0 }}</div>
-                <div class="stat-badge">Live</div>
               </div>
             </div>
           </mat-card>
@@ -327,7 +331,7 @@
       </section>
 
       <!-- All Donor Contributions Section -->
-      <section class="donations-section" *ngIf="showAllContributions">
+      <section id="all-donor-contributions" class="donations-section" *ngIf="showAllContributions">
         <h2 class="section-title">All Donor Contributions</h2>
         <div *ngIf="isLoadingDonations" class="loading-container">
           <mat-spinner diameter="40"></mat-spinner>
@@ -543,8 +547,9 @@
     <!-- Profile View (Center) -->
     <div *ngIf="!isLoading && currentView === 'profile' && dashboardData?.profile" class="profile-view">
       <div class="profile-container">
-        <!-- Profile Header Card -->
-        <mat-card class="profile-header-card">
+        <!-- Single Profile Card -->
+        <mat-card class="profile-card-unified">
+          <!-- Profile Header Section -->
           <div class="profile-header-content">
             <div class="profile-avatar-large">
               <mat-icon>business</mat-icon>
@@ -586,10 +591,8 @@
               </button>
             </div>
           </div>
-        </mat-card>
 
-        <!-- Profile Details Card -->
-        <mat-card class="profile-details-card">
+          <!-- Profile Details Section -->
           <mat-card-header>
             <mat-card-title>
               <mat-icon>info</mat-icon>

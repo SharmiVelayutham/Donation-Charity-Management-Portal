@@ -578,12 +578,25 @@ export class NgoDashboardComponent implements OnInit, OnDestroy {
   /**
    * Get recent donations (last 3 days)
    */
+  /**
+   * Get recent donation details (last 3 days only)
+   */
   getRecentDonationDetails(): any[] {
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    threeDaysAgo.setHours(0, 0, 0, 0); // Set to start of day
     
     return this.allDonationDetails.filter((donation: any) => {
-      const donationDate = new Date(donation.donationDate);
+      // Try multiple date fields that might exist in the donation object
+      const donationDateStr = donation.donationDate || donation.created_at || donation.createdAt || donation.date || donation.contributionDate;
+      if (!donationDateStr) return false;
+      
+      const donationDate = new Date(donationDateStr);
+      if (isNaN(donationDate.getTime())) return false; // Invalid date
+      
+      donationDate.setHours(0, 0, 0, 0); // Set to start of day
+      
+      // Return donations from last 3 days (inclusive)
       return donationDate >= threeDaysAgo;
     });
   }
@@ -774,6 +787,10 @@ export class NgoDashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/ngo/requests']);
   }
 
+  goToCreateBlog() {
+    this.router.navigate(['/ngo/create-blog']);
+  }
+
   /**
    * Toggle between showing recent and all contributions
    */
@@ -787,13 +804,21 @@ export class NgoDashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Show all donor contributions
+   * Show all donor contributions (all donation history)
    */
   showAllContributionsView() {
     this.showAllContributions = true;
     this.currentView = 'dashboard';
-    this.donationDetails = this.allDonationDetails;
+    this.donationDetails = this.allDonationDetails; // Show all donation history
     this.mobileMenuOpen = false;
+    
+    // Scroll to the donations section after a short delay to ensure DOM is updated
+    setTimeout(() => {
+      const element = document.getElementById('all-donor-contributions') || document.querySelector('.donations-section');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   }
 
   toggleProfileEdit() {

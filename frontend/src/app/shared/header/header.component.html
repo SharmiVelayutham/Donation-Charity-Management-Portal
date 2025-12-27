@@ -1,0 +1,40 @@
+<!-- Navigation Header -->
+<header class="navbar">
+  <div class="nav-container">
+    <div class="logo-section">
+      <div class="logo">
+        <span class="logo-star">★</span>
+        <h1>Donation</h1>
+      </div>
+      <p class="tagline">Help Others, Be Happy!</p>
+    </div>
+    <nav class="nav-menu" [class.menu-open]="menuOpen">
+      <a routerLink="/" class="nav-link" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">HOME</a>
+      <a routerLink="/about" class="nav-link" routerLinkActive="active">ABOUT</a>
+      <a routerLink="/blog" class="nav-link" routerLinkActive="active">BLOG</a>
+      <div class="nav-dropdown">
+        <a routerLink="/donations" class="nav-link" routerLinkActive="active">DONATION <span class="dropdown-arrow">▼</span></a>
+        <div class="dropdown-menu">
+          <a routerLink="/donations" class="dropdown-item">Browse All Donations</a>
+          <a routerLink="/donations" [queryParams]="{category: 'FOOD'}" class="dropdown-item">Food Donations</a>
+          <a routerLink="/donations" [queryParams]="{category: 'CLOTHES'}" class="dropdown-item">Clothes Donations</a>
+          <a routerLink="/donations" [queryParams]="{category: 'FUNDS'}" class="dropdown-item">Funds Donations</a>
+        </div>
+      </div>
+      <a routerLink="/leaderboard" class="nav-link" routerLinkActive="active">🏆 LEADERBOARD</a>
+    </nav>
+    <div class="nav-actions">
+      <button *ngIf="!isAuthenticated" class="btn-login" routerLink="/login">LOGIN</button>
+      <div *ngIf="isAuthenticated && userRole === 'DONOR'" class="profile-icon-container" (click)="navigateToDashboard()">
+        <div class="profile-icon">{{ userInitial }}</div>
+      </div>
+      <button *ngIf="isAuthenticated && userRole !== 'DONOR'" class="btn-donate" (click)="navigateToDashboard()">DASHBOARD</button>
+      <button class="menu-toggle" (click)="menuOpen = !menuOpen">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </div>
+</header>
+

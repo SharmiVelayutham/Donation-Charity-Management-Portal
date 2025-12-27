@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 export type UserRole = 'DONOR' | 'NGO' | 'ADMIN';
 
@@ -7,6 +8,9 @@ export type UserRole = 'DONOR' | 'NGO' | 'ADMIN';
   providedIn: 'root'
 })
 export class AuthService {
+  private authStatusSubject = new BehaviorSubject<boolean>(this.isAuthenticated());
+  public authStatus$: Observable<boolean> = this.authStatusSubject.asObservable();
+
   constructor(private router: Router) {}
 
   /**
@@ -81,6 +85,9 @@ export class AuthService {
     localStorage.setItem('user', JSON.stringify(user));
     localStorage.setItem('userRole', normalizedRole);
     
+    // Update auth status
+    this.authStatusSubject.next(true);
+    
     // Debug: Verify what was stored
     console.log('setUser: Stored data:', {
       token: !!token,
@@ -97,6 +104,7 @@ export class AuthService {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userRole');
+    this.authStatusSubject.next(false);
     this.router.navigate(['/login']);
   }
 

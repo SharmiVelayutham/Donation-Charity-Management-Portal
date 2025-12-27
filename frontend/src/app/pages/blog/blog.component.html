@@ -1,0 +1,73 @@
+<app-header></app-header>
+
+<section class="blog-hero">
+  <h1>All Blogs</h1>
+  <p>Stories, awareness, and updates from our donation community</p>
+</section>
+
+<section class="blog-list">
+  <div class="blog-layout">
+    <!-- Left Section: Main Content -->
+    <div class="blog-main">
+      <div *ngIf="isLoading" class="loading-container">
+        <p>Loading blogs...</p>
+      </div>
+
+      <div *ngIf="!isLoading && blogs.length === 0" class="empty-state">
+        <p>No blogs found.</p>
+      </div>
+
+      <div *ngIf="!isLoading && blogs.length > 0" class="blog-cards">
+        <div class="blog-card" *ngFor="let blog of blogs" (click)="navigateToBlog(blog.id)">
+          <div class="blog-image" *ngIf="blog.image_url">
+            <img 
+              [src]="getImageUrl(blog.image_url)" 
+              [alt]="blog.title" 
+              (error)="onImageError($event)"
+              (click)="navigateToBlog(blog.id); $event.stopPropagation()">
+          </div>
+          <div class="blog-content">
+            <div class="blog-header">
+              <span class="blog-category">{{ blog.category }}</span>
+              <span class="blog-date">{{ formatDate(blog.created_at) }}</span>
+            </div>
+            <h2 (click)="navigateToBlog(blog.id); $event.stopPropagation()">{{ blog.title }}</h2>
+            <p class="blog-author">By {{ blog.author_name }}</p>
+            <p class="blog-excerpt">{{ blog.excerpt || (getPlainText(blog.content).substring(0, 150) + '...') }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="blog-sidebar">
+      <!-- Search Bar -->
+      <div class="sidebar-section">
+        <h3>Search</h3>
+        <div class="search-box">
+          <input 
+            type="text" 
+            [(ngModel)]="searchQuery" 
+            (keyup.enter)="onSearch()"
+            placeholder="Search blogs...">
+          <button (click)="onSearch()">Search</button>
+          <button *ngIf="searchQuery" (click)="searchQuery = ''; onSearch()" class="clear-search">Clear</button>
+        </div>
+      </div>
+
+      <!-- Categories -->
+      <div class="sidebar-section">
+        <h3>Categories</h3>
+        <div class="categories-list">
+          <a 
+            *ngFor="let cat of categoryCounts" 
+            (click)="onCategorySelect(cat.category)"
+            [class.active]="selectedCategory === cat.category"
+            class="category-item">
+            {{ cat.category }} ({{ cat.count }})
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

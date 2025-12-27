@@ -229,7 +229,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   notifications: Notification[] = [];
   unreadCount: number = 0;
   isLoading: boolean = false;
-  private socketSubscription: any;
+  private socketSubscription: (() => void) | null = null;
 
   constructor(
     private apiService: ApiService,
@@ -242,8 +242,8 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.socketSubscription) {
-      this.socketSubscription.unsubscribe();
+    if (this.socketSubscription && typeof this.socketSubscription === 'function') {
+      this.socketSubscription();
     }
   }
 

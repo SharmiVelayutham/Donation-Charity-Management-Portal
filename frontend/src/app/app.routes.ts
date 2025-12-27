@@ -20,6 +20,28 @@ export const routes: Routes = [
       import('./leaderboard/leaderboard.component')
         .then(m => m.LeaderboardComponent)
   },
+
+  // ---------------- ABOUT (Public) ---------------- 
+  {
+    path: 'about',
+    loadComponent: () =>
+      import('./pages/about/about.component')
+        .then(m => m.AboutComponent)
+  },
+
+  // ---------------- BLOG (Public) ---------------- 
+  {
+    path: 'blog',
+    loadComponent: () =>
+      import('./pages/blog/blog.component')
+        .then(m => m.BlogComponent)
+  },
+  {
+    path: 'blog/:id',
+    loadComponent: () =>
+      import('./pages/blog/blog-detail/blog-detail.component')
+        .then(m => m.BlogDetailComponent)
+  },
   
   // ---------------- AUTH ---------------- 
   { path: 'login', component: LoginComponent },
@@ -51,6 +73,20 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./ngo/requests/requests.component')
         .then(m => m.RequestsComponent),
+    canActivate: [roleGuard(['NGO'])]
+  },
+  {
+    path: 'ngo/create-blog',
+    loadComponent: () =>
+      import('./ngo/create-blog/create-blog.component')
+        .then(m => m.CreateBlogComponent),
+    canActivate: [roleGuard(['NGO'])]
+  },
+  {
+    path: 'ngo/edit-blog/:id',
+    loadComponent: () =>
+      import('./ngo/edit-blog/edit-blog.component')
+        .then(m => m.EditBlogComponent),
     canActivate: [roleGuard(['NGO'])]
   },
 

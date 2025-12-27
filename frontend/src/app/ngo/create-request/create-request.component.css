@@ -23,14 +23,60 @@
 
 .create-request-container {
   min-height: 100vh;
-  background: var(--bg-secondary);
-  padding: 24px;
+  background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #eef2ff);
+  padding: 2rem;
   font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.create-request-container::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('../../../assets/images/ngo-bg.jpg');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.create-request-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.05);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.create-request-container > * {
+  position: relative;
+  z-index: 2;
 }
 
 /* NGO Info Header Card */
 .ngo-info-card {
   margin-bottom: 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ngo-info-card ::ng-deep .mat-mdc-card {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
@@ -89,8 +135,12 @@
 .request-header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 32px;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  width: 100%;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .back-button {
@@ -108,23 +158,23 @@
 .page-title {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 28px;
+  gap: 0.75rem;
+  font-size: 1.75rem;
   font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 8px 0;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
 }
 
 .page-title mat-icon {
-  font-size: 32px;
-  width: 32px;
-  height: 32px;
-  color: var(--primary-color);
+  color: #3b82f6;
+  font-size: 2rem;
+  width: 2rem;
+  height: 2rem;
 }
 
 .page-subtitle {
-  font-size: 16px;
-  color: var(--text-secondary);
+  font-size: 1rem;
+  color: #64748b;
   margin: 0;
 }
 
@@ -133,10 +183,34 @@
    ============================================ */
 
 .form-card {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+}
+
+.form-card ::ng-deep .mat-mdc-card {
+  background: #ffffff;
+}
+
+.form-card ::ng-deep .mat-mdc-card-header {
+  background: #f8fafc;
+  padding: 1.5rem;
+}
+
+.form-card ::ng-deep .mat-mdc-card-content {
+  background: #ffffff;
+  padding: 1.5rem;
+}
+
+.form-card ::ng-deep .mat-mdc-card-title {
+  color: #1e293b;
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .form-card mat-card-header {

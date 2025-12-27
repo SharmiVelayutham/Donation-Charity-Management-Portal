@@ -7,14 +7,45 @@ app-donor-dashboard {
 
 .donor-dashboard-container {
   min-height: 100vh;
-  background-color: #ffffff;
+  background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #eef2ff);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   width: 100%;
+  position: relative;
+}
+
+/* Background Image with Dark Overlay */
+.donor-dashboard-container::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('/assets/images/donor.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.donor-dashboard-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.05);
+  z-index: 1;
+  pointer-events: none;
 }
 
 /* Header Section (Profile at Top - Full Width - Fixed) */
 .header-section {
-  background-color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   padding: 2rem;
   border-bottom: 1px solid #e5e7eb;
   position: fixed;
@@ -90,12 +121,14 @@ app-donor-dashboard {
   width: 100%;
   position: relative;
   margin-top: 192px; /* Offset for fixed header */
+  z-index: 2;
 }
 
 /* Sidebar Navigation (Left - Gray Background - Fixed) */
 .sidebar {
   width: 288px;
-  background-color: #f9fafb;
+  background-color: rgba(249, 250, 251, 0.95);
+  backdrop-filter: blur(10px);
   border-right: 1px solid #e5e7eb;
   padding: 1.5rem;
   position: fixed;
@@ -169,9 +202,12 @@ app-donor-dashboard {
 .main-content {
   flex: 1;
   padding: 2rem;
-  background-color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   min-height: calc(100vh - 240px);
   margin-left: 288px; /* Offset for fixed sidebar */
+  position: relative;
+  z-index: 2;
 }
 
 /* Section Titles */

@@ -700,5 +700,154 @@ export class ApiService {
         catchError(err => this.handleError(err))
       );
   }
+
+  // ==================== BLOGS ====================
+  /**
+   * Get all blogs (public)
+   */
+  getBlogs(params?: { category?: string; search?: string }): Observable<ApiResponse> {
+    let url = `${this.apiUrl}/blogs`;
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.category) queryParams.append('category', params.category);
+      if (params.search) queryParams.append('search', params.search);
+      if (queryParams.toString()) url += `?${queryParams.toString()}`;
+    }
+    return this.http.get<ApiResponse>(url, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Get blog by ID (public)
+   */
+  getBlogById(id: number): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/blogs/${id}`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Create blog (NGO only)
+   */
+  createBlog(blogData: FormData): Observable<ApiResponse> {
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({
+      ...(token && { Authorization: `Bearer ${token}` })
+      // Don't set Content-Type for FormData - browser will set it with boundary
+    });
+    return this.http.post<ApiResponse>(`${this.apiUrl}/blogs`, blogData, { headers })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Get my blogs (NGO only)
+   */
+  getMyBlogs(): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/blogs/my-blogs`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Update blog (NGO only - own blogs)
+   */
+  updateBlog(id: number, blogData: FormData): Observable<ApiResponse> {
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({
+      ...(token && { Authorization: `Bearer ${token}` })
+      // Don't set Content-Type for FormData - browser will set it with boundary
+    });
+    return this.http.put<ApiResponse>(`${this.apiUrl}/blogs/${id}`, blogData, { headers })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Delete blog (NGO only - own blogs)
+   */
+  deleteBlog(id: number): Observable<ApiResponse> {
+    return this.http.delete<ApiResponse>(`${this.apiUrl}/blogs/${id}`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  // ==================== SLIDERS ====================
+  /**
+   * Get all sliders (public - active only)
+   */
+  getSliders(): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/sliders`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Get all sliders including inactive (Admin only)
+   */
+  getSlidersAdmin(): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/sliders/all`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Create slider (Admin only)
+   */
+  createSlider(sliderData: FormData): Observable<ApiResponse> {
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({
+      ...(token && { Authorization: `Bearer ${token}` })
+    });
+    return this.http.post<ApiResponse>(`${this.apiUrl}/sliders`, sliderData, { headers })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Update slider (Admin only)
+   */
+  updateSlider(id: number, sliderData: FormData | any): Observable<ApiResponse> {
+    const token = localStorage.getItem('token');
+    const headers = new HttpHeaders({
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(sliderData instanceof FormData ? {} : { 'Content-Type': 'application/json' })
+    });
+    return this.http.put<ApiResponse>(`${this.apiUrl}/sliders/${id}`, sliderData, { headers })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
+
+  /**
+   * Delete slider (Admin only)
+   */
+  deleteSlider(id: number): Observable<ApiResponse> {
+    return this.http.delete<ApiResponse>(`${this.apiUrl}/sliders/${id}`, { headers: this.getHeaders() })
+      .pipe(
+        map(res => this.normalizeResponse(res)),
+        catchError(err => this.handleError(err))
+      );
+  }
 }
 

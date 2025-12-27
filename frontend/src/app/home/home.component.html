@@ -9,12 +9,11 @@
       <p class="tagline">Help Others, Be Happy!</p>
     </div>
     <nav class="nav-menu" [class.menu-open]="menuOpen">
-      <a routerLink="/" class="nav-link active">HOME</a>
-      <a href="#about" class="nav-link">ABOUT</a>
-      <a href="#events" class="nav-link">EVENTS</a>
-      <a href="#blog" class="nav-link">BLOG</a>
+      <a routerLink="/" class="nav-link" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">HOME</a>
+      <a routerLink="/about" class="nav-link" routerLinkActive="active">ABOUT</a>
+      <a routerLink="/blog" class="nav-link" routerLinkActive="active">BLOG</a>
       <div class="nav-dropdown">
-        <a routerLink="/donations" class="nav-link">DONATION <span class="dropdown-arrow">▼</span></a>
+        <a routerLink="/donations" class="nav-link" routerLinkActive="active">DONATION <span class="dropdown-arrow">▼</span></a>
         <div class="dropdown-menu">
           <a routerLink="/donations" class="dropdown-item">Browse All Donations</a>
           <a routerLink="/donations" [queryParams]="{category: 'FOOD'}" class="dropdown-item">Food Donations</a>
@@ -22,8 +21,7 @@
           <a routerLink="/donations" [queryParams]="{category: 'FUNDS'}" class="dropdown-item">Funds Donations</a>
         </div>
       </div>
-      <a routerLink="/leaderboard" class="nav-link">🏆 LEADERBOARD</a>
-      <a href="#pages" class="nav-link">PAGES <span class="dropdown-arrow">▼</span></a>
+      <a routerLink="/leaderboard" class="nav-link" routerLinkActive="active">🏆 LEADERBOARD</a>
     </nav>
     <div class="nav-actions">
       <button *ngIf="!isAuthenticated" class="btn-login" routerLink="/login">LOGIN</button>
@@ -42,10 +40,40 @@
 
 <!-- Hero Section with Carousel -->
 <section class="hero-section">
-  <div class="hero-slider">
+  <div *ngIf="isLoadingSliders" class="hero-loading">
+    <p>Loading...</p>
+  </div>
+  <div *ngIf="!isLoadingSliders && sliders.length > 0" class="hero-slider">
+    <div 
+      *ngFor="let slider of sliders; let i = index" 
+      class="hero-slide" 
+      [class.active]="i === currentSlide"
+      [style.background-image]="'url(' + getSliderImageUrl(slider.image_url) + ')'">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <p class="hero-tagline" *ngIf="slider.tagline">{{ slider.tagline }}</p>
+        <h1 class="hero-title">{{ slider.title }}</h1>
+        <p class="hero-description" *ngIf="slider.description">
+          {{ slider.description }}
+        </p>
+        <div class="hero-buttons" *ngIf="slider.button1_text || slider.button2_text">
+          <button *ngIf="slider.button1_text" class="btn-yellow" [routerLink]="slider.button1_link || '#'">
+            <span class="btn-icon">✓</span>
+            {{ slider.button1_text }}
+          </button>
+          <button *ngIf="slider.button2_text" class="btn-red" [routerLink]="slider.button2_link || '#'">
+            <span class="btn-icon">✓</span>
+            {{ slider.button2_text }}
+          </button>
+        </div>
+      </div>
+      <button class="carousel-prev" (click)="prevSlide()" *ngIf="sliders.length > 1">‹</button>
+      <button class="carousel-next" (click)="nextSlide()" *ngIf="sliders.length > 1">›</button>
+    </div>
+  </div>
+  <div *ngIf="!isLoadingSliders && sliders.length === 0" class="hero-slider">
     <div class="hero-slide active">
       <div class="hero-image">
-        <!-- Background image will be set via CSS -->
         <div class="hero-overlay"></div>
       </div>
       <div class="hero-content">
@@ -65,8 +93,6 @@
           </button>
         </div>
       </div>
-      <button class="carousel-prev" (click)="prevSlide()">‹</button>
-      <button class="carousel-next" (click)="nextSlide()">›</button>
     </div>
   </div>
 </section>
@@ -122,35 +148,6 @@
   </div>
 </section>
 
-<!-- How We Help Section -->
-<section id="events" class="help-section">
-  <div class="container">
-    <div class="section-header">
-      <h2>How We Help</h2>
-      <p>Our platform makes it easy to make a difference</p>
-    </div>
-    <div class="help-grid">
-      <div class="help-card">
-        <div class="help-number">01</div>
-        <h3>For Donors</h3>
-        <p>Browse donation requests, contribute easily, and track your impact in real-time.</p>
-        <button class="btn-read-more" routerLink="/signup">Get Started</button>
-      </div>
-      <div class="help-card">
-        <div class="help-number">02</div>
-        <h3>For NGOs</h3>
-        <p>Create donation requests, manage contributions, and connect with generous donors.</p>
-        <button class="btn-read-more" routerLink="/signup">Register NGO</button>
-      </div>
-      <div class="help-card">
-        <div class="help-number">03</div>
-        <h3>Secure Platform</h3>
-        <p>All transactions are secure, transparent, and verified for complete peace of mind.</p>
-        <button class="btn-read-more" routerLink="/donations">Learn More</button>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- Recent Donations -->
 <section class="donations-section">
@@ -230,7 +227,6 @@
         <ul>
           <li><a routerLink="/signup">Register as NGO</a></li>
           <li><a routerLink="/dashboard/ngo" *ngIf="isAuthenticated">NGO Dashboard</a></li>
-          <li><a href="#events">Events</a></li>
         </ul>
       </div>
       <div class="footer-section">

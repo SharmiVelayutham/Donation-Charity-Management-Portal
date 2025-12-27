@@ -1,0 +1,75 @@
+<div *ngIf="isLoading" class="loading-container">
+  <p>Loading blog...</p>
+</div>
+
+<div *ngIf="!isLoading && blog" class="blog-detail-page">
+  <div class="blog-detail-layout">
+    <!-- Main Content -->
+    <div class="blog-detail-main">
+      <article class="blog-article">
+        <h1 class="blog-title">{{ blog.title }}</h1>
+        
+        <div class="blog-meta">
+          <span class="blog-author">By {{ blog.author_name }}</span>
+          <span class="blog-date">{{ formatDate(blog.created_at) }}</span>
+        </div>
+
+        <!-- Edit/Delete Buttons (Author only) -->
+        <div class="blog-actions" *ngIf="isAuthor">
+          <button (click)="editBlog()" class="btn-edit">✏️ Edit</button>
+          <button (click)="deleteBlog()" class="btn-delete">🗑️ Delete</button>
+        </div>
+
+        <!-- Social Share Buttons -->
+        <div class="social-share">
+          <button (click)="shareOnEmail()" class="share-btn" title="Share via Email">
+            <span>📧</span> Email
+          </button>
+          <button (click)="shareOnFacebook()" class="share-btn" title="Share on Facebook">
+            <span>📘</span> Facebook
+          </button>
+          <button (click)="shareOnWhatsApp()" class="share-btn" title="Share on WhatsApp">
+            <span>💬</span> WhatsApp
+          </button>
+          <button (click)="shareOnLinkedIn()" class="share-btn" title="Share on LinkedIn">
+            <span>💼</span> LinkedIn
+          </button>
+          <button (click)="copyLink()" class="share-btn" title="Copy Link">
+            <span>🔗</span> Copy Link
+          </button>
+        </div>
+
+        <!-- Featured Image -->
+        <div class="blog-featured-image" *ngIf="blog.image_url">
+          <img [src]="getImageUrl(blog.image_url)" [alt]="blog.title">
+        </div>
+
+        <!-- Blog Content -->
+        <div class="blog-content" [innerHTML]="safeContent"></div>
+      </article>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="blog-detail-sidebar">
+      <div class="sidebar-section">
+        <h3>Related Posts</h3>
+        <div class="related-posts" *ngIf="relatedBlogs.length > 0">
+          <div 
+            class="related-post-card" 
+            *ngFor="let relatedBlog of relatedBlogs"
+            (click)="navigateToBlog(relatedBlog.id)">
+            <div class="related-post-image" *ngIf="relatedBlog.image_url">
+              <img [src]="getImageUrl(relatedBlog.image_url)" [alt]="relatedBlog.title">
+            </div>
+            <div class="related-post-content">
+              <h4>{{ relatedBlog.title }}</h4>
+              <p class="related-post-date">{{ formatDate(relatedBlog.created_at) }}</p>
+            </div>
+          </div>
+        </div>
+        <p *ngIf="relatedBlogs.length === 0" class="no-related">No related posts</p>
+      </div>
+    </div>
+  </div>
+</div>
+

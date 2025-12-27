@@ -5,11 +5,12 @@ import { Observable, lastValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { ApiService, ApiResponse } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
+import { HeaderComponent } from '../../shared/header/header.component';
 
 @Component({
   selector: 'app-donation-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HeaderComponent],
   templateUrl: './donation-list.component.html',
   styleUrls: ['./donation-list.component.css']
 })

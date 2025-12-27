@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { lastValueFrom } from 'rxjs';
 
 // Angular Material imports
 import { MatCardModule } from '@angular/material/card';
@@ -34,7 +35,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   templateUrl: './create-request.component.html',
   styleUrl: './create-request.component.css'
 })
-export class CreateRequestComponent {
+export class CreateRequestComponent implements OnInit {
   donationType: string = '';
   quantityOrAmount: number = 0;
   description: string = '';
@@ -67,7 +68,7 @@ export class CreateRequestComponent {
 
   async loadNgoProfile() {
     try {
-      const response = await this.apiService.getNgoProfile().toPromise();
+      const response = await lastValueFrom(this.apiService.getNgoProfile());
       if (response?.success && response.data) {
         this.ngoName = response.data.name || '';
         const addressParts = [
@@ -243,7 +244,7 @@ export class CreateRequestComponent {
         formData.append('images', file);
       });
 
-      const response = await this.apiService.createDonationRequest(formData).toPromise();
+      const response = await lastValueFrom(this.apiService.createDonationRequest(formData));
 
       if (response?.success) {
         this.successMessage = 'Donation request created successfully!';

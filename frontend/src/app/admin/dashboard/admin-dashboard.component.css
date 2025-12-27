@@ -40,7 +40,7 @@ app-admin-dashboard {
   align-items: center;
   gap: 0.75rem;
   max-width: 1200px;
-  margin: 0 auto;
+  /* margin: 0 auto; */
   width: 100%;
   height: 100%;
   padding: 0 1.5rem;
@@ -109,10 +109,14 @@ app-admin-dashboard {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.95rem;
+  z-index: 40;
+  color: green;
+  opacity: 10;
+
 }
 
-/* Notification Bell - White Icon */
+/* 
 .header-actions ::ng-deep app-notification-bell button[mat-icon-button] {
   color: #ffffff !important;
   --mdc-icon-button-icon-color: #ffffff !important;
@@ -129,7 +133,7 @@ app-admin-dashboard {
 .header-actions ::ng-deep app-notification-bell mat-icon {
   color: #ffffff !important;
   fill: #ffffff !important;
-}
+} */
 
 @media (max-width: 768px) {
   .header-section {
@@ -470,17 +474,32 @@ app-admin-dashboard {
   right: 0;
   bottom: 0;
   background-image: url('../../../assets/images/admin.jpeg');
-  background-size: contain;
-  background-position: center right;
+  background-size: cover;
+  background-position: center center;
   background-repeat: no-repeat;
-  opacity: 0.02;
+  opacity: 0.15;
   z-index: 0;
+  pointer-events: none;
+}
+
+.main-content-wrapper::before,
+.main-content::before {
+  content: '';
+  position: fixed;
+  top: 60px;
+  left: 280px;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.05);
+  z-index: 1;
   pointer-events: none;
 }
 
 @media (max-width: 1024px) {
   .main-content-wrapper::after,
-  .main-content::after {
+  .main-content::after,
+  .main-content-wrapper::before,
+  .main-content::before {
     left: 0;
   }
 }
@@ -488,7 +507,15 @@ app-admin-dashboard {
 .main-content-wrapper > *,
 .main-content > * {
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  visibility: visible;
+}
+
+.dashboard-view,
+.profile-view {
+  position: relative;
+  z-index: 2;
+  visibility: visible;
 }
 
 @media (max-width: 1024px) {
@@ -1993,5 +2020,32 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
   .template-form-actions button {
     width: 100%;
   }
+}
+
+/* Slider Management Styles */
+.slider-thumbnail {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+}
+
+.status-active {
+  color: #10b981;
+  font-weight: 600;
+  padding: 4px 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.status-inactive {
+  color: #6b7280;
+  font-weight: 600;
+  padding: 4px 12px;
+  background: rgba(107, 114, 128, 0.1);
+  border-radius: 12px;
+  display: inline-block;
 }
 
