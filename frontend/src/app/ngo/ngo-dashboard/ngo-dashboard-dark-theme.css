@@ -1,4 +1,4 @@
-/* Dark Theme NGO Dashboard - Similar to Reference Design */
+
 app-ngo-dashboard {
   --dark-bg: #0F172A;
   --dark-surface: #1E293B;
@@ -25,8 +25,6 @@ app-ngo-dashboard {
   flex-direction: column !important;
   width: 100% !important;
 }
-
-/* Top Navigation - Dark Theme */
 .top-navbar {
   background: var(--dark-surface) !important;
   border-bottom: 1px solid var(--dark-border) !important;
@@ -179,8 +177,6 @@ app-ngo-dashboard {
   background: rgba(239, 68, 68, 0.2);
   color: #EF4444;
 }
-
-/* Main Content */
 .main-content-wrapper {
   flex: 1;
   max-width: 1600px;
@@ -188,8 +184,6 @@ app-ngo-dashboard {
   margin: 0 auto;
   padding: 32px;
 }
-
-/* Hero Section */
 .hero-section {
   background: linear-gradient(135deg, var(--green-primary) 0%, var(--green-dark) 100%);
   border-radius: 16px;
@@ -231,8 +225,6 @@ app-ngo-dashboard {
   opacity: 0.95;
   color: white;
 }
-
-/* Stats Cards - Dark Theme */
 .stats-section {
   margin-bottom: 32px;
 }
@@ -282,19 +274,9 @@ app-ngo-dashboard {
   height: 28px;
   color: white;
 }
-
-/* .stat-primary {
-  background: var(--green-primary);
-} */
-
 .stat-warning {
   background: #FBBF24;
 }
-
-/* .stat-info {
-  background: #3B82F6;
-} */
-
 .stat-success {
   background: var(--green-primary);
 }
@@ -348,8 +330,6 @@ app-ngo-dashboard {
   position: relative;
   border: 2px solid var(--green-primary);
 }
-
-/* Charts Section */
 .charts-section {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -371,8 +351,6 @@ app-ngo-dashboard {
   color: var(--text-primary);
   margin: 0 0 24px 0;
 }
-
-/* Donut Chart */
 .donut-chart-container {
   position: relative;
   width: 200px;
@@ -403,8 +381,6 @@ app-ngo-dashboard {
   font-size: 12px;
   color: var(--text-secondary);
 }
-
-/* Line Chart */
 .line-chart-container {
   height: 300px;
   position: relative;
@@ -431,8 +407,6 @@ app-ngo-dashboard {
   height: 12px;
   border-radius: 2px;
 }
-
-/* Summary Cards */
 .summary-section {
   margin-bottom: 32px;
 }
@@ -508,8 +482,6 @@ app-ngo-dashboard {
   font-weight: 700;
   color: var(--text-primary);
 }
-
-/* Breakdown */
 .breakdown-card {
   background: var(--dark-surface);
   border-radius: 12px;
@@ -577,8 +549,6 @@ app-ngo-dashboard {
   font-weight: 700;
   color: var(--green-primary);
 }
-
-/* Customer/Donor Table */
 .customer-table-card {
   background: var(--dark-surface);
   border-radius: 12px;
@@ -619,16 +589,16 @@ app-ngo-dashboard {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--green-primary), var(--green-light));
+  background: linear-gradient(135deg, var(--green-primary), var(--green-dark, #0ea5a3));
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #e2e8f0; /* Light text on dark gradient for visibility */
   font-weight: 600;
   font-size: 16px;
+  border: 1px solid var(--dark-border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
-
-/* Actions */
 .actions-section {
   margin-bottom: 32px;
 }
@@ -682,8 +652,6 @@ app-ngo-dashboard {
   color: var(--text-primary);
   margin: 0;
 }
-
-/* Responsive */
 @media (max-width: 1024px) {
   .charts-section {
     grid-template-columns: 1fr;

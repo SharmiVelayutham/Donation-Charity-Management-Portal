@@ -17,13 +17,10 @@ import { HeaderComponent } from '../../shared/header/header.component';
 export class DonationListComponent implements OnInit {
   donations: any[] = [];
   isLoading: boolean = false;
-  errorMessage: string = '';
-  // Filters
+  errorMessage: string = '';
   filterCategory: string = '';
   filterLocation: string = '';
-  filterDate: string = '';
-
-  // Quick-schedule UI state maps
+  filterDate: string = '';
   showSchedule: Record<string, boolean> = {};
   scheduleDateTimeMap: Record<string, string> = {};
   notesMap: Record<string, string> = {};
@@ -38,8 +35,7 @@ export class DonationListComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    await this.loadDonations();
-    // Only load donor profile if user is authenticated
+    await this.loadDonations();
     if (this.authService.isAuthenticated()) {
       await this.loadDonorProfile();
     }
@@ -48,13 +44,11 @@ export class DonationListComponent implements OnInit {
   async loadDonations() {
     this.isLoading = true;
     this.errorMessage = '';
-    try {
-      // Use new donation-requests endpoint
+    try {
       const donationType = this.filterCategory || undefined;
       const resp$: Observable<ApiResponse> = this.apiService.getActiveDonationRequests(donationType);
       const response = await lastValueFrom(resp$);
-      if (response?.success && response.data) {
-        // Filter by location if provided
+      if (response?.success && response.data) {
         let donations = Array.isArray(response.data) ? response.data : [];
         
         if (this.filterLocation) {
@@ -76,18 +70,14 @@ export class DonationListComponent implements OnInit {
     }
   }
 
-  contribute(id: string | number) {
-    // Check if donor is logged in
-    if (!this.authService.isAuthenticated()) {
-      // Redirect to login with message
+  contribute(id: string | number) {
+    if (!this.authService.isAuthenticated()) {
       alert('Please register/login to donate');
       this.router.navigate(['/login'], { 
         queryParams: { returnUrl: `/donation-requests/${id}/contribute` }
       });
       return;
-    }
-    
-    // Check if user is a donor
+    }
     const userRole = this.authService.getCurrentRole();
     if (userRole !== 'DONOR') {
       alert('Only registered donors can contribute. Please login as a donor.');
@@ -95,9 +85,7 @@ export class DonationListComponent implements OnInit {
         queryParams: { returnUrl: `/donation-requests/${id}/contribute` }
       });
       return;
-    }
-    
-    // Navigate to contribution form for donation request
+    }
     this.router.navigate(['/donation-requests', id, 'contribute']);
   }
 
@@ -116,8 +104,7 @@ export class DonationListComponent implements OnInit {
     this.showSchedule[donationId] = !this.showSchedule[donationId];
   }
 
-  async loadDonorProfile() {
-    // Only load if user is authenticated
+  async loadDonorProfile() {
     if (!this.authService.isAuthenticated()) {
       return;
     }
@@ -130,8 +117,7 @@ export class DonationListComponent implements OnInit {
         this.donorAddress = profile.fullAddress || profile.address || '';
         this.donorContactNumber = profile.phoneNumber || profile.contactInfo || '';
       }
-    } catch {
-      // ignore - user might not be a donor or not authenticated
+    } catch {
     }
   }
 
@@ -168,10 +154,6 @@ export class DonationListComponent implements OnInit {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString();
   }
-
-  /**
-   * Get label for quantity/amount field based on donation type
-   */
   getQuantityOrAmountLabel(donationType: string): string {
     if (donationType === 'FUNDS') {
       return 'Required Amount';
@@ -180,28 +162,18 @@ export class DonationListComponent implements OnInit {
     }
     return 'Required Quantity/Amount';
   }
-
-  /**
-   * Format quantity/amount based on donation type
-   */
   formatQuantityOrAmount(donation: any): string {
     const value = donation.quantity_or_amount;
     if (!value && value !== 0) return 'N/A';
     
     const numValue = parseFloat(value);
-    if (isNaN(numValue)) return 'N/A';
-
-    // For FUNDS: show with ₹ symbol and 2 decimals
+    if (isNaN(numValue)) return 'N/A';
     if (donation.donation_type === 'FUNDS') {
       return `₹${numValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    
-    // For FOOD/CLOTHES: show as integer (no decimals, no currency)
+    }
     if (donation.donation_type === 'FOOD' || donation.donation_type === 'CLOTHES') {
       return Math.round(numValue).toLocaleString('en-IN');
-    }
-    
-    // Default: show as number
+    }
     return numValue.toLocaleString('en-IN');
   }
 }

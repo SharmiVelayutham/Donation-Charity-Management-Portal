@@ -1,6 +1,11 @@
 <div class="donor-dashboard-container">
   <!-- Header Section (Profile at Top - Full Width) -->
   <div class="header-section">
+    <button class="mobile-menu-icon" aria-label="Open menu" (click)="toggleMobileMenu()">
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+    </button>
     <div class="profile-header">
       <div class="profile-avatar">
         <mat-icon class="avatar-icon">person</mat-icon>
@@ -22,8 +27,7 @@
   </div>
 
   <div class="dashboard-body">
-    <!-- Sidebar Navigation (Left) -->
-    <aside class="sidebar">
+    <aside class="sidebar" [class.mobile-open]="mobileMenuOpen">
       <nav class="sidebar-nav">
         <button 
           class="nav-item"
@@ -53,12 +57,9 @@
         </button>
       </nav>
     </aside>
-
-    <!-- Main Content Area (Right) -->
+    <div class="sidebar-backdrop" (click)="toggleMobileMenu()" [class.mobile-open]="mobileMenuOpen"></div>
     <main class="main-content">
-      <!-- Dashboard View -->
       <ng-container *ngIf="activeView === 'dashboard'">
-        <!-- Your Giving Stats Section -->
         <section class="stats-section">
           <h2 class="section-title">
             <mat-icon class="title-icon">bar_chart</mat-icon>
@@ -87,8 +88,6 @@
             </div>
           </div>
         </section>
-
-        <!-- Recent Donations Section (Last 3 Days) -->
         <section class="donations-section">
           <h2 class="section-title">
             <mat-icon class="title-icon">calendar_view_week</mat-icon>
@@ -104,15 +103,12 @@
           </div>
 
           <div *ngIf="!isLoadingContributions && recentDonations.length > 0" class="donations-table-wrapper">
-            <!-- Table Header -->
             <div class="table-header">
               <div class="header-cell">Donation</div>
               <div class="header-cell">Form</div>
               <div class="header-cell">Date</div>
               <div class="header-cell">Status</div>
             </div>
-
-            <!-- Table Body -->
             <div class="donations-table">
               <div *ngFor="let donation of recentDonations" class="donation-row">
                 <div class="donation-cell">
@@ -146,8 +142,6 @@
           </div>
         </section>
       </ng-container>
-
-      <!-- History View -->
       <ng-container *ngIf="activeView === 'history'">
         <section class="donations-section">
           <h2 class="section-title">
@@ -164,15 +158,12 @@
           </div>
 
           <div *ngIf="!isLoadingContributions && allDonations.length > 0" class="donations-table-wrapper">
-            <!-- Table Header -->
             <div class="table-header">
               <div class="header-cell">Donation</div>
               <div class="header-cell">Form</div>
               <div class="header-cell">Date</div>
               <div class="header-cell">Status</div>
             </div>
-
-            <!-- Table Body -->
             <div class="donations-table">
               <div *ngFor="let donation of allDonations" class="donation-row">
                 <div class="donation-cell">
@@ -208,8 +199,6 @@
       </ng-container>
     </main>
   </div>
-
-  <!-- Edit Profile Dialog -->
   <div *ngIf="isEditingProfile" class="edit-profile-overlay" (click)="isEditingProfile = false">
     <div class="edit-profile-dialog" (click)="$event.stopPropagation()">
       <h3>Edit Profile</h3>

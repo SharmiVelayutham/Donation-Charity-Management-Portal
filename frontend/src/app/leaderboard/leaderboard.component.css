@@ -1,4 +1,4 @@
-/* Professional Charity Dashboard Theme */
+
 :root {
   --primary-color: #2E7D32;
   --secondary-color: #1565C0;
@@ -20,8 +20,6 @@
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
-
-/* Header Section */
 .leaderboard-header {
   text-align: center;
   margin-bottom: 2.5rem;
@@ -55,8 +53,6 @@
   font-weight: 400;
   line-height: 1.6;
 }
-
-/* Filters Section */
 .filters {
   background: #EDEAE0; /* Alabaster SW7008 */
   padding: 1.5rem;
@@ -118,8 +114,6 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
-
-/* Loading and Error States */
 .loading,
 .error {
   background: #EDEAE0; /* Alabaster SW7008 */
@@ -143,8 +137,6 @@
   margin: 0;
   font-weight: 500;
 }
-
-/* Leaderboard Table */
 .leaderboard-table {
   background: #EDEAE0; /* Alabaster SW7008 */
   border-radius: 12px;
@@ -223,8 +215,6 @@
 .leaderboard-table td:last-child {
   padding-right: 1.5rem;
 }
-
-/* Rank Badge */
 .rank-badge {
   display: inline-flex !important;
   align-items: center;
@@ -267,25 +257,17 @@
   color: #1e293b !important;
   border-color: #e2e8f0 !important;
 }
-
-/* Amount Styling */
 .amount {
   color: #10b981;
   font-weight: 600;
   font-size: 1rem;
 }
-
-/* No Data Message */
 .no-data {
   text-align: center;
   padding: 2rem 1rem !important;
   color: #64748b;
   font-size: 1rem;
 }
-
-/* Actions Section - Removed for admin dashboard */
-
-/* Responsive Design */
 @media (max-width: 1024px) {
   .leaderboard-header {
     padding: 1.25rem;

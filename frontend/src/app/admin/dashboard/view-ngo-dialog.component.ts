@@ -390,25 +390,21 @@ export class ViewNgoDialogComponent implements OnInit {
     private snackBar: MatSnackBar
   ) {}
 
-  async ngOnInit() {
-    // Fetch full details from backend to ensure all fields are available
+  async ngOnInit() {
     if (this.data.ngo) {
       this.isLoading = true;
       try {
         const response: ApiResponse = await lastValueFrom(this.apiService.getNgoDetails(this.data.ngo.id.toString()));
         console.log('[View NGO Dialog] API Response:', response);
-        if (response?.success && response.data) {
-          // Use data from backend (more complete)
+        if (response?.success && response.data) {
           this.ngoDetails = response.data;
           console.log('[View NGO Dialog] NGO Details loaded:', this.ngoDetails);
-        } else {
-          // Fallback to table data if API fails
+        } else {
           this.ngoDetails = this.data.ngo;
           console.log('[View NGO Dialog] Using table data as fallback:', this.ngoDetails);
         }
       } catch (error) {
-        console.error('[View NGO Dialog] Error fetching NGO details:', error);
-        // Fallback to table data
+        console.error('[View NGO Dialog] Error fetching NGO details:', error);
         this.ngoDetails = this.data.ngo;
         console.log('[View NGO Dialog] Using table data due to error:', this.ngoDetails);
       } finally {

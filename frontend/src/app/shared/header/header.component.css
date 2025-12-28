@@ -1,6 +1,4 @@
-/* ============================================
-   NAVIGATION
-   ============================================ */
+
 .navbar {
   position: sticky;
   top: 0;
@@ -206,8 +204,6 @@
   background: #333;
   transition: 0.3s;
 }
-
-/* Responsive Design */
 @media (max-width: 768px) {
   .nav-menu {
     position: fixed;

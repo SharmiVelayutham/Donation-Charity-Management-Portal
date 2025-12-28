@@ -25,8 +25,7 @@ export class AdminLoginComponent implements OnInit {
     private authService: AuthService
   ) {}
 
-  ngOnInit() {
-    // If already logged in as admin, redirect to dashboard
+  ngOnInit() {
     if (this.authService.isAuthenticated() && this.authService.hasRole('ADMIN')) {
       this.router.navigate(['/admin/dashboard']);
     }
@@ -47,29 +46,18 @@ export class AdminLoginComponent implements OnInit {
 
       if (response?.success && response.token) {
         console.log('=== ADMIN LOGIN RESPONSE ===');
-        console.log('Full response:', response);
-        
-        // Admin login returns 'admin' field, but normalizeResponse converts it to 'user' for consistency
+        console.log('Full response:', response);
         const adminData = (response as any).admin || response.user;
-        console.log('Admin data extracted:', adminData);
-        
-        // CRITICAL: Ensure role is ALWAYS set to ADMIN
+        console.log('Admin data extracted:', adminData);
         if (!adminData) {
           console.error('Admin data is null/undefined');
           this.errorMessage = 'Invalid response from server';
           return;
-        }
-        
-        // Force role to ADMIN
+        }
         adminData.role = 'ADMIN';
-        console.log('Admin data with role:', adminData);
-        
-        // Store user data with ADMIN role
-        this.authService.setUser(response.token, adminData);
-        
-        // Wait a bit for localStorage to be written (synchronous but just to be safe)
-        setTimeout(() => {
-          // Verify role was set correctly
+        console.log('Admin data with role:', adminData);
+        this.authService.setUser(response.token, adminData);
+        setTimeout(() => {
           const storedRole = this.authService.getCurrentRole();
           const storedToken = localStorage.getItem('token');
           const storedUser = localStorage.getItem('user');
@@ -78,16 +66,13 @@ export class AdminLoginComponent implements OnInit {
           console.log('Stored token:', !!storedToken);
           console.log('Stored user:', storedUser);
           console.log('Stored role:', storedRole);
-          console.log('Expected role: ADMIN');
-          
-          // Navigate to admin dashboard
+          console.log('Expected role: ADMIN');
           if (storedRole === 'ADMIN') {
             console.log('Role verified, navigating to admin dashboard...');
             this.router.navigate(['/admin/dashboard']).then(
               () => console.log('Navigation successful'),
               (err) => {
-                console.error('Navigation error:', err);
-                // Fallback: use AuthService navigation
+                console.error('Navigation error:', err);
                 this.authService.navigateToDashboard('ADMIN');
               }
             );

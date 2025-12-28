@@ -17,8 +17,6 @@ app-ngo-dashboard {
 .ngo-dashboard-container * {
   box-sizing: border-box;
 }
-
-/* Header Section (Profile at Top - Full Width - Fixed) */
 .header-section {
   background: #1e293b;
   border-bottom: 1px solid #334155;
@@ -69,8 +67,16 @@ app-ngo-dashboard {
   align-items: center;
   gap: 0.5rem;
   height: 100%;
-  flex-shrink: 0;
-  flex-grow: 0;
+  flex-shrink: 1;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .profile-info {
+    display: flex;
+    gap: 0.25rem;
+  }
 }
 
 .profile-name {
@@ -111,8 +117,6 @@ app-ngo-dashboard {
   align-items: center;
   gap: 0.75rem;
 }
-
-/* Notification Bell - White Icon */
 .header-actions ::ng-deep app-notification-bell button[mat-icon-button] {
   color:green !important;
   --mdc-icon-button-icon-color: green !important;
@@ -134,31 +138,77 @@ app-ngo-dashboard {
 
 @media (max-width: 768px) {
   .header-section {
-    height: 56px;
+    height: 50px;
     padding: 0;
   }
   
   .profile-header {
-    padding: 0 1rem;
+    padding: 0 0.5rem 0 48px;
+    gap: 0.25rem !important;
+    align-items: center;
+    justify-content: flex-start;
+    height: 50px;
   }
   
   .profile-name {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     background: linear-gradient(to right, #10b981, #3b82f6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: 100%;
+    margin: 0;
+    line-height: 1.2;
   }
   
   .profile-avatar {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    flex-shrink: 0;
+    margin-left: 0;
   }
   
   .profile-avatar .avatar-icon {
     font-size: 16px;
     width: 16px;
     height: 16px;
+  }
+  
+  .header-actions {
+    margin-left: auto;
+    margin-right: 0.5rem;
+    gap: 0.25rem;
+  }
+  
+  .header-actions ::ng-deep app-notification-bell button[mat-icon-button] {
+    width: 32px !important;
+    height: 32px !important;
+    padding: 4px !important;
+  }
+  
+  .header-actions ::ng-deep app-notification-bell button[mat-icon-button] .mat-icon,
+  .header-actions ::ng-deep app-notification-bell button[mat-icon-button] mat-icon {
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
+    background-clip: text;
+  }
+  
+  .profile-avatar {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .profile-avatar .avatar-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
   }
 }
 
@@ -183,23 +233,23 @@ app-ngo-dashboard {
   background-color: rgba(251, 191, 36, 0.2);
   color: #FBBF24;
 }
-
-/* Dashboard Body (Sidebar + Main Content) */
 .dashboard-body {
   display: flex;
   width: 100%;
   position: relative;
   margin-top: 60px; /* Offset for fixed header */
   overflow-x: hidden;
+  overflow-y: auto;
+  height: calc(100vh - 60px);
 }
 
 @media (max-width: 768px) {
   .dashboard-body {
-    margin-top: 56px;
+    margin-top: 50px;
+    height: calc(100vh - 50px);
+    overflow-y: auto;
   }
 }
-
-/* Sidebar Navigation (Left - Gradient Background - Fixed) */
 .sidebar {
   width: 280px;
   padding: 0;
@@ -217,8 +267,8 @@ app-ngo-dashboard {
 
 @media (max-width: 768px) {
   .sidebar {
-    top: 56px;
-    height: calc(100vh - 56px);
+    top: 50px;
+    height: calc(100vh - 50px);
   }
 }
 
@@ -242,8 +292,6 @@ app-ngo-dashboard {
     transform: translateX(-100%);
   }
 }
-
-/* Backdrop overlay for mobile */
 .sidebar-backdrop {
   display: none;
   position: fixed;
@@ -361,12 +409,33 @@ app-ngo-dashboard {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
 }
+.mobile-menu-icon {
+  display: none !important;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  cursor: pointer;
+  z-index: 1002;
+}
 
+.mobile-menu-icon .bar {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: #FFF4D9; /* cream color */
+  margin: 3px auto;
+  border-radius: 2px;
+}
 
-/* ============================================
-   MAIN CONTENT WRAPPER
-   ============================================ */
-
+@media (max-width: 1024px) {
+  .mobile-menu-icon { display: block !important; }
+}
 .main-content-wrapper,
 .main-content {
   flex: 1;
@@ -433,8 +502,6 @@ app-ngo-dashboard {
   z-index: 2;
   visibility: visible;
 }
-
-/* Profile view ko pure left align karne ke liye */
 .main-content .profile-view,
 .main-content-wrapper .profile-view {
   margin-left: -1.5rem;
@@ -468,7 +535,7 @@ app-ngo-dashboard {
 @media (max-width: 768px) {
   .main-content-wrapper,
   .main-content {
-    min-height: calc(100vh - 56px);
+    min-height: auto;
     padding: 1rem;
   }
   
@@ -506,18 +573,96 @@ app-ngo-dashboard {
   .main-content-wrapper,
   .main-content {
     padding: 1rem;
-    min-height: calc(100vh - 30px);
+    min-height: auto;
   }
 }
 
 .main-content-wrapper {
   margin-top: 0;
 }
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%) !important;
+    transition: transform 0.25s ease !important;
+    width: 260px;
+    position: fixed;
+    left: 0;
+    top: 56px;
+    height: calc(100vh - 56px);
+    z-index: 1200;
+    background: #1e293b;
+    border-right: 1px solid #334155;
+  }
 
-/* ============================================
-   LOADING STATE
-   ============================================ */
+  .sidebar.mobile-open {
+    transform: translateX(0) !important;
+  }
 
+  .sidebar-backdrop {
+    z-index: 1100;
+  }
+
+  .mobile-menu-icon { 
+    display: block !important; 
+    position: absolute !important;
+  }
+  .main-content-wrapper,
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem !important;
+    min-height: calc(100vh - 56px);
+    overflow-x: hidden;
+  }
+  .main-content-wrapper::after,
+  .main-content::after,
+  .main-content-wrapper::before,
+  .main-content::before {
+    display: none !important;
+  }
+  .profile-header { 
+    padding-left: 50px !important; 
+    gap: 0.5rem !important;
+  }
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+  .hero-section {
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .hero-title {
+    font-size: 1.5rem !important;
+  }
+
+  .hero-subtitle {
+    font-size: 0.875rem !important;
+  }
+  .stat-card {
+    padding: 1rem !important;
+  }
+
+  .stat-value {
+    font-size: 1.5rem !important;
+  }
+
+  .stat-label {
+    font-size: 0.75rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 260px;
+    top: 56px;
+    height: calc(100vh - 56px);
+  }
+
+  .nav-item span { display: inline-block; }
+}
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -531,11 +676,6 @@ app-ngo-dashboard {
 .loading-container mat-spinner {
   margin-bottom: var(--spacing-md);
 }
-
-/* ============================================
-   DASHBOARD VIEW
-   ============================================ */
-
 .dashboard-view {
   display: flex;
   flex-direction: column;
@@ -562,8 +702,6 @@ app-ngo-dashboard {
 .dashboard-view > section:last-child {
   margin-bottom: 0;
 }
-
-/* Hero Section */
 .hero-section {
   background: #EDEAE0 !important; /* Alabaster SW7008 */
   border-radius: 1rem;
@@ -633,11 +771,6 @@ app-ngo-dashboard {
 .hero-actions button {
   flex-shrink: 0;
 }
-
-/* ============================================
-   STATISTICS SECTION
-   ============================================ */
-
 .stats-section {
   margin-bottom: 2rem;
   margin-top: 0;
@@ -761,8 +894,6 @@ app-ngo-dashboard {
   color: #64748b;
   font-weight: 400;
 }
-
-/* Real-time stats styling */
 .real-time-stat {
   position: relative;
   border: 2px solid var(--primary-color);
@@ -825,14 +956,10 @@ app-ngo-dashboard {
   background: var(--success-bg);
   color: var(--success-color);
 }
-
-/* Actions Section */
 .actions-section {
   margin-top: 0;
   margin-bottom: 2rem;
 }
-
-/* Section Titles */
 .section-title {
   display: flex;
   align-items: center;
@@ -890,8 +1017,6 @@ app-ngo-dashboard {
   color: var(--text-primary);
   margin: 0;
 }
-
-/* Activity Section */
 .activity-section {
   margin-top: 0;
   margin-bottom: 2rem;
@@ -989,11 +1114,6 @@ app-ngo-dashboard {
   background: var(--success-bg);
   color: var(--success-color);
 }
-
-/* ============================================
-   PROFILE VIEW (CENTER)
-   ============================================ */
-
 .profile-view {
   display: flex;
   justify-content: flex-start;
@@ -1012,8 +1132,6 @@ app-ngo-dashboard {
   margin-left: 0;
   padding-left: 0;
 }
-
-/* Unified Profile Card */
 .profile-card-unified {
   background: #EDEAE0 !important; /* Alabaster SW7008 - Same as admin dashboard */
   border-radius: 1rem;
@@ -1038,8 +1156,6 @@ app-ngo-dashboard {
   border-bottom: 1px solid #e2e8f0;
   margin-bottom: 0;
 }
-
-/* Profile Header Card - Keep for backward compatibility if needed */
 .profile-header-card {
   background: #EDEAE0 !important;
   border-radius: 1rem;
@@ -1161,8 +1277,6 @@ app-ngo-dashboard {
   width: 18px;
   height: 18px;
 }
-
-/* Profile Details Card - Apply to unified card */
 .profile-card-unified mat-card-header {
   padding: 1.25rem 1.25rem 1.25rem 1rem;
   border-bottom: 1px solid #e2e8f0;
@@ -1192,8 +1306,6 @@ app-ngo-dashboard {
 .profile-card-unified mat-card-content {
   padding: 1rem 1.25rem 1.25rem 1rem;
 }
-
-/* Profile Details Card - Keep for backward compatibility */
 .profile-details-card {
   background: #EDEAE0 !important;
   border-radius: 1rem;
@@ -1228,8 +1340,6 @@ app-ngo-dashboard {
 .profile-details-card mat-card-content {
   padding: 1.5rem;
 }
-
-/* Profile Details View */
 .profile-details-view {
   display: flex;
   flex-direction: column;
@@ -1311,8 +1421,6 @@ app-ngo-dashboard {
   color: #64748b;
   line-height: 1.5;
 }
-
-/* Responsive Profile Styles */
 @media (max-width: 768px) {
   .profile-header-content {
     flex-direction: column;
@@ -1367,8 +1475,6 @@ app-ngo-dashboard {
     gap: 1.5rem;
   }
 }
-
-/* Profile Edit Form */
 .profile-edit-form {
   margin-top: var(--spacing-lg);
 }
@@ -1384,8 +1490,6 @@ app-ngo-dashboard {
 .form-field-full {
   grid-column: 1 / -1;
 }
-
-/* Enhanced Form Field Styling */
 .profile-edit-form ::ng-deep .mat-mdc-form-field {
   width: 100%;
   font-size: 1rem;
@@ -1508,8 +1612,6 @@ app-ngo-dashboard {
   border-radius: 10px;
   font-size: 0.9375rem;
 }
-
-/* No Data Container */
 .no-data-container {
   display: flex;
   justify-content: center;
@@ -1548,11 +1650,6 @@ app-ngo-dashboard {
   font-size: var(--font-size-base);
   line-height: var(--line-height-relaxed);
 }
-
-/* ============================================
-   PASSWORD DIALOG
-   ============================================ */
-
 .password-dialog-overlay {
   position: fixed;
   top: 0;
@@ -1612,8 +1709,6 @@ app-ngo-dashboard {
   width: 100%;
   margin-bottom: 1rem;
 }
-
-/* Password Dialog Input Fields Styling */
 .password-dialog ::ng-deep .mat-mdc-form-field {
   width: 100%;
   font-size: 1rem;
@@ -1784,11 +1879,6 @@ app-ngo-dashboard {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-weight: 500;
 }
-
-/* ============================================
-   RESPONSIVE DESIGN
-   ============================================ */
-
 @media (max-width: 1024px) {
   .mobile-menu-toggle {
     display: block !important;
@@ -2070,11 +2160,6 @@ app-ngo-dashboard {
     height: 24px;
   }
 }
-
-/* ============================================
-   UTILITY CLASSES
-   ============================================ */
-
 .text-center {
   text-align: center;
 }
@@ -2098,11 +2183,6 @@ app-ngo-dashboard {
 .bg-secondary {
   background: var(--bg-secondary);
 }
-
-/* ============================================
-   MATERIAL OVERRIDES
-   ============================================ */
-
 app-ngo-dashboard ::ng-deep .mat-mdc-form-field {
   font-size: var(--font-size-base);
 }
@@ -2181,8 +2261,6 @@ app-ngo-dashboard ::ng-deep .mat-mdc-raised-button:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
-
-/* Override for action-card buttons */
 app-ngo-dashboard ::ng-deep .action-card.mat-mdc-raised-button {
   background-color: var(--bg-primary) !important;
   color: var(--text-primary) !important;
@@ -2249,8 +2327,6 @@ app-ngo-dashboard ::ng-deep .mat-mdc-card-content {
   background: #EDEAE0 !important; /* Alabaster SW7008 */
   color: var(--text-primary) !important;
 }
-
-/* Specific override for donation-item cards */
 app-ngo-dashboard ::ng-deep .donation-item.mat-mdc-card {
   background: #EDEAE0 !important; /* Alabaster SW7008 */
   color: var(--text-primary) !important;
@@ -2260,8 +2336,6 @@ app-ngo-dashboard ::ng-deep .donation-item .mat-mdc-card-content {
   background: #EDEAE0 !important; /* Alabaster SW7008 */
   color: var(--text-primary) !important;
 }
-
-/* Specific override for summary-card */
 app-ngo-dashboard ::ng-deep .summary-card.mat-mdc-card {
   background: #EDEAE0 !important; /* Alabaster SW7008 */
   color: var(--text-primary) !important;
@@ -2271,8 +2345,6 @@ app-ngo-dashboard ::ng-deep .summary-card .mat-mdc-card-content {
   background: #EDEAE0 !important; /* Alabaster SW7008 */
   color: var(--text-primary) !important;
 }
-
-/* Specific override for breakdown-card */
 app-ngo-dashboard ::ng-deep .breakdown-card.mat-mdc-card {
   background: #EDEAE0 !important; /* Alabaster SW7008 */
   color: var(--text-primary) !important;
@@ -2295,8 +2367,6 @@ app-ngo-dashboard ::ng-deep .mat-mdc-stroked-button {
   text-transform: none;
   min-height: 42px;
 }
-
-/* Ensure proper contrast for Material components */
 app-ngo-dashboard ::ng-deep .mat-mdc-form-field-label {
   color: var(--text-secondary);
 }
@@ -2308,11 +2378,6 @@ app-ngo-dashboard ::ng-deep .mat-mdc-input-element {
 app-ngo-dashboard ::ng-deep .mat-mdc-select-value {
   color: var(--text-primary);
 }
-
-/* ============================================
-   SUMMARY SECTION
-   ============================================ */
-
 .summary-section {
   margin-top: 0;
   margin-bottom: 2rem;
@@ -2520,10 +2585,6 @@ app-ngo-dashboard ::ng-deep .mat-mdc-select-value {
   font-weight: var(--font-weight-bold);
   color: var(--primary-color);
 }
-
-/* ============================================
-   DONOR CONTRIBUTIONS SECTION
-   ============================================ */
 .donations-section {
   margin-top: 0;
   margin-bottom: 2rem;
@@ -2839,11 +2900,6 @@ app-ngo-dashboard ::ng-deep .mat-mdc-select-value {
   color: var(--text-secondary);
   margin: 0;
 }
-
-/* ============================================
-   CHARTS SECTION
-   ============================================ */
-
 .charts-section {
   margin-bottom: 2rem;
   margin-top: 0;
@@ -2961,8 +3017,6 @@ app-ngo-dashboard ::ng-deep .mat-mdc-select-value {
   height: 12px;
   border-radius: 2px;
 }
-
-/* Customer/Donor Table */
 .customer-table-card {
   background: #EDEAE0 !important; /* Alabaster SW7008 */
   border-radius: 12px;
@@ -3010,16 +3064,16 @@ app-ngo-dashboard ::ng-deep .mat-mdc-select-value {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark, #3b82f6));
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #0f172a; /* Dark text for better visibility on light backgrounds */
   font-weight: 600;
   font-size: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
-
-/* Responsive charts */
 @media (max-width: 1024px) {
   .charts-grid {
     grid-template-columns: 1fr;
@@ -3027,5 +3081,220 @@ app-ngo-dashboard ::ng-deep .mat-mdc-select-value {
   
   .chart-card.full-width {
     grid-column: span 1;
+  }
+}
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 1rem;
+    width: 100%;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    min-width: 600px;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .action-buttons button {
+    width: 100%;
+  }
+
+  .dialog-content {
+    padding: 1rem;
+    max-width: 100%;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .profile-edit-form {
+    margin-top: 1rem;
+  }
+
+  .profile-edit-form ::ng-deep .mat-mdc-form-field {
+    font-size: 0.9375rem;
+  }
+
+  .profile-edit-form ::ng-deep .mat-mdc-input-element {
+    padding: 10px 12px !important;
+    font-size: 0.9375rem;
+  }
+
+  .profile-edit-form ::ng-deep textarea.mat-mdc-input-element {
+    min-height: 80px;
+    padding: 10px 12px !important;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    margin-top: 1rem;
+  }
+
+  .form-actions button {
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    min-width: auto;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .card-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .profile-form {
+    padding: 1rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-row .form-group {
+    width: 100%;
+  }
+
+  .contribution-card {
+    padding: 1rem;
+  }
+
+  .contribution-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .contribution-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-section {
+    height: 50px;
+  }
+
+  .profile-header {
+    padding: 0 0.75rem;
+  }
+
+  .profile-name {
+    font-size: 0.75rem;
+  }
+
+  .profile-avatar {
+    width: 24px;
+    height: 24px;
+  }
+
+  .profile-avatar .avatar-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .dashboard-body {
+    margin-top: 50px;
+  }
+
+  .main-content {
+    padding: 0.75rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.75rem;
+  }
+
+  .table {
+    min-width: 500px;
+    font-size: 0.75rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.375rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .dialog-content {
+    padding: 0.75rem;
+  }
+
+  .form-group label {
+    font-size: 0.875rem;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 0.875rem;
+    padding: 0.5rem;
+  }
+
+  .profile-form {
+    padding: 0.75rem;
+  }
+
+  .contribution-card {
+    padding: 0.75rem;
   }
 }

@@ -31,18 +31,14 @@ export class RequestsComponent implements OnInit {
     this.errorMessage = '';
     console.log('[Requests Component] Loading donations...');
 
-    try {
-      // Use getMyDonationRequests which queries donation_requests table (not donations table)
+    try {
       const response = await lastValueFrom(this.apiService.getMyDonationRequests());
       console.log('[Requests Component] API Response:', response);
       
       if (response?.success && response.data) {
         const rawDonations = Array.isArray(response.data) ? response.data : [];
         console.log('[Requests Component] Raw donations from API:', rawDonations);
-        console.log('[Requests Component] Number of donations:', rawDonations.length);
-        
-        // Map database snake_case fields to camelCase for template compatibility
-        // Note: donation_requests table has different structure than donations table
+        console.log('[Requests Component] Number of donations:', rawDonations.length);
         this.donations = rawDonations.map((request: any) => ({
           id: request.id,
           purpose: request.description || '', // donation_requests uses 'description' not 'purpose'
@@ -119,12 +115,9 @@ export class RequestsComponent implements OnInit {
     this.router.navigate(['/ngo/create-request']);
   }
 
-  editRequest(requestId: number) {
-    // TODO: Navigate to edit page when implemented
-    console.log('Edit request:', requestId);
-    // For now, just show an alert
-    alert('Edit functionality coming soon!');
-    // this.router.navigate(['/ngo/edit-request', requestId]);
+  editRequest(requestId: number) {
+    console.log('Edit request:', requestId);
+    alert('Edit functionality coming soon!');
   }
 
   async cancelRequest(requestId: number) {
@@ -136,8 +129,7 @@ export class RequestsComponent implements OnInit {
     try {
       const response = await lastValueFrom(this.apiService.updateDonationRequestStatus(requestId.toString(), 'CLOSED'));
       
-      if (response?.success) {
-        // Reload the requests list
+      if (response?.success) {
         await this.loadDonations();
         alert('Request closed successfully!');
       } else {

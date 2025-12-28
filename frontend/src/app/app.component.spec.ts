@@ -24,8 +24,7 @@ describe('AppComponent', () => {
   it('should render router outlet (no direct title render)', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    // App now uses <router-outlet> so we assert its presence instead of an <h1> title
+    const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
 });

@@ -7,7 +7,6 @@
 
 <section class="blog-list">
   <div class="blog-layout">
-    <!-- Left Section: Main Content -->
     <div class="blog-main">
       <div *ngIf="isLoading" class="loading-container">
         <p>Loading blogs...</p>
@@ -38,10 +37,7 @@
         </div>
       </div>
     </div>
-
-    <!-- Right Sidebar -->
     <div class="blog-sidebar">
-      <!-- Search Bar -->
       <div class="sidebar-section">
         <h3>Search</h3>
         <div class="search-box">
@@ -54,8 +50,6 @@
           <button *ngIf="searchQuery" (click)="searchQuery = ''; onSearch()" class="clear-search">Clear</button>
         </div>
       </div>
-
-      <!-- Categories -->
       <div class="sidebar-section">
         <h3>Categories</h3>
         <div class="categories-list">

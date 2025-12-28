@@ -1,7 +1,6 @@
 <app-header></app-header>
 
 <div class="leaderboard-container">
-  <!-- Filters -->
   <div class="filters">
     <div class="filter-group">
       <label>Type:</label>
@@ -28,18 +27,12 @@
       </select>
     </div>
   </div>
-
-  <!-- Loading State -->
   <div *ngIf="isLoading" class="loading">
     <p>Loading leaderboard...</p>
   </div>
-
-  <!-- Error State -->
   <div *ngIf="errorMessage && !isLoading" class="error">
     <p>{{ errorMessage }}</p>
   </div>
-
-  <!-- Leaderboard Table -->
   <div *ngIf="!isLoading && !errorMessage" class="leaderboard-table">
     <table>
       <thead>

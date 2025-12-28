@@ -27,8 +27,7 @@ export class BlogComponent implements OnInit {
     private route: ActivatedRoute
   ) {}
 
-  async ngOnInit() {
-    // Watch for query param changes first
+  async ngOnInit() {
     this.route.queryParams.subscribe(async params => {
       if (params['category']) {
         this.selectedCategory = params['category'];
@@ -41,9 +40,7 @@ export class BlogComponent implements OnInit {
         this.searchQuery = '';
       }
       await this.loadBlogs();
-    });
-    
-    // Also load blogs on initial mount (in case no query params)
+    });
     if (!this.route.snapshot.queryParams['category'] && !this.route.snapshot.queryParams['search']) {
       await this.loadBlogs();
     }
@@ -65,23 +62,19 @@ export class BlogComponent implements OnInit {
       console.log('Response data type:', typeof response.data);
       console.log('Is data array?', Array.isArray(response.data));
       
-      if (response.success) {
-        // Handle different response structures
-        if (response.data) {
-          // If data has blogs and categoryCounts
+      if (response.success) {
+        if (response.data) {
           if (response.data.blogs !== undefined) {
             this.blogs = Array.isArray(response.data.blogs) ? response.data.blogs : [];
             this.categoryCounts = Array.isArray(response.data.categoryCounts) ? response.data.categoryCounts : [];
             console.log('✅ Found blogs array:', this.blogs.length);
             console.log('✅ Found categoryCounts:', this.categoryCounts.length);
-          } 
-          // If data is directly an array
+          } 
           else if (Array.isArray(response.data)) {
             this.blogs = response.data;
             this.categoryCounts = [];
             console.log('✅ Data is direct array:', this.blogs.length);
-          }
-          // If data has a different structure
+          }
           else {
             console.warn('⚠️ Unexpected response data structure:', response.data);
             console.warn('Data keys:', Object.keys(response.data || {}));
@@ -147,27 +140,22 @@ export class BlogComponent implements OnInit {
   }
 
   getImageUrl(imageUrl: string | null): string {
-    if (!imageUrl) return '';
-    // If it's already a full URL, return as is
+    if (!imageUrl) return '';
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       return imageUrl;
-    }
-    // Otherwise, prepend API base URL (remove /api from environment.apiUrl)
-    const baseUrl = environment.apiUrl.replace('/api', '');
-    // Ensure imageUrl starts with /
+    }
+    const baseUrl = environment.apiUrl.replace('/api', '');
     const cleanUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
     return `${baseUrl}${cleanUrl}`;
   }
 
   onImageError(event: any) {
-    console.error('Image failed to load:', event.target.src);
-    // Hide the image on error
+    console.error('Image failed to load:', event.target.src);
     event.target.style.display = 'none';
   }
 
   getPlainText(text: string): string {
-    if (!text) return '';
-    // Remove HTML tags for excerpt display
+    if (!text) return '';
     const div = document.createElement('div');
     div.innerHTML = text;
     return div.textContent || div.innerText || '';

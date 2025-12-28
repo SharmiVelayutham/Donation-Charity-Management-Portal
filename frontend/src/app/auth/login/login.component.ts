@@ -26,15 +26,12 @@ export class LoginComponent implements OnInit {
     private authService: AuthService
   ) {}
 
-  ngOnInit() {
-    // Pre-fill email if coming from OTP verification
+  ngOnInit() {
     this.route.queryParams.subscribe(params => {
       if (params['email']) {
         this.email = params['email'];
       }
-    });
-
-    // If already logged in, redirect to dashboard
+    });
     if (this.authService.isAuthenticated()) {
       const role = this.authService.getCurrentRole();
       if (role) {
@@ -44,9 +41,7 @@ export class LoginComponent implements OnInit {
   }
 
   async onLogin() {
-    this.errorMessage = '';
-
-    // Validation
+    this.errorMessage = '';
     if (!this.email || !this.password) {
       this.errorMessage = 'Please enter email and password';
       return;
@@ -57,42 +52,32 @@ export class LoginComponent implements OnInit {
     try {
       const response = await lastValueFrom(this.apiService.login(this.email, this.password));
 
-      if (response?.success && response.token) {
-        // Store user data using AuthService
-        this.authService.setUser(response.token, response.user);
-
-        // Debug logging
+      if (response?.success && response.token) {
+        this.authService.setUser(response.token, response.user);
         console.log('=== LOGIN SUCCESS ===');
         console.log('API Response:', response);
         console.log('User object:', response.user);
         console.log('User role:', response.user?.role);
         console.log('Token stored:', !!localStorage.getItem('token'));
-        console.log('Role stored:', localStorage.getItem('userRole'));
-
-        // Navigate to dashboard via AuthService for consistent handling
+        console.log('Role stored:', localStorage.getItem('userRole'));
         const role = (response.user?.role || '').toUpperCase();
         console.log('Final role for navigation:', role);
         this.authService.navigateToDashboard(role);
       } else {
         this.errorMessage = response?.message || 'Login failed';
       }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      const errorMessage = error?.error?.message || error?.message || 'Invalid email or password';
-      const errorData = error?.error;
-      
-      // Check if this is an admin trying to login through regular endpoint
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Something went wrong. Please try again.';
+      const errorData = error?.error;
       if (errorMessage.includes('Admin login is not allowed through this endpoint') || 
           errorMessage.includes('Please use /api/admin/auth/login')) {
-        this.errorMessage = 'Admin accounts must use the Admin Login page. Redirecting...';
-        // Redirect to admin login after 2 seconds
+        this.errorMessage = 'Admin accounts must use the Admin Login page. Redirecting...';
         setTimeout(() => {
           this.router.navigate(['/admin/login'], { 
             queryParams: { email: this.email } 
           });
         }, 2000);
-      } 
-      // Check if NGO verification status issue
+      } 
       else if (errorData?.verification_status === 'PENDING') {
         this.errorMessage = 'Your NGO profile is under admin verification. You will receive an email once verified.';
       } 
@@ -102,10 +87,10 @@ export class LoginComponent implements OnInit {
           : '';
         this.errorMessage = `Your NGO registration was rejected. ${rejectionReason} Please contact support for more information.`;
       }
-      else {
+      else {
         this.errorMessage = errorMessage;
       }
-    } finally {
+    } finally {
       this.isLoading = false;
     }
   }

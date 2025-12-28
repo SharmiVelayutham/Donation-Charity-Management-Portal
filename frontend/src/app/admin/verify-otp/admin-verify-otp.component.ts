@@ -27,22 +27,17 @@ export class AdminVerifyOtpComponent implements OnInit {
     private authService: AuthService
   ) {}
 
-  ngOnInit() {
-    // Get email from query params
+  ngOnInit() {
     this.route.queryParams.subscribe(params => {
       this.email = params['email'] || '';
-    });
-
-    // Get registration data from sessionStorage
+    });
     const pendingReg = sessionStorage.getItem('pendingAdminRegistration');
     if (pendingReg) {
       this.registrationData = JSON.parse(pendingReg);
       if (!this.email && this.registrationData.email) {
         this.email = this.registrationData.email;
       }
-    }
-
-    // If no registration data, redirect to admin registration
+    }
     if (!this.registrationData) {
       alert('Please complete admin registration first');
       this.router.navigate(['/admin/register']);
@@ -50,9 +45,7 @@ export class AdminVerifyOtpComponent implements OnInit {
   }
 
   async verifyOTP() {
-    this.errorMessage = '';
-
-    // Validation
+    this.errorMessage = '';
     if (!this.otp || this.otp.length !== 6) {
       this.errorMessage = 'Please enter a valid 6-digit OTP';
       return;
@@ -66,11 +59,8 @@ export class AdminVerifyOtpComponent implements OnInit {
 
     this.isLoading = true;
 
-    try {
-      // Trim OTP to remove any whitespace
-      const trimmedOTP = this.otp.trim();
-      
-      // Verify OTP and complete admin registration
+    try {
+      const trimmedOTP = this.otp.trim();
       const response = await lastValueFrom(
         this.apiService.adminVerifyOTPAndRegister({
           name: this.registrationData.name,
@@ -82,17 +72,12 @@ export class AdminVerifyOtpComponent implements OnInit {
         })
       );
 
-      if (response?.success && response.token) {
-        // Clear pending registration data
-        sessionStorage.removeItem('pendingAdminRegistration');
-
-        // Store admin data and token
+      if (response?.success && response.token) {
+        sessionStorage.removeItem('pendingAdminRegistration');
         const adminData = (response as any).admin || response.user;
         this.authService.setUser(response.token, adminData);
 
-        alert('Admin account verified and created successfully! Redirecting to dashboard...');
-        
-        // Redirect to admin dashboard
+        alert('Admin account verified and created successfully! Redirecting to dashboard...');
         setTimeout(() => {
           this.router.navigate(['/admin/dashboard']);
         }, 1500);

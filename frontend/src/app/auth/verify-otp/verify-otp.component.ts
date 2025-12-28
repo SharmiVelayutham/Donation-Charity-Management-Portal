@@ -4,9 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
-import { lastValueFrom } from 'rxjs';
-
-// Angular Material imports
+import { lastValueFrom } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -47,22 +45,17 @@ export class VerifyOtpComponent implements OnInit {
     private snackBar: MatSnackBar
   ) {}
 
-  ngOnInit() {
-    // Get email from query params
+  ngOnInit() {
     this.route.queryParams.subscribe(params => {
       this.email = params['email'] || '';
-    });
-
-    // Get registration data from sessionStorage
+    });
     const pendingReg = sessionStorage.getItem('pendingRegistration');
     if (pendingReg) {
       this.registrationData = JSON.parse(pendingReg);
       if (!this.email && this.registrationData.email) {
         this.email = this.registrationData.email;
       }
-    }
-
-    // If no registration data, redirect to signup
+    }
     if (!this.registrationData) {
       this.showToast('Please complete registration first', true);
       this.router.navigate(['/signup']);
@@ -70,9 +63,7 @@ export class VerifyOtpComponent implements OnInit {
   }
 
   async verifyOTP() {
-    this.errorMessage = '';
-
-    // Validation
+    this.errorMessage = '';
     if (!this.otp || this.otp.length !== 6) {
       this.errorMessage = 'Please enter a valid 6-digit OTP';
       return;
@@ -86,8 +77,7 @@ export class VerifyOtpComponent implements OnInit {
 
     this.isLoading = true;
 
-    try {
-      // Build registration data with all fields
+    try {
       const registrationPayload: any = {
         name: this.registrationData.name,
         email: this.registrationData.email,
@@ -95,9 +85,7 @@ export class VerifyOtpComponent implements OnInit {
         role: this.registrationData.role as 'DONOR' | 'NGO',
         contactInfo: this.registrationData.contactInfo,
         otp: this.otp
-      };
-
-      // Add NGO-specific fields if role is NGO
+      };
       if (this.registrationData.role === 'NGO') {
         registrationPayload.registrationNumber = this.registrationData.registrationNumber;
         registrationPayload.address = this.registrationData.address;
@@ -108,39 +96,25 @@ export class VerifyOtpComponent implements OnInit {
         registrationPayload.phoneNumber = this.registrationData.phoneNumber;
         registrationPayload.aboutNgo = this.registrationData.aboutNgo;
         registrationPayload.websiteUrl = this.registrationData.websiteUrl;
-      }
-
-      // Verify OTP and complete registration
+      }
       const response = await lastValueFrom(this.apiService.verifyOTPAndRegister(registrationPayload));
 
-      if (response?.success) {
-        // Clear pending registration data
-        sessionStorage.removeItem('pendingRegistration');
-
-        // Check if this is an NGO registration
+      if (response?.success) {
+        sessionStorage.removeItem('pendingRegistration');
         const isNgo = this.registrationData.role === 'NGO';
         const responseData = response.data as any;
-        const verificationStatus = responseData?.user?.verification_status || responseData?.verification_status;
-
-        // CRITICAL: For NGOs - check verification status FIRST
+        const verificationStatus = responseData?.user?.verification_status || responseData?.verification_status;
         if (isNgo) {
-          const status = verificationStatus || 'PENDING';
-          
-          // If PENDING or REJECTED, NO TOKEN should be issued - block login
-          if (status === 'PENDING' || status === 'REJECTED') {
-            // Clear any existing auth data (safety measure)
+          const status = verificationStatus || 'PENDING';
+          if (status === 'PENDING' || status === 'REJECTED') {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            localStorage.removeItem('userRole');
-            
-            // NGO registered but pending/rejected - cannot login
+            localStorage.removeItem('userRole');
             const message = status === 'REJECTED' 
               ? 'Your NGO registration was rejected. Please contact support.'
               : 'NGO registration completed! Your profile is under admin verification. You will receive an email once verified.';
             
-            this.showToast(message, false);
-            
-            // Redirect to login page with message
+            this.showToast(message, false);
             setTimeout(() => {
               this.router.navigate(['/login'], {
                 queryParams: { 
@@ -150,9 +124,7 @@ export class VerifyOtpComponent implements OnInit {
               });
             }, 3000);
             return; // EXIT - do NOT proceed to login
-          }
-          
-          // Only VERIFIED NGOs can proceed (should have token)
+          }
           if (status === 'VERIFIED' && response.token && response.user) {
             this.authService.setUser(response.token, response.user);
             this.showToast('Account verified successfully! Redirecting to dashboard...', false);
@@ -162,22 +134,16 @@ export class VerifyOtpComponent implements OnInit {
             }, 2000);
             return;
           }
-        }
-        
-        // For DONOR or if token exists (should only happen for VERIFIED NGO)
-        if (response.token && response.user) {
-          // Store user data
+        }
+        if (response.token && response.user) {
           this.authService.setUser(response.token, response.user);
           
-          this.showToast('Account verified successfully! Redirecting to dashboard...', false);
-          
-          // Redirect to appropriate dashboard
+          this.showToast('Account verified successfully! Redirecting to dashboard...', false);
           setTimeout(() => {
             const role = (response.user?.role || '').toUpperCase();
             this.authService.navigateToDashboard(role);
           }, 2000);
-        } else {
-          // No token but success - redirect to login
+        } else {
           this.showToast('Account verified successfully! Please login to continue.', false);
           
           setTimeout(() => {

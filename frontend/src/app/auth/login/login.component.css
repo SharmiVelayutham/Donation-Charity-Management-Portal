@@ -3,8 +3,6 @@
   height: 100vh;
   width: 100%;
 }
-
-/* LEFT IMAGE */
 .auth-image {
   flex: 1;
   background-image: url('/assets/images/donation-bg.jpg');
@@ -24,8 +22,6 @@
   font-size: 36px;
   margin-bottom: 8px;
 }
-
-/* RIGHT FORM */
 .auth-form {
   flex: 1;
   display: flex;

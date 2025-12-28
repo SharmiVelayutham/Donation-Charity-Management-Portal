@@ -11,8 +11,6 @@
   grid-template-columns: 1fr 350px;
   gap: 40px;
 }
-
-/* Main Content */
 .blog-detail-main {
   background: white;
   border-radius: 16px;
@@ -173,8 +171,6 @@
 .blog-content li {
   margin-bottom: 8px;
 }
-
-/* Right Sidebar */
 .blog-detail-sidebar {
   display: flex;
   flex-direction: column;
@@ -263,8 +259,6 @@
   color: #6c757d;
   font-size: 1.2rem;
 }
-
-/* RESPONSIVE */
 @media (max-width: 968px) {
   .blog-detail-layout {
     grid-template-columns: 1fr;

@@ -1,4 +1,4 @@
-<!-- Navigation Header -->
+
 <header class="navbar">
   <div class="nav-container">
     <div class="logo-section">
@@ -37,8 +37,6 @@
     </div>
   </div>
 </header>
-
-<!-- Hero Section with Carousel -->
 <section class="hero-section">
   <div *ngIf="isLoadingSliders" class="hero-loading">
     <p>Loading...</p>
@@ -96,8 +94,6 @@
     </div>
   </div>
 </section>
-
-<!-- About Section -->
 <section id="about" class="about-section">
   <div class="container">
     <div class="section-header">
@@ -123,33 +119,28 @@
     </div>
   </div>
 </section>
-
-<!-- Stats Section -->
 <section class="stats-section">
   <div class="container">
     <div class="stats-grid">
       <div class="stat-item">
-        <div class="stat-number">{{ stats.totalDonations || '1,250+' }}</div>
+        <div class="stat-number">{{ stats.totalDonations }}</div>
         <div class="stat-label">Total Donations</div>
       </div>
-      <div class="stat-item">
-        <div class="stat-number">{{ stats.totalContributions || '3,420+' }}</div>
+      <!-- <div class="stat-item">
+        <div class="stat-number">{{ stats.totalContributions }}</div>
         <div class="stat-label">Contributions</div>
-      </div>
+      </div> -->
       <div class="stat-item">
-        <div class="stat-number">{{ stats.activeNGOs || '45+' }}</div>
+        <div class="stat-number">{{ stats.activeNGOs }}</div>
         <div class="stat-label">Active NGOs</div>
       </div>
       <div class="stat-item">
-        <div class="stat-number">{{ stats.activeDonors || '320+' }}</div>
+        <div class="stat-number">{{ stats.activeDonors }}</div>
         <div class="stat-label">Active Donors</div>
       </div>
     </div>
   </div>
 </section>
-
-
-<!-- Recent Donations -->
 <section class="donations-section">
   <div class="container">
     <div class="section-header">
@@ -182,8 +173,6 @@
     </div>
   </div>
 </section>
-
-<!-- CTA Section -->
 <section class="cta-section">
   <div class="container">
     <h2>Ready to Make a Difference?</h2>
@@ -200,8 +189,6 @@
     </div>
   </div>
 </section>
-
-<!-- Footer -->
 <footer class="footer">
   <div class="container">
     <div class="footer-content">

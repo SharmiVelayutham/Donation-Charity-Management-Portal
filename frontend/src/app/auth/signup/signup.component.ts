@@ -21,9 +21,7 @@ export class SignupComponent {
   contactInfo: string = '';
   role: string = '';
   isLoading: boolean = false;
-  errorMessage: string = '';
-  
-  // NGO-specific fields
+  errorMessage: string = '';
   registrationNumber: string = '';
   address: string = '';
   city: string = '';
@@ -45,15 +43,11 @@ export class SignupComponent {
   }
 
   async createAccount() {
-    this.errorMessage = '';
-    
-    // Validation
+    this.errorMessage = '';
     if (!this.name || !this.email || !this.password || !this.contactInfo || !this.role) {
       this.errorMessage = 'Please fill all required fields';
       return;
-    }
-
-    // NGO-specific validation
+    }
     if (this.role === 'NGO') {
       if (!this.registrationNumber || !this.address || !this.contactPersonName || !this.phoneNumber) {
         this.errorMessage = 'Please fill all required NGO fields: Registration Number, Address, Contact Person Name, and Phone Number';
@@ -80,9 +74,7 @@ export class SignupComponent {
         password: this.password,
         role: this.role as 'DONOR' | 'NGO',
         contactInfo: this.contactInfo
-      };
-
-      // Add NGO-specific fields if role is NGO
+      };
       if (this.role === 'NGO') {
         registrationData.registrationNumber = this.registrationNumber;
         registrationData.address = this.address;
@@ -95,9 +87,7 @@ export class SignupComponent {
         registrationData.websiteUrl = this.websiteUrl;
       }
 
-      const response = await lastValueFrom(this.apiService.register(registrationData));
-
-      // Debug logging
+      const response = await lastValueFrom(this.apiService.register(registrationData));
       console.log('=== REGISTRATION RESPONSE ===');
       console.log('Full response:', JSON.stringify(response, null, 2));
       console.log('Response data:', response.data);
@@ -105,38 +95,27 @@ export class SignupComponent {
       console.log('Has user:', !!response.user);
       console.log('Has requiresVerification:', !!(response.data as any)?.requiresVerification);
 
-      if (response?.success) {
-        // CRITICAL: If token or user exists in registration response, backend is using OLD CODE
-        // This should NEVER happen with OTP flow - reject it immediately
+      if (response?.success) {
         if (response.token || response.user) {
           console.error('❌ CRITICAL ERROR: Registration returned token/user directly!');
           console.error('This means backend server is running OLD CODE.');
           console.error('Response:', JSON.stringify(response, null, 2));
           console.error('ACTION REQUIRED: Restart backend server to load new code!');
-          this.errorMessage = 'Backend error: Registration should not return token. Please restart backend server.';
-          // DO NOT store token or navigate to dashboard
+          this.errorMessage = 'Backend error: Registration should not return token. Please restart backend server.';
           return;
-        }
-        
-        // Check if OTP verification is required
-        // The backend returns { success: true, data: { requiresVerification: true, email: ... } }
+        }
         const responseData = response.data as any;
         const requiresVerification = responseData?.requiresVerification;
         
         if (requiresVerification) {
-          console.log('✅ OTP flow detected - redirecting to verification page');
-          
-          // Store registration data temporarily in sessionStorage (not localStorage)
-          // This will be used during OTP verification
+          console.log('✅ OTP flow detected - redirecting to verification page');
           const pendingData: any = {
             name: this.name,
             email: this.email,
             password: this.password,
             role: this.role,
             contactInfo: this.contactInfo
-          };
-
-          // Add NGO-specific fields if role is NGO
+          };
           if (this.role === 'NGO') {
             pendingData.registrationNumber = this.registrationNumber;
             pendingData.address = this.address;
@@ -149,14 +128,11 @@ export class SignupComponent {
             pendingData.websiteUrl = this.websiteUrl;
           }
 
-          sessionStorage.setItem('pendingRegistration', JSON.stringify(pendingData));
-
-          // Redirect to OTP verification page
+          sessionStorage.setItem('pendingRegistration', JSON.stringify(pendingData));
           this.router.navigate(['/verify-otp'], {
             queryParams: { email: this.email }
           });
-        } else {
-          // If no requiresVerification flag, something went wrong
+        } else {
           console.error('❌ Unexpected registration response - no requiresVerification flag');
           console.error('Response:', JSON.stringify(response, null, 2));
           this.errorMessage = response?.message || responseData?.message || 'Registration failed. Please try again.';

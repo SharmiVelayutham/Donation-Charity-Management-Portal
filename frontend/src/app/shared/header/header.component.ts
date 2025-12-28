@@ -16,6 +16,7 @@ export class HeaderComponent implements OnInit {
   userName: string = '';
   userInitial: string = '';
   menuOpen = false;
+  showHeader = true;
 
   constructor(
     private authService: AuthService,
@@ -35,11 +36,13 @@ export class HeaderComponent implements OnInit {
       const user = this.authService.getUser();
       this.userRole = user?.role || null;
       this.userName = user?.name || '';
-      this.userInitial = this.userName ? this.userName.charAt(0).toUpperCase() : 'U';
+      this.userInitial = this.userName ? this.userName.charAt(0).toUpperCase() : 'U';
+      this.showHeader = !(this.userRole === 'ADMIN' || this.userRole === 'NGO');
     } else {
       this.userRole = null;
       this.userName = '';
       this.userInitial = '';
+      this.showHeader = true;
     }
   }
 

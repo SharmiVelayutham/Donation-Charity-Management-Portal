@@ -10,13 +10,9 @@ export class SocketService {
   private isConnected = false;
 
   constructor() {}
-
-  /**
-   * Connect to Socket.IO server
-   */
   connect(token: string): void {
     if (this.isConnected && this.socket) {
-      console.log('[Socket] Already connected');
+      console.debug('[Socket] Already connected');
       return;
     }
 
@@ -33,51 +29,39 @@ export class SocketService {
     });
 
     this.socket.on('connect', () => {
-      console.log('[Socket] Connected to server');
+      console.debug('[Socket] Connected to server');
       this.isConnected = true;
     });
 
     this.socket.on('disconnect', () => {
-      console.log('[Socket] Disconnected from server');
+      console.debug('[Socket] Disconnected from server');
       this.isConnected = false;
     });
 
     this.socket.on('connect_error', (error: Error) => {
-      console.error('[Socket] Connection error:', error);
+      console.error('[Socket] Connection error');
       this.isConnected = false;
     });
   }
-
-  /**
-   * Disconnect from Socket.IO server
-   */
   disconnect(): void {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
-      console.log('[Socket] Disconnected');
+      console.debug('[Socket] Disconnected');
     }
   }
-
-  /**
-   * Subscribe to NGO stats updates
-   */
   onNgoStatsUpdate(callback: (stats: { totalDonationRequests: number; totalDonors: number }) => void): void {
     if (!this.socket) {
       console.error('[Socket] Not connected. Call connect() first.');
       return;
     }
 
-    this.socket.on('ngo:stats:updated', (data: { totalDonationRequests: number; totalDonors: number }) => {
-      console.log('[Socket] NGO stats updated:', data);
+    this.socket.on('ngo:stats:updated', (data: { totalDonationRequests: number; totalDonors: number }) => {
+      console.debug('[Socket] NGO stats updated');
       callback(data);
     });
   }
-
-  /**
-   * Subscribe to Donor stats updates
-   */
   onDonorStatsUpdate(callback: (stats: { totalDonations: number }) => void): void {
     if (!this.socket) {
       console.error('[Socket] Not connected. Call connect() first.');
@@ -85,23 +69,15 @@ export class SocketService {
     }
 
     this.socket.on('donor:stats:updated', (data: { totalDonations: number }) => {
-      console.log('[Socket] Donor stats updated:', data);
+      console.debug('[Socket] Donor stats updated');
       callback(data);
     });
   }
-
-  /**
-   * Unsubscribe from NGO stats updates
-   */
   offNgoStatsUpdate(): void {
     if (this.socket) {
       this.socket.off('ngo:stats:updated');
     }
   }
-
-  /**
-   * Subscribe to new notifications
-   */
   onNotification(callback: (notification: any) => void): () => void {
     if (!this.socket) {
       console.error('[Socket] Not connected. Call connect() first.');
@@ -109,21 +85,15 @@ export class SocketService {
     }
 
     this.socket.on('notification:new', (data: any) => {
-      console.log('[Socket] New notification received:', data);
+      console.debug('[Socket] New notification received');
       callback(data);
-    });
-
-    // Return unsubscribe function
+    });
     return () => {
       if (this.socket) {
         this.socket.off('notification:new');
       }
     };
   }
-
-  /**
-   * Subscribe to contribution status updates (for donors)
-   */
   onContributionStatusUpdate(callback: (data: { contributionId: number; status: string; message: string }) => void): void {
     if (!this.socket) {
       console.error('[Socket] Not connected. Call connect() first.');
@@ -131,32 +101,20 @@ export class SocketService {
     }
 
     this.socket.on('contribution:status-updated', (data: { contributionId: number; status: string; message: string }) => {
-      console.log('[Socket] Contribution status updated:', data);
+      console.debug('[Socket] Contribution status updated');
       callback(data);
     });
   }
-
-  /**
-   * Unsubscribe from contribution status updates
-   */
   offContributionStatusUpdate(): void {
     if (this.socket) {
       this.socket.off('contribution:status-updated');
     }
   }
-
-  /**
-   * Unsubscribe from Donor stats updates
-   */
   offDonorStatsUpdate(): void {
     if (this.socket) {
       this.socket.off('donor:stats:updated');
     }
   }
-
-  /**
-   * Subscribe to donation created events (for NGO)
-   */
   onDonationCreated(callback: (donation: any) => void): void {
     if (!this.socket) {
       console.error('[Socket] Not connected. Call connect() first.');
@@ -164,23 +122,15 @@ export class SocketService {
     }
 
     this.socket.on('donation:created', (data: any) => {
-      console.log('[Socket] New donation created:', data);
+      console.debug('[Socket] New donation created');
       callback(data);
     });
   }
-
-  /**
-   * Unsubscribe from donation created events
-   */
   offDonationCreated(): void {
     if (this.socket) {
       this.socket.off('donation:created');
     }
   }
-
-  /**
-   * Check if socket is connected
-   */
   get connected(): boolean {
     return this.isConnected && this.socket?.connected === true;
   }

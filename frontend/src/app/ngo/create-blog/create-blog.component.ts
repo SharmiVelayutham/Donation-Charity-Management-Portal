@@ -47,9 +47,7 @@ export class CreateBlogComponent implements OnInit {
   onImageSelect(event: any) {
     const file = event.target.files[0];
     if (file) {
-      this.blogForm.image = file;
-      
-      // Create preview
+      this.blogForm.image = file;
       const reader = new FileReader();
       reader.onload = (e: any) => {
         this.imagePreview = e.target.result;
@@ -67,8 +65,7 @@ export class CreateBlogComponent implements OnInit {
     this.router.navigate(['/dashboard/ngo']);
   }
 
-  async onSubmit() {
-    // Validation
+  async onSubmit() {
     if (!this.blogForm.title || !this.blogForm.content || !this.blogForm.category) {
       this.errorMessage = 'Please fill in all required fields';
       return;
@@ -78,8 +75,7 @@ export class CreateBlogComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    try {
-      // Create FormData
+    try {
       const formData = new FormData();
       formData.append('title', this.blogForm.title);
       formData.append('content', this.blogForm.content);

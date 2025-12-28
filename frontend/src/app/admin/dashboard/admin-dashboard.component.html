@@ -1,6 +1,11 @@
 <div class="admin-dashboard-container">
   <!-- Header Section (Profile at Top - Full Width) -->
   <div class="header-section">
+    <button class="mobile-menu-icon" aria-label="Open menu" (click)="toggleMobileMenu()">
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+    </button>
     <div class="profile-header">
       <div class="profile-avatar">
         <mat-icon class="avatar-icon">admin_panel_settings</mat-icon>
@@ -15,8 +20,7 @@
   </div>
 
   <div class="dashboard-body">
-    <!-- Sidebar Navigation (Left) -->
-    <aside class="sidebar">
+    <aside class="sidebar" [class.mobile-open]="mobileMenuOpen">
       <nav class="sidebar-nav">
         <button 
           class="nav-item" 
@@ -68,30 +72,21 @@
         </button>
       </nav>
     </aside>
-
-    <!-- Main Content Area (Right) -->
+    <div class="sidebar-backdrop" (click)="toggleMobileMenu()" [class.mobile-open]="mobileMenuOpen"></div>
     <main class="main-content">
-    
-    <!-- Loading State -->
     <div *ngIf="isLoading" class="loading-container">
       <mat-spinner diameter="50"></mat-spinner>
       <p>Loading...</p>
   </div>
-
-    <!-- Dashboard View -->
     <div *ngIf="!isLoading && currentView === 'dashboard'" class="dashboard-view">
-      <!-- Hero Section -->
       <section class="hero-section">
         <div class="hero-content">
           <h1 class="hero-title">Admin Dashboard</h1>
           <p class="hero-subtitle">Platform analytics and insights</p>
         </div>
       </section>
-
-      <!-- Statistics Cards -->
       <section class="stats-section">
         <div class="stats-grid">
-          <!-- Total Donations -->
           <mat-card class="stat-card">
             <div class="stat-content">
               <div class="stat-icon-wrapper stat-primary">
@@ -104,8 +99,6 @@
               </div>
             </div>
           </mat-card>
-
-          <!-- Total NGOs -->
           <mat-card class="stat-card">
             <div class="stat-content">
               <div class="stat-icon-wrapper stat-success">
@@ -118,8 +111,6 @@
               </div>
             </div>
           </mat-card>
-
-          <!-- Total Donors -->
           <mat-card class="stat-card">
             <div class="stat-content">
               <div class="stat-icon-wrapper stat-info">
@@ -132,8 +123,6 @@
               </div>
             </div>
           </mat-card>
-
-          <!-- Verified NGOs -->
           <mat-card class="stat-card">
             <div class="stat-content">
               <div class="stat-icon-wrapper stat-accent">
@@ -148,11 +137,8 @@
           </mat-card>
         </div>
       </section>
-
-      <!-- Charts Section -->
       <section class="charts-section" *ngIf="getDonationBreakdownItems().length > 0 || getChartData().length > 0">
         <div class="charts-grid">
-          <!-- Monthly Trends Area Chart (Wave Graph) -->
           <div class="chart-card donation-trends-card" *ngIf="getChartData().length > 0">
           <div class="chart-header">
             <div>
@@ -184,7 +170,6 @@
               
               <!-- Y-axis labels and horizontal grid lines -->
               <g *ngFor="let label of getYAxisLabels(); let i = index">
-                <!-- Grid line -->
                 <line x1="70" 
                       [attr.y1]="220 - (i * (200 / (getYAxisLabels().length - 1)))" 
                       x2="570" 
@@ -200,8 +185,6 @@
                       text-anchor="end" 
                       alignment-baseline="middle">{{ formatChartValue(label) }}</text>
               </g>
-              
-              <!-- Bar Chart -->
               <g *ngIf="getChartData().length > 0">
                 <rect *ngFor="let value of getChartData(); let i = index; trackBy: trackByIndex"
                       [attr.x]="getBarXPosition(i)"
@@ -221,8 +204,6 @@
             </svg>
           </div>
           </div>
-
-          <!-- Donation Type Donut Chart -->
           <mat-card class="chart-card" *ngIf="getDonationBreakdownItems().length > 0">
             <h3 class="chart-title">Donation Types Distribution</h3>
             <div class="donut-chart-container">
@@ -251,8 +232,6 @@
           </mat-card>
         </div>
       </section>
-
-      <!-- Funds Summary Section -->
       <section class="summary-section">
         <h2 class="section-title">Funds Summary</h2>
         <div class="summary-grid">
@@ -281,8 +260,6 @@
           </mat-card>
         </div>
       </section>
-
-      <!-- NGO Statistics Section -->
       <section class="summary-section">
         <h2 class="section-title">NGO Statistics</h2>
         <div class="summary-grid">
@@ -332,8 +309,6 @@
           </mat-card> -->
         </div>
       </section>
-
-      <!-- Top NGOs Table -->
       <section class="customer-table-card" *ngIf="analytics?.ngos?.topNgos?.length > 0">
         <h2 class="section-title">Top NGOs by Contributions</h2>
         <table class="customer-table">
@@ -360,8 +335,6 @@
           </tbody>
         </table>
       </section>
-
-      <!-- Top Donors Table -->
       <section class="customer-table-card" *ngIf="analytics?.donors?.topDonors?.length > 0">
         <h2 class="section-title">Top Donors</h2>
         <table class="customer-table">
@@ -390,10 +363,7 @@
         </table>
       </section>
   </div>
-
-    <!-- Contributions View -->
     <div *ngIf="!isLoading && currentView === 'contributions'" class="dashboard-view">
-      <!-- Hero Section -->
       <section class="hero-section">
         <div class="hero-content">
           <h1 class="hero-title">Contributions Management</h1>
@@ -414,8 +384,6 @@
           </button>
         </div>
       </section>
-
-      <!-- Filters Section -->
       <section class="filters-section">
         <mat-card class="filters-card">
           <h3 class="filters-title">Filter Contributions</h3>
@@ -470,13 +438,9 @@
           </div>
         </mat-card>
       </section>
-
-      <!-- Error Message -->
   <div *ngIf="errorMessage" class="error-message">
     {{ errorMessage }}
   </div>
-
-      <!-- Contributions Table -->
       <section class="contributions-section" *ngIf="!isLoadingContributions">
         <mat-card class="table-card">
           <div class="table-header">
@@ -536,8 +500,6 @@
               </tbody>
             </table>
           </div>
-
-          <!-- Pagination -->
           <div class="pagination" *ngIf="totalContributions > pageSize">
             <button mat-button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">
               <mat-icon>chevron_left</mat-icon>
@@ -553,25 +515,18 @@
           </div>
         </mat-card>
       </section>
-
-      <!-- Loading Contributions -->
       <div *ngIf="isLoadingContributions" class="loading-container">
         <mat-spinner diameter="50"></mat-spinner>
         <p>Loading contributions...</p>
       </div>
     </div>
-
-    <!-- NGOs View -->
     <div *ngIf="!isLoading && currentView === 'ngos'" class="dashboard-view">
-      <!-- Hero Section -->
       <section class="hero-section">
         <div class="hero-content">
           <h1 class="hero-title">NGO Management</h1>
           <p class="hero-subtitle">Manage NGO accounts and verifications</p>
         </div>
       </section>
-
-      <!-- Filters -->
       <section class="filters-section">
         <mat-card class="filters-card">
           <div class="filters-grid">
@@ -594,8 +549,6 @@
           </div>
         </mat-card>
       </section>
-
-      <!-- NGOs Table -->
       <section class="ngos-section">
         <mat-card class="table-card">
           <h2 class="section-title">NGOs List ({{ ngos.length }})</h2>
@@ -669,8 +622,6 @@
         </mat-card>
       </section>
     </div>
-
-    <!-- Email Templates View -->
     <div *ngIf="!isLoading && currentView === 'email-templates'" class="dashboard-view">
       <section class="hero-section">
         <div class="hero-content">
@@ -678,8 +629,6 @@
           <p class="hero-subtitle">Manage email templates for system notifications</p>
         </div>
       </section>
-
-      <!-- Template Type Selector -->
       <mat-card class="template-selector-card" style="margin-bottom: 24px;">
         <mat-form-field appearance="outline" style="width: 100%;">
           <mat-label>Select Email Template</mat-label>
@@ -746,8 +695,6 @@
         </mat-card>
       </div>
     </div>
-
-    <!-- Leaderboard View -->
     <div *ngIf="!isLoading && currentView === 'leaderboard'" class="dashboard-view">
       <section class="hero-section">
         <div class="hero-content">
@@ -757,8 +704,6 @@
       </section>
       <app-leaderboard></app-leaderboard>
     </div>
-
-    <!-- Slider Management View -->
     <div *ngIf="!isLoading && currentView === 'sliders'" class="dashboard-view">
       <section class="hero-section">
         <div class="hero-content">
@@ -772,8 +717,6 @@
           </button>
         </div>
       </section>
-
-      <!-- Sliders List -->
       <section class="sliders-section" *ngIf="!isLoadingSliders">
         <mat-card class="table-card">
           <h2 class="section-title">All Sliders ({{ sliders.length }})</h2>

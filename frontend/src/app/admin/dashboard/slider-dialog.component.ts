@@ -144,8 +144,7 @@ export class SliderDialogComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    if (this.data?.slider) {
-      // Edit mode - populate form
+    if (this.data?.slider) {
       this.sliderData = {
         title: this.data.slider.title || '',
         tagline: this.data.slider.tagline || '',
@@ -214,11 +213,9 @@ export class SliderDialogComponent implements OnInit {
       }
 
       let response: any;
-      if (this.data?.slider) {
-        // Update
+      if (this.data?.slider) {
         response = await lastValueFrom(this.apiService.updateSlider(this.data.slider.id, formData));
-      } else {
-        // Create
+      } else {
         response = await lastValueFrom(this.apiService.createSlider(formData));
       }
 

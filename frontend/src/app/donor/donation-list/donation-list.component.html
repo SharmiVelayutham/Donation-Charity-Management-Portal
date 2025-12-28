@@ -1,15 +1,12 @@
 <app-header></app-header>
 
 <div class="donation-list-container">
-  <!-- Header -->
   <header class="page-header">
     <div class="header-content">
       <h1>Available Donation Requests</h1>
       <p>Browse and contribute to donation requests from verified NGOs</p>
     </div>
   </header>
-
-  <!-- Filters -->
   <div class="filters-section">
     <div class="filters-card">
       <h3>Filter Donation Requests</h3>
@@ -38,20 +35,14 @@
       </div>
     </div>
   </div>
-
-  <!-- Error Message -->
   <div *ngIf="errorMessage" class="error-message">
     <span>⚠️</span>
     <span>{{ errorMessage }}</span>
   </div>
-
-  <!-- Loading State -->
   <div *ngIf="isLoading" class="loading-state">
     <div class="spinner"></div>
     <p>Loading donation requests...</p>
   </div>
-
-  <!-- Donations Grid -->
   <div *ngIf="!isLoading && donations.length > 0" class="donations-grid">
     <div class="donation-card" *ngFor="let donation of donations">
       <div class="donation-badge" [class.active]="donation.status === 'ACTIVE'">
@@ -95,8 +86,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Empty State -->
   <div *ngIf="!isLoading && donations.length === 0" class="empty-state">
     <div class="empty-icon">📦</div>
     <h3>No donation requests found</h3>

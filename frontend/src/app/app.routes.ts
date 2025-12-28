@@ -3,33 +3,25 @@ import { LoginComponent } from './auth/login/login.component';
 import { SignupComponent } from './auth/signup/signup.component';
 import { authGuard, roleGuard } from './guards/auth.guard';
 
-export const routes: Routes = [
-
-  // ---------------- HOME ---------------- 
+export const routes: Routes = [
   { 
     path: '', 
     loadComponent: () =>
       import('./home/home.component')
         .then(m => m.HomeComponent)
-  },
-
-  // ---------------- LEADERBOARD (Public) ---------------- 
+  },
   {
     path: 'leaderboard',
     loadComponent: () =>
       import('./leaderboard/leaderboard.component')
         .then(m => m.LeaderboardComponent)
-  },
-
-  // ---------------- ABOUT (Public) ---------------- 
+  },
   {
     path: 'about',
     loadComponent: () =>
       import('./pages/about/about.component')
         .then(m => m.AboutComponent)
-  },
-
-  // ---------------- BLOG (Public) ---------------- 
+  },
   {
     path: 'blog',
     loadComponent: () =>
@@ -41,9 +33,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/blog/blog-detail/blog-detail.component')
         .then(m => m.BlogDetailComponent)
-  },
-  
-  // ---------------- AUTH ---------------- 
+  },
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
   {
@@ -51,9 +41,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./auth/verify-otp/verify-otp.component')
         .then(m => m.VerifyOtpComponent)
-  },
-
-  // ---------------- NGO ROUTES (Protected - NGO only) ---------------- 
+  },
   {
     path: 'dashboard/ngo',
     loadComponent: () =>
@@ -88,10 +76,7 @@ export const routes: Routes = [
       import('./ngo/edit-blog/edit-blog.component')
         .then(m => m.EditBlogComponent),
     canActivate: [roleGuard(['NGO'])]
-  },
-
-
-  // ---------------- DONATION REQUESTS (Public - anyone can view, but only donors can contribute) ---------------- 
+  },
   {
     path: 'donations/:id/contribute',
     loadComponent: () =>
@@ -110,15 +95,13 @@ export const routes: Routes = [
     path: 'donations/:id',
     loadComponent: () =>
       import('./donor/donation-list/donation-list.component')
-        .then(m => m.DonationListComponent)
-    // No auth guard - anyone can view individual donation request
+        .then(m => m.DonationListComponent)
   },
   {
     path: 'donations',
     loadComponent: () =>
       import('./donor/donation-list/donation-list.component')
-        .then(m => m.DonationListComponent)
-    // No auth guard - anyone can view donation requests
+        .then(m => m.DonationListComponent)
   },
   {
     path: 'dashboard/donor',
@@ -126,9 +109,7 @@ export const routes: Routes = [
       import('./donor/donor-dashboard/donor-dashboard.component')
         .then(m => m.DonorDashboardComponent),
     canActivate: [roleGuard(['DONOR'])]
-  },
-
-  // ---------------- ADMIN ROUTES (Protected - ADMIN only) ---------------- 
+  },
   {
     path: 'admin/login',
     loadComponent: () =>
@@ -153,9 +134,12 @@ export const routes: Routes = [
       import('./admin/dashboard/admin-dashboard.component')
         .then(m => m.AdminDashboardComponent),
     canActivate: [roleGuard(['ADMIN'])]
-  },
-
-  // ---------------- FALLBACK (ALWAYS LAST) ---------------- 
-  { path: '**', redirectTo: '' }
+  },
+  {
+    path: '**',
+    loadComponent: () =>
+      import('./pages/not-found/not-found.component')
+        .then(m => m.NotFoundComponent)
+  }
 
 ];

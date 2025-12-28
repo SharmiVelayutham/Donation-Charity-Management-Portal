@@ -1,6 +1,11 @@
 <div class="ngo-dashboard-container">
   <!-- Header Section (Profile at Top - Full Width) -->
   <div class="header-section">
+    <button class="mobile-menu-icon" aria-label="Open menu" (click)="toggleMobileMenu()">
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+    </button>
     <div class="profile-header">
       <div class="profile-avatar">
         <mat-icon class="avatar-icon">business</mat-icon>
@@ -15,8 +20,7 @@
   </div>
 
   <div class="dashboard-body">
-    <!-- Sidebar Navigation (Left) -->
-    <aside class="sidebar">
+    <aside class="sidebar" [class.mobile-open]="mobileMenuOpen">
       <nav class="sidebar-nav">
         <button 
           class="nav-item" 
@@ -77,26 +81,19 @@
         </button>
       </nav>
     </aside>
-
-    <!-- Main Content Area (Right) -->
+    <div class="sidebar-backdrop" (click)="toggleMobileMenu()" [class.mobile-open]="mobileMenuOpen"></div>
     <main class="main-content">
-      <!-- Loading State -->
       <div *ngIf="isLoading" class="loading-container">
         <mat-spinner diameter="50"></mat-spinner>
         <p>Loading...</p>
       </div>
-
-      <!-- Dashboard View -->
       <div *ngIf="!isLoading && currentView === 'dashboard'" class="dashboard-view">
-        <!-- Hero Section -->
         <section class="hero-section">
           <div class="hero-content">
             <h1 class="hero-title">NGO Dashboard</h1>
             <p class="hero-subtitle">Manage donations and track your impact</p>
           </div>
         </section>
-
-        <!-- Statistics Cards -->
         <section class="stats-section">
         <div class="stats-grid">
           <!-- Real-Time Stats: Donation Requests -->
@@ -130,7 +127,6 @@
       <!-- Charts Section - Analytics -->
       <section class="charts-section" *ngIf="getBreakdownItems().length > 0">
         <div class="charts-grid">
-        <!-- Donation Type Donut Chart -->
         <mat-card class="chart-card">
           <h3 class="chart-title">Donation Types Distribution</h3>
           <div class="donut-chart-container">
@@ -157,23 +153,18 @@
             </div>
           </div>
         </mat-card>
-
-        <!-- Monthly Donations Line Chart -->
         <mat-card class="chart-card">
           <h3 class="chart-title">Monthly Donations Trend</h3>
           <div class="line-chart-container">
             <svg viewBox="0 0 600 300" style="width: 100%; height: 100%;">
-              <!-- Grid lines -->
               <line x1="50" y1="50" x2="50" y2="250" stroke="#475569" stroke-width="1"/>
               <line x1="50" y1="250" x2="550" y2="250" stroke="#475569" stroke-width="1"/>
-              <!-- Chart line -->
               <polyline *ngIf="getMonthlyDonationData().data.length > 0"
                         [attr.points]="getLineChartPoints()"
                         fill="none"
                         stroke="#10B981"
                         stroke-width="3"
                         stroke-linecap="round"/>
-              <!-- Area fill -->
               <polygon *ngIf="getMonthlyDonationData().data.length > 0"
                        [attr.points]="getLineChartAreaPoints()"
                        fill="url(#gradient)"
@@ -184,13 +175,11 @@
                   <stop offset="100%" style="stop-color:#10B981;stop-opacity:0" />
                 </linearGradient>
               </defs>
-              <!-- Data points -->
               <circle *ngFor="let point of getLineChartDataPoints()"
                       [attr.cx]="point.x"
                       [attr.cy]="point.y"
                       r="5"
                       fill="#10B981"/>
-              <!-- Labels -->
               <text *ngFor="let label of getMonthlyDonationData().labels; let i = index"
                     [attr.x]="50 + (i * 83.33) + 41.66"
                     [attr.y]="270"
@@ -202,8 +191,6 @@
         </mat-card>
         </div>
       </section>
-
-      <!-- Top Donors Table -->
       <section class="customer-table-card" *ngIf="getTopDonors().length > 0">
         <h2 class="section-title">Top Donors</h2>
         <table class="customer-table">
@@ -231,8 +218,6 @@
           </tbody>
         </table>
       </section>
-
-      <!-- Donation Summary Section -->
       <section class="summary-section">
         <h2 class="section-title">Donation Summary</h2>
         <div class="summary-grid">
@@ -259,8 +244,6 @@
               </div>
             </div>
           </mat-card>
-
-          <!-- Funds Received Card -->
           <mat-card class="summary-card">
             <div class="summary-content">
               <div class="summary-icon-wrapper summary-success">
@@ -272,8 +255,6 @@
               </div>
             </div>
           </mat-card>
-
-          <!-- Funds Pending Card -->
           <mat-card class="summary-card">
             <div class="summary-content">
               <div class="summary-icon-wrapper summary-warning">
@@ -286,8 +267,6 @@
             </div>
           </mat-card>
         </div>
-
-        <!-- Donation Breakdown by Type -->
         <mat-card class="breakdown-card">
           <h3 class="breakdown-title">Donation Breakdown by Type</h3>
           <div class="breakdown-list">
@@ -304,8 +283,6 @@
           </div>
         </mat-card>
       </section>
-
-      <!-- Recent Activity -->
       <section class="activity-section" *ngIf="dashboardData?.recentDonations?.length > 0">
         <h2 class="section-title">Recent Donation Requests</h2>
         <mat-card class="activity-card">
@@ -329,8 +306,6 @@
           </mat-card-content>
         </mat-card>
       </section>
-
-      <!-- All Donor Contributions Section -->
       <section id="all-donor-contributions" class="donations-section" *ngIf="showAllContributions">
         <h2 class="section-title">All Donor Contributions</h2>
         <div *ngIf="isLoadingDonations" class="loading-container">
@@ -361,7 +336,6 @@
                 </div>
               </div>
               <div class="donation-status-actions">
-                <!-- Current Status Display Badge -->
                 <div class="current-status-badge" [class]="'status-' + (donation.status || 'PENDING').toLowerCase().replace('_', '-')">
                   {{ getStatusLabel(donation.status || 'PENDING') }}
                 </div>
@@ -437,8 +411,6 @@
           </mat-card>
         </div>
       </section>
-
-      <!-- Recent Donor Contributions Section -->
       <section class="donations-section" *ngIf="!showAllContributions">
         <h2 class="section-title">Recent Donor Contributions</h2>
         <div *ngIf="isLoadingDonations" class="loading-container">
@@ -469,7 +441,6 @@
                 </div>
               </div>
               <div class="donation-status-actions">
-                <!-- Current Status Display Badge -->
                 <div class="current-status-badge" [class]="'status-' + (donation.status || 'PENDING').toLowerCase().replace('_', '-')">
                   {{ getStatusLabel(donation.status || 'PENDING') }}
                 </div>
@@ -543,13 +514,9 @@
         </div>
       </section>
     </div>
-
-    <!-- Profile View (Center) -->
     <div *ngIf="!isLoading && currentView === 'profile' && dashboardData?.profile" class="profile-view">
       <div class="profile-container">
-        <!-- Single Profile Card -->
         <mat-card class="profile-card-unified">
-          <!-- Profile Header Section -->
           <div class="profile-header-content">
             <div class="profile-avatar-large">
               <mat-icon>business</mat-icon>
@@ -591,8 +558,6 @@
               </button>
             </div>
           </div>
-
-          <!-- Profile Details Section -->
           <mat-card-header>
             <mat-card-title>
               <mat-icon>info</mat-icon>
@@ -600,7 +565,6 @@
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <!-- View Mode -->
             <div *ngIf="!isEditingProfile" class="profile-details-view">
               <div class="detail-row">
                 <div class="detail-label">
@@ -667,8 +631,6 @@
                 <div class="detail-value">{{ dashboardData.profile.aboutNgo }}</div>
               </div>
             </div>
-
-            <!-- Edit Mode -->
             <form *ngIf="isEditingProfile" (ngSubmit)="saveProfileUpdate()" class="profile-edit-form">
               <div class="form-grid">
                 <mat-form-field appearance="outline" class="form-field-full">
@@ -732,8 +694,6 @@
         </mat-card>
       </div>
     </div>
-
-    <!-- No Profile Data -->
     <div *ngIf="!isLoading && currentView === 'profile' && !dashboardData?.profile" class="no-data-container">
       <mat-card class="no-data-card">
         <mat-card-content>
@@ -745,8 +705,6 @@
     </div>
   </main>
 </div>
-
-<!-- Change Password Dialog -->
 <div *ngIf="changePasswordOpen" class="password-dialog-overlay" (click)="closeChangePassword()">
   <mat-card class="password-dialog" (click)="$event.stopPropagation()">
     <mat-card-header>

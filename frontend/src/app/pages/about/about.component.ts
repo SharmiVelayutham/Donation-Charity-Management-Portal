@@ -82,8 +82,7 @@ export class AboutComponent implements OnInit {
 
   ngOnInit() {}
 
-  donate() {
-    // Navigate to donations page
+  donate() {
     window.location.href = '/donations';
   }
 }

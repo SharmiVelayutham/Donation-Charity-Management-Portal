@@ -10,15 +10,12 @@
 
   <div *ngIf="!isLoading" class="create-blog-form-wrapper">
     <form (ngSubmit)="onSubmit()" class="create-blog-form">
-      <!-- Error/Success Messages -->
       <div *ngIf="errorMessage" class="alert alert-error">
         {{ errorMessage }}
       </div>
       <div *ngIf="successMessage" class="alert alert-success">
         {{ successMessage }}
       </div>
-
-      <!-- Blog Title -->
       <div class="form-group">
         <label for="title">Blog Title *</label>
         <input 
@@ -29,8 +26,6 @@
           placeholder="Enter blog title"
           required>
       </div>
-
-      <!-- Category -->
       <div class="form-group">
         <label for="category">Category *</label>
         <select 
@@ -42,8 +37,6 @@
           <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
         </select>
       </div>
-
-      <!-- Featured Image -->
       <div class="form-group">
         <label for="image">Featured Image</label>
         <div class="image-upload-section">
@@ -63,8 +56,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Blog Content -->
       <div class="form-group">
         <label for="content">Blog Content *</label>
         <textarea 
@@ -76,8 +67,6 @@
           required></textarea>
         <small class="form-hint">You can use line breaks, paragraphs, and formatting. HTML will be preserved.</small>
       </div>
-
-      <!-- Submit Button -->
       <div class="form-actions">
         <button 
           type="submit" 

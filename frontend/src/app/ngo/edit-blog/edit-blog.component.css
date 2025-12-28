@@ -85,8 +85,6 @@
   color: #6c757d;
   margin-top: 4px;
 }
-
-/* Image Upload */
 .image-upload-section {
   display: flex;
   flex-direction: column;
@@ -154,8 +152,6 @@
   background: #c82333;
   transform: scale(1.1);
 }
-
-/* Alerts */
 .alert {
   padding: 14px 18px;
   border-radius: 12px;
@@ -174,8 +170,6 @@
   color: #155724;
   border: 2px solid #c3e6cb;
 }
-
-/* Form Actions */
 .form-actions {
   display: flex;
   gap: 16px;
@@ -228,8 +222,6 @@
   border-color: #dc3545;
   color: #dc3545;
 }
-
-/* Responsive */
 @media (max-width: 768px) {
   .create-blog-container {
     padding: 20px 16px;
@@ -243,6 +235,10 @@
     font-size: 2rem;
   }
 
+  .create-blog-header p {
+    font-size: 1rem;
+  }
+
   .form-actions {
     flex-direction: column;
   }
@@ -250,6 +246,49 @@
   .btn-publish,
   .btn-cancel {
     width: 100%;
+  }
+
+  .form-group textarea {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .create-blog-container {
+    padding: 16px 12px;
+  }
+
+  .create-blog-form-wrapper {
+    padding: 16px;
+  }
+
+  .create-blog-header {
+    margin-bottom: 24px;
+  }
+
+  .create-blog-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .create-blog-header p {
+    font-size: 0.9rem;
+  }
+
+  .form-group input[type="text"],
+  .form-group select,
+  .form-group textarea {
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+
+  .form-group textarea {
+    min-height: 200px;
+  }
+
+  .btn-publish,
+  .btn-cancel {
+    padding: 12px;
+    font-size: 15px;
   }
 }
 

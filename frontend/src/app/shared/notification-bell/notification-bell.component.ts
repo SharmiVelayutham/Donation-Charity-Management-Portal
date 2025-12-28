@@ -247,8 +247,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     }
   }
 
-  setupSocketConnection() {
-    // Listen for new notifications
+  setupSocketConnection() {
     this.socketSubscription = this.socketService.onNotification((notification: Notification) => {
       this.notifications.unshift(notification);
       if (!notification.isRead) {

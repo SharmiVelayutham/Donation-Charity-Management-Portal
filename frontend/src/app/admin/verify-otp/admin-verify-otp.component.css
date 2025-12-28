@@ -1,4 +1,4 @@
-/* Use same styles as admin login component */
+
 .auth-wrapper {
   display: flex;
   height: 100vh;
@@ -157,5 +157,58 @@
 
 .signup-text a:hover {
   text-decoration: underline;
+}
+@media (max-width: 768px) {
+  .auth-wrapper {
+    flex-direction: column;
+  }
+
+  .auth-image {
+    display: none;
+  }
+
+  .auth-form {
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+  }
+
+  .auth-card input {
+    font-size: 18px;
+    letter-spacing: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 1.5rem 1rem;
+    border-radius: 12px;
+  }
+
+  .auth-card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .auth-card input {
+    padding: 10px 12px;
+    font-size: 16px;
+    letter-spacing: 4px;
+  }
+
+  .login-btn {
+    padding: 10px;
+    font-size: 15px;
+  }
+
+  .info-text {
+    font-size: 13px;
+    padding: 10px;
+  }
 }
 

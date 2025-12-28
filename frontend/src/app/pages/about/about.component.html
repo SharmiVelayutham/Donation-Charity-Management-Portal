@@ -1,12 +1,8 @@
 <app-header></app-header>
-
-<!-- Header Section -->
 <div class="header">
     <h1>{{pageTitle}}</h1>
     <p>{{pageSubtitle}}</p>
 </div>
-
-<!-- Mission Section -->
 <section class="mission-section">
     <div class="mission-content">
         <div class="mission-text">
@@ -15,24 +11,43 @@
             <p>{{mission.description2}}</p>
         </div>
         <div class="mission-image">
-            {{mission.icon}}
+            <svg width="150" height="150" viewBox="0 0 24 24" fill="#dc3545" aria-label="Mission">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4c1.74 0 3.41 1 4.22 2.44C12.09 5 13.76 4 15.5 4 18 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
         </div>
     </div>
 </section>
-
-<!-- Values Section -->
 <section class="values-section">
     <h2>Our Core Values</h2>
     <div class="values-grid">
         <div class="value-card" *ngFor="let value of values">
-            <div class="value-icon">{{value.icon}}</div>
+            <div class="value-icon" [ngSwitch]="value.title">
+                <!-- Transparency: Eye icon -->
+                <svg *ngSwitchCase="'Transparency'" width="60" height="60" viewBox="0 0 24 24" fill="#dc3545" aria-label="Transparency">
+                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-7a2 2 0 110 4 2 2 0 010-4z"/>
+                </svg>
+                <!-- Empowerment: Bolt icon -->
+                <svg *ngSwitchCase="'Empowerment'" width="60" height="60" viewBox="0 0 24 24" fill="#dc3545" aria-label="Empowerment">
+                    <path d="M13 3L4 14h7l-1 7 9-12h-7l1-6z"/>
+                </svg>
+                <!-- Integrity: Check-circle icon -->
+                <svg *ngSwitchCase="'Integrity'" width="60" height="60" viewBox="0 0 24 24" fill="#dc3545" aria-label="Integrity">
+                    <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 14l-4-4 1.41-1.41L11 12.17l4.59-4.59L17 9l-6 7z"/>
+                </svg>
+                <!-- Impact: Target icon -->
+                <svg *ngSwitchCase="'Impact'" width="60" height="60" viewBox="0 0 24 24" fill="#dc3545" aria-label="Impact">
+                    <path d="M12 20a8 8 0 110-16 8 8 0 010 16zm0-3a5 5 0 100-10 5 5 0 000 10zm0-2a3 3 0 110-6 3 3 0 010 6z"/>
+                </svg>
+                <!-- Default: heart icon -->
+                <svg *ngSwitchDefault width="60" height="60" viewBox="0 0 24 24" fill="#dc3545" aria-label="Value">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4c1.74 0 3.41 1 4.22 2.44C12.09 5 13.76 4 15.5 4 18 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
             <h3>{{value.title}}</h3>
             <p>{{value.description}}</p>
         </div>
     </div>
 </section>
-
-<!-- Stats Section -->
 <section class="stats-section">
     <div class="stats-grid">
         <div class="stat-item" *ngFor="let stat of stats">
@@ -41,13 +56,15 @@
         </div>
     </div>
 </section>
-
-<!-- Team Section -->
 <section class="team-section">
     <h2>Meet Our Team</h2>
     <div class="team-grid">
         <div class="team-card" *ngFor="let member of team">
-            <div class="team-avatar">{{member.avatar}}</div>
+            <div class="team-avatar">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="#ffffff" aria-label="Team member">
+                    <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/>
+                </svg>
+            </div>
             <div class="team-info">
                 <h3>{{member.name}}</h3>
                 <p>{{member.role}}</p>
@@ -56,8 +73,6 @@
         </div>
     </div>
 </section>
-
-<!-- CTA Section -->
 <section class="cta-section">
     <h2>Join Us in Making a Difference</h2>
     <p>Your contribution can change lives. Together, we can build a better tomorrow for those in need.</p>

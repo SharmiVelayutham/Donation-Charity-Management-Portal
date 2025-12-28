@@ -20,6 +20,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     activeDonors: 0
   };
   isLoading = false;
+  isLoadingStats = false;
   isAuthenticated = false;
   userRole: string | null = null;
   userName: string = '';
@@ -41,6 +42,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.checkAuthStatus();
     this.loadRecentDonations();
     this.loadSliders();
+    this.loadPlatformStats();
     this.authService.authStatus$.subscribe(() => {
       this.checkAuthStatus();
     });
@@ -127,12 +129,11 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   async loadRecentDonations() {
     try {
-      // Load ACTIVE donation requests (no auth required for viewing)
+
       const response = await lastValueFrom(this.apiService.getActiveDonationRequests());
       if (response?.success && response.data) {
         const requests = Array.isArray(response.data) ? response.data : [];
-        
-        // Filter to show only requests from last 3 days
+
         const threeDaysAgo = new Date();
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
         
@@ -145,8 +146,26 @@ export class HomeComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Failed to load donation requests:', error);
-      // Use empty array if API fails
+
       this.recentDonations = [];
+    }
+  }
+
+  async loadPlatformStats() {
+    this.isLoadingStats = true;
+    try {
+      const response = await lastValueFrom(this.apiService.getPlatformStats());
+      if (response?.success && response.data) {
+        const data: any = response.data;
+        this.stats.totalDonations = Number(data.totalDonations) || 0;
+        this.stats.totalContributions = Number(data.totalContributions) || 0;
+        this.stats.activeNGOs = Number(data.activeNGOs) || 0;
+        this.stats.activeDonors = Number(data.activeDonors) || 0;
+      }
+    } catch (error) {
+      console.error('Failed to load platform stats:', error);
+    } finally {
+      this.isLoadingStats = false;
     }
   }
 
@@ -155,10 +174,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (!date) return 'N/A';
     return new Date(date).toLocaleString();
   }
-
-  /**
-   * Get label for quantity/amount field based on donation type
-   */
   ngOnDestroy() {
     this.stopSliderAutoRotation();
   }
@@ -171,10 +186,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
     return 'Quantity/Amount';
   }
-
-  /**
-   * Format quantity/amount based on donation type
-   */
   formatQuantityOrAmount(donation: any): string {
     const value = donation.quantity_or_amount;
     if (!value && value !== 0) return 'N/A';
@@ -182,22 +193,19 @@ export class HomeComponent implements OnInit, OnDestroy {
     const numValue = parseFloat(value);
     if (isNaN(numValue)) return 'N/A';
 
-    // For FUNDS: show with ₹ symbol and 2 decimals
     if (donation.donation_type === 'FUNDS') {
       return `₹${numValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
-    
-    // For FOOD/CLOTHES: show as integer (no decimals, no currency)
+
     if (donation.donation_type === 'FOOD' || donation.donation_type === 'CLOTHES') {
       return Math.round(numValue).toLocaleString('en-IN');
     }
-    
-    // Default: show as number
+
     return numValue.toLocaleString('en-IN');
   }
 
   handleDonateClick(donationId: string | number) {
-    // Check if donor is logged in
+
     if (!this.authService.isAuthenticated()) {
       alert('Please register/login to donate');
       this.router.navigate(['/login'], { 
@@ -205,8 +213,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       });
       return;
     }
-    
-    // Check if user is a donor
+
     const userRole = this.authService.getCurrentRole();
     if (userRole !== 'DONOR') {
       alert('Only registered donors can contribute. Please login as a donor.');
@@ -215,8 +222,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       });
       return;
     }
-    
-    // Allow donor to proceed
+
     this.router.navigate(['/donations', donationId, 'contribute']);
   }
 }

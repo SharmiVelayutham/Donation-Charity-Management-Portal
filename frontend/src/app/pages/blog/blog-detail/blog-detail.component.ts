@@ -44,11 +44,8 @@ export class BlogDetailComponent implements OnInit {
       const response = await lastValueFrom(this.apiService.getBlogById(this.blogId));
       if (response.success && response.data) {
         this.blog = response.data.blog;
-        this.relatedBlogs = response.data.relatedBlogs || [];
-        // Sanitize HTML content for safe display
-        this.safeContent = this.sanitizer.bypassSecurityTrustHtml(this.blog.content || '');
-        
-        // Check if current user is the author
+        this.relatedBlogs = response.data.relatedBlogs || [];
+        this.safeContent = this.sanitizer.bypassSecurityTrustHtml(this.blog.content || '');
         const user = this.authService.getUser();
         if (user && user.id) {
           this.currentUserId = parseInt(user.id);
@@ -76,12 +73,10 @@ export class BlogDetailComponent implements OnInit {
   }
 
   getImageUrl(imageUrl: string | null): string {
-    if (!imageUrl) return '';
-    // If it's already a full URL, return as is
+    if (!imageUrl) return '';
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       return imageUrl;
-    }
-    // Otherwise, prepend API base URL (remove /api from environment.apiUrl)
+    }
     const baseUrl = environment.apiUrl.replace('/api', '');
     return `${baseUrl}${imageUrl}`;
   }

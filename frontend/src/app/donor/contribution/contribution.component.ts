@@ -14,9 +14,7 @@ import { Observable, lastValueFrom } from 'rxjs';
 })
 export class ContributionComponent implements OnInit {
   donationId!: string;
-  request: any = null; // Changed from donation to request
-  
-  // Donor form fields
+  request: any = null; // Changed from donation to request
   quantityOrAmount: number = 0;
   pickupLocation: string = '';
   pickupDate: string = '';
@@ -42,8 +40,7 @@ export class ContributionComponent implements OnInit {
   async loadDonation() {
     this.isLoading = true;
     this.errorMessage = '';
-    try {
-      // Load donation request details
+    try {
       const resp$: Observable<ApiResponse> = this.apiService.getDonationRequestById(this.donationId);
       const response = await lastValueFrom(resp$);
       if (response?.success && response.data) {
@@ -81,9 +78,7 @@ export class ContributionComponent implements OnInit {
 
   removeImage(index: number) {
     this.imageFiles.splice(index, 1);
-  }
-
-  // Helper methods
+  }
   isFundsType(): boolean {
     return this.request?.donation_type === 'FUNDS';
   }
@@ -93,45 +88,32 @@ export class ContributionComponent implements OnInit {
   }
 
   async submitContribution() {
-    this.errorMessage = '';
-
-    // Validation
+    this.errorMessage = '';
     if (!this.quantityOrAmount || this.quantityOrAmount <= 0) {
       this.errorMessage = 'Please enter a valid quantity/amount';
       return;
-    }
-
-    // For FOOD/CLOTHES, pickup fields are required
+    }
     if (this.requiresPickup()) {
       if (!this.pickupLocation || !this.pickupDate || !this.pickupTime) {
         this.errorMessage = 'Please fill all required fields (Pickup Location, Date, and Time)';
         return;
       }
-    }
-
-    // For FUNDS, pickup fields are not required
-    // Donors will transfer funds directly to the bank account
+    }
 
     this.isLoading = true;
 
     try {
       const formData = new FormData();
-      formData.append('quantityOrAmount', this.quantityOrAmount.toString());
-      
-      // Only add pickup fields if donation type requires pickup
-      // For FUNDS, don't send pickup fields at all
+      formData.append('quantityOrAmount', this.quantityOrAmount.toString());
       if (this.requiresPickup()) {
         formData.append('pickupLocation', this.pickupLocation.trim());
         formData.append('pickupDate', this.pickupDate);
         formData.append('pickupTime', this.pickupTime);
-      }
-      // For FUNDS: pickup fields are not sent (backend will set them to NULL)
+      }
       
       if (this.notes) {
         formData.append('notes', this.notes.trim());
-      }
-      
-      // Images removed - no longer needed
+      }
 
       const resp$: Observable<ApiResponse> = this.apiService.contributeToDonationRequest(this.donationId, formData);
       const response = await lastValueFrom(resp$);
@@ -142,10 +124,9 @@ export class ContributionComponent implements OnInit {
       } else {
         this.errorMessage = response?.message || 'Failed to submit donation';
       }
-    } catch (error: any) {
-      console.error('Error submitting donation:', error);
-      this.errorMessage = error?.error?.message || error?.message || 'Failed to submit donation';
-    } finally {
+    } catch (error: any) {
+      this.errorMessage = error?.message || 'Something went wrong. Please try again.';
+    } finally {
       this.isLoading = false;
     }
   }

@@ -18,8 +18,6 @@ app-admin-dashboard {
 .admin-dashboard-container * {
   box-sizing: border-box;
 }
-
-/* Header Section (Profile at Top - Full Width - Fixed) */
 .header-section {
   background: #1e293b;
   border-bottom: 1px solid #334155;
@@ -40,7 +38,6 @@ app-admin-dashboard {
   align-items: center;
   gap: 0.75rem;
   max-width: 1200px;
-  /* margin: 0 auto; */
   width: 100%;
   height: 100%;
   padding: 0 1.5rem;
@@ -70,8 +67,14 @@ app-admin-dashboard {
   align-items: center;
   gap: 0.5rem;
   height: 100%;
-  flex-shrink: 0;
+  flex-shrink: 1;
   flex-grow: 0;
+}
+
+@media (max-width: 768px) {
+  .profile-info {
+    display: none !important;
+  }
 }
 
 .profile-name {
@@ -109,53 +112,55 @@ app-admin-dashboard {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 0.95rem;
+  gap: 0.5rem;
   z-index: 40;
   color: green;
   opacity: 10;
-
 }
-
-/* 
-.header-actions ::ng-deep app-notification-bell button[mat-icon-button] {
-  color: #ffffff !important;
-  --mdc-icon-button-icon-color: #ffffff !important;
-}
-
-.header-actions ::ng-deep app-notification-bell button[mat-icon-button] .mat-icon,
-.header-actions ::ng-deep app-notification-bell button[mat-icon-button] mat-icon {
-  color: #ffffff !important;
-  fill: #ffffff !important;
-  --mdc-icon-button-icon-color: #ffffff !important;
-}
-
-.header-actions ::ng-deep app-notification-bell .mat-icon,
-.header-actions ::ng-deep app-notification-bell mat-icon {
-  color: #ffffff !important;
-  fill: #ffffff !important;
-} */
 
 @media (max-width: 768px) {
+  .header-actions {
+    gap: 0.25rem;
+    margin-left: auto;
+  }
+  
+  .header-actions ::ng-deep app-notification-bell button[mat-icon-button] {
+    width: 32px !important;
+    height: 32px !important;
+    padding: 4px !important;
+  }
+  
+  .header-actions ::ng-deep app-notification-bell button[mat-icon-button] .mat-icon,
+  .header-actions ::ng-deep app-notification-bell button[mat-icon-button] mat-icon {
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
+@media (max-width: 768px) {
   .header-section {
-    height: 56px;
+    height: 50px;
     padding: 0;
   }
   
   .profile-header {
-    padding: 0 1rem;
+    padding: 0 0.5rem;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: space-between;
+    height: 50px;
   }
   
   .profile-name {
-    font-size: 0.875rem;
-    background: linear-gradient(to right, #10b981, #3b82f6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    display: none;
   }
   
   .profile-avatar {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    flex-shrink: 0;
+    margin-left: 36px;
   }
   
   .profile-avatar .avatar-icon {
@@ -164,8 +169,6 @@ app-admin-dashboard {
     height: 16px;
   }
 }
-
-/* Dashboard Body (Sidebar + Main Content) */
 .dashboard-body {
   display: flex;
   width: 100%;
@@ -176,11 +179,9 @@ app-admin-dashboard {
 
 @media (max-width: 768px) {
   .dashboard-body {
-    margin-top: 56px;
+    margin-top: 50px;
   }
 }
-
-/* Sidebar Navigation (Left - Gradient Background - Fixed) */
 .sidebar {
   width: 280px;
   padding: 0;
@@ -198,8 +199,8 @@ app-admin-dashboard {
 
 @media (max-width: 768px) {
   .sidebar {
-    top: 56px;
-    height: calc(100vh - 56px);
+    top: 50px;
+    height: calc(100vh - 50px);
   }
 }
 
@@ -223,8 +224,6 @@ app-admin-dashboard {
     transform: translateX(-100%);
   }
 }
-
-/* Backdrop overlay for mobile */
 .sidebar-backdrop {
   display: none;
   position: fixed;
@@ -233,15 +232,17 @@ app-admin-dashboard {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 999;
+  z-index: 99;
   opacity: 0;
   transition: opacity 0.3s ease;
+  pointer-events: none;
 }
 
 @media (max-width: 1024px) {
   .sidebar-backdrop.mobile-open {
     display: block;
     opacity: 1;
+    pointer-events: auto;
   }
 }
 
@@ -398,6 +399,40 @@ app-admin-dashboard {
   color: white;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
+.mobile-menu-icon {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  cursor: pointer;
+  z-index: 300;
+}
+
+.mobile-menu-icon .bar {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: #FFF4D9; /* cream color */
+  margin: 3px auto;
+  border-radius: 2px;
+  transition: transform 0.15s ease;
+}
+
+@media (max-width: 1024px) {
+  .mobile-menu-icon {
+    display: block;
+  }
+
+  .profile-header {
+    padding-left: 48px; /* room for mobile icon with gap */
+  }
+}
 
 .nav-item.active mat-icon {
   color: white;
@@ -445,11 +480,6 @@ app-admin-dashboard {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
 }
-
-/* ============================================
-   MAIN CONTENT WRAPPER
-   ============================================ */
-
 .main-content-wrapper,
 .main-content {
   flex: 1;
@@ -530,7 +560,10 @@ app-admin-dashboard {
 @media (max-width: 768px) {
   .main-content-wrapper,
   .main-content {
-    min-height: calc(100vh - 56px);
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: calc(100vh - 50px);
     padding: 1rem;
   }
 }
@@ -562,18 +595,16 @@ app-admin-dashboard {
   .main-content-wrapper,
   .main-content {
     padding: 1rem;
-    min-height: calc(100vh - 30px);
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: calc(100vh - 50px);
   }
 }
 
 .main-content-wrapper {
   margin-top: 0;
 }
-
-/* ============================================
-   LOADING STATE
-   ============================================ */
-
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -582,8 +613,6 @@ app-admin-dashboard {
   padding: 4rem 2rem;
   color: #6b7280;
 }
-
-/* Section Titles */
 .section-title {
   display: flex;
   align-items: center;
@@ -604,11 +633,6 @@ app-admin-dashboard {
 .loading-container mat-spinner {
   margin-bottom: var(--spacing-md);
 }
-
-/* ============================================
-   DASHBOARD VIEW
-   ============================================ */
-
 .dashboard-view {
   display: flex;
   flex-direction: column;
@@ -618,8 +642,6 @@ app-admin-dashboard {
 .dashboard-view > section {
   margin-bottom: 2rem;
 }
-
-/* Hero Section */
 .hero-section {
   background: #EDEAE0; /* Alabaster SW7008 */
   border-radius: 1rem;
@@ -686,11 +708,6 @@ app-admin-dashboard {
 .hero-actions button {
   flex-shrink: 0;
 }
-
-/* ============================================
-   FILTERS SECTION
-   ============================================ */
-
 .filters-section {
   margin-top: var(--spacing-xl);
 }
@@ -756,11 +773,6 @@ app-admin-dashboard {
   gap: 0.5rem;
   margin-top: 1rem;
 }
-
-/* ============================================
-   CONTRIBUTIONS SECTION
-   ============================================ */
-
 .contributions-section {
   margin-top: var(--spacing-xl);
 }
@@ -946,11 +958,6 @@ app-admin-dashboard {
   background: rgba(16, 185, 129, 0.2);
   color: var(--primary-color);
 }
-
-/* ============================================
-   PAGINATION
-   ============================================ */
-
 .pagination {
   display: flex;
   justify-content: center;
@@ -1150,11 +1157,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
   background: var(--bg-tertiary) !important;
   color: var(--text-primary) !important;
 }
-
-/* ============================================
-   RESPONSIVE DESIGN
-   ============================================ */
-
 @media (max-width: 1024px) {
   .mobile-menu-toggle {
     display: block !important;
@@ -1264,11 +1266,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
     flex-wrap: wrap;
   }
 }
-
-/* ============================================
-   STATISTICS SECTION
-   ============================================ */
-
 .stats-section {
   margin-bottom: 2rem;
   margin-top: 1.5rem;
@@ -1378,11 +1375,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
   color: #64748b;
   font-weight: 400;
 }
-
-/* ============================================
-   CHARTS SECTION
-   ============================================ */
-
 .charts-section {
   margin-bottom: 2rem;
   margin-top: 2rem;
@@ -1535,11 +1527,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
   height: 12px;
   border-radius: 2px;
 }
-
-/* ============================================
-   SUMMARY SECTION
-   ============================================ */
-
 .summary-section {
   margin-top: 2rem;
   margin-bottom: 2rem;
@@ -1650,11 +1637,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
   color: #1e293b;
   line-height: 1.2;
 }
-
-/* ============================================
-   CUSTOMER/DONOR TABLE
-   ============================================ */
-
 .customer-table-card {
   background: #EDEAE0 !important; /* Alabaster SW7008 */
   border-radius: 12px;
@@ -1706,8 +1688,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
   font-size: 16px;
   flex-shrink: 0;
 }
-
-/* Responsive charts */
 @media (max-width: 1024px) {
   .charts-grid {
     grid-template-columns: 1fr;
@@ -1731,11 +1711,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
     grid-template-columns: 1fr;
   }
 }
-
-/* ============================================
-   EMAIL TEMPLATES VIEW
-   ============================================ */
-
 .template-view {
   margin-top: var(--spacing-xl);
 }
@@ -1843,12 +1818,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
   padding-top: var(--spacing-lg);
   border-top: 1px solid var(--border-color);
 }
-
-/* ============================================
-   RESPONSIVE IMPROVEMENTS FOR CONTRIBUTIONS VIEW
-   ============================================ */
-
-/* Hero Actions - Download Buttons */
 @media (max-width: 768px) {
   .hero-actions {
     flex-wrap: wrap;
@@ -1885,8 +1854,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
     min-width: 100%;
   }
 }
-
-/* Filters Grid Responsive */
 @media (max-width: 768px) {
   .filters-grid {
     grid-template-columns: 1fr;
@@ -1907,8 +1874,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
     width: 100%;
   }
 }
-
-/* Customer Tables Responsive */
 @media (max-width: 768px) {
   .customer-table-card {
     padding: 16px;
@@ -1961,8 +1926,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
     margin-bottom: 0.75rem;
   }
 }
-
-/* Table Card Responsive */
 @media (max-width: 768px) {
   .table-card {
     padding: 1rem;
@@ -1981,8 +1944,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
     font-size: 1.25rem;
   }
 }
-
-/* Chart Cards Responsive */
 @media (max-width: 640px) {
   .chart-card,
   .donation-trends-card {
@@ -1994,8 +1955,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
     min-height: 240px;
   }
 }
-
-/* Template Cards Responsive */
 @media (max-width: 768px) {
   .template-header {
     flex-direction: column;
@@ -2021,8 +1980,6 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
     width: 100%;
   }
 }
-
-/* Slider Management Styles */
 .slider-thumbnail {
   width: 120px;
   height: 80px;
@@ -2047,5 +2004,157 @@ app-admin-dashboard ::ng-deep .mat-mdc-chip {
   background: rgba(107, 114, 128, 0.1);
   border-radius: 12px;
   display: inline-block;
+}
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 1rem;
+    width: 100%;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    min-width: 600px;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .action-buttons button {
+    width: 100%;
+  }
+
+  .dialog-content {
+    padding: 1rem;
+    max-width: 100%;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .card-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-section {
+    height: 50px;
+  }
+
+  .profile-header {
+    padding: 0 0.75rem;
+  }
+
+  .profile-name {
+    font-size: 0.75rem;
+  }
+
+  .profile-avatar {
+    width: 24px;
+    height: 24px;
+  }
+
+  .profile-avatar .avatar-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .dashboard-body {
+    margin-top: 50px;
+  }
+
+  .main-content {
+    padding: 0.75rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.75rem;
+  }
+
+  .table {
+    min-width: 500px;
+    font-size: 0.75rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.375rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .dialog-content {
+    padding: 0.75rem;
+  }
+
+  .form-group label {
+    font-size: 0.875rem;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 0.875rem;
+    padding: 0.5rem;
+  }
 }
 

@@ -3,9 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
-import { lastValueFrom } from 'rxjs';
-
-// Angular Material imports
+import { lastValueFrom } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -40,9 +38,7 @@ export class CreateRequestComponent implements OnInit {
   quantityOrAmount: number = 0;
   description: string = '';
   imageFiles: File[] = [];
-  imagePreviews: string[] = [];
-  
-  // Account details for FUNDS/MONEY donations
+  imagePreviews: string[] = [];
   showAccountDetails: boolean = false;
   bankAccountNumber: string = '';
   bankName: string = '';
@@ -51,9 +47,7 @@ export class CreateRequestComponent implements OnInit {
 
   isLoading: boolean = false;
   errorMessage: string = '';
-  successMessage: string = '';
-  
-  // NGO profile info to display at top
+  successMessage: string = '';
   ngoName: string = '';
   ngoAddress: string = '';
 
@@ -87,23 +81,18 @@ export class CreateRequestComponent implements OnInit {
   onImageSelected(event: any) {
     const files = Array.from(event.target.files) as File[];
     if (files.length > 0) {
-      files.forEach(file => {
-        // Validate file type
+      files.forEach(file => {
         if (!file.type.startsWith('image/')) {
           this.errorMessage = 'Please select only image files';
           return;
-        }
-        
-        // Validate file size (max 5MB)
+        }
         if (file.size > 5 * 1024 * 1024) {
           this.errorMessage = 'Image size should be less than 5MB';
           return;
         }
         
         if (this.imageFiles.length < 5) {
-          this.imageFiles.push(file);
-          
-          // Create preview
+          this.imageFiles.push(file);
           const reader = new FileReader();
           reader.onload = (e: any) => {
             this.imagePreviews.push(e.target.result);
@@ -120,31 +109,21 @@ export class CreateRequestComponent implements OnInit {
     this.imagePreviews.splice(index, 1);
   }
 
-  onDonationTypeChange() {
-    // Show account details only for FUNDS type
-    this.showAccountDetails = this.donationType === 'FUNDS';
-    // Clear account details if type changes away from FUNDS
+  onDonationTypeChange() {
+    this.showAccountDetails = this.donationType === 'FUNDS';
     if (!this.showAccountDetails) {
       this.bankAccountNumber = '';
       this.bankName = '';
       this.ifscCode = '';
       this.accountHolderName = '';
     }
-  }
-
-  // Helper method to check if donation type requires pickup
+  }
   requiresPickup(): boolean {
     return this.donationType === 'FOOD' || this.donationType === 'CLOTHES';
-  }
-
-  // Helper method to check if donation type is FUNDS
+  }
   isFundsType(): boolean {
     return this.donationType === 'FUNDS';
   }
-
-  /**
-   * Get dynamic label for quantity/amount field
-   */
   getQuantityOrAmountLabel(): string {
     if (this.donationType === 'FUNDS') {
       return 'Amount Required';
@@ -153,10 +132,6 @@ export class CreateRequestComponent implements OnInit {
     }
     return 'Quantity/Amount Required';
   }
-
-  /**
-   * Get dynamic placeholder for quantity/amount field
-   */
   getQuantityOrAmountPlaceholder(): string {
     if (this.donationType === 'FUNDS') {
       return 'Enter amount';
@@ -165,10 +140,6 @@ export class CreateRequestComponent implements OnInit {
     }
     return 'Enter quantity or amount';
   }
-
-  /**
-   * Get dynamic hint for quantity/amount field
-   */
   getQuantityOrAmountHint(): string {
     if (this.donationType === 'FUNDS') {
       return 'Enter the total amount (in ₹) you need';
@@ -191,9 +162,7 @@ export class CreateRequestComponent implements OnInit {
 
   async onSubmit() {
     this.errorMessage = '';
-    this.successMessage = '';
-
-    // Validation - Only Donation Type and Quantity/Amount are required
+    this.successMessage = '';
     if (!this.donationType) {
       this.errorMessage = 'Please select a Donation Type';
       return;
@@ -203,13 +172,8 @@ export class CreateRequestComponent implements OnInit {
       const fieldName = this.donationType === 'FUNDS' ? 'Amount' : 'Quantity';
       this.errorMessage = `Please enter a valid ${fieldName} (must be greater than 0)`;
       return;
-    }
-
-    // For FUNDS type, bank details are recommended but not mandatory
-    // (Backend will handle this, but we can show a warning)
-    if (this.donationType === 'FUNDS') {
-      // Bank details are optional but recommended
-      // No validation error, just proceed
+    }
+    if (this.donationType === 'FUNDS') {
     }
 
     this.isLoading = true;
@@ -221,9 +185,7 @@ export class CreateRequestComponent implements OnInit {
       
       if (this.description) {
         formData.append('description', this.description);
-      }
-      
-      // Add account details if donation type is FUNDS
+      }
       if (this.donationType === 'FUNDS') {
         if (this.bankAccountNumber) {
           formData.append('bankAccountNumber', this.bankAccountNumber);
@@ -237,9 +199,7 @@ export class CreateRequestComponent implements OnInit {
         if (this.accountHolderName) {
           formData.append('accountHolderName', this.accountHolderName);
         }
-      }
-      
-      // Add images
+      }
       this.imageFiles.forEach(file => {
         formData.append('images', file);
       });

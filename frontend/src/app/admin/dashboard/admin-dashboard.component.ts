@@ -1,12 +1,11 @@
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
-import { lastValueFrom } from 'rxjs';
-
-// Angular Material imports
+import { SocketService } from '../../services/socket.service';
+import { lastValueFrom } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -55,7 +54,7 @@ import { LeaderboardComponent } from '../../leaderboard/leaderboard.component';
   styleUrls: ['./admin-dashboard.component.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class AdminDashboardComponent implements OnInit {
+export class AdminDashboardComponent implements OnInit, OnDestroy {
   ngos: any[] = [];
   donors: any[] = [];
   contributions: any[] = [];
@@ -70,9 +69,7 @@ export class AdminDashboardComponent implements OnInit {
   isLoadingAnalytics: boolean = false;
   errorMessage: string = '';
   searchTerm: string = '';
-  filterBlocked: string = '';
-  
-  // Email template data
+  filterBlocked: string = '';
   availableTemplateTypes = [
     { value: 'OTP_REGISTRATION', label: 'OTP Registration' },
     { value: 'OTP_PASSWORD_RESET', label: 'OTP Password Reset' },
@@ -101,9 +98,7 @@ export class AdminDashboardComponent implements OnInit {
     'DONOR_DONATION_CONFIRMATION': 'Available placeholders: {{DONOR_NAME}}, {{NGO_NAME}}, {{DONATION_TYPE}}, {{AMOUNT_OR_QUANTITY}}',
     'NGO_UNBLOCK': 'Available placeholders: {{NGO_NAME}}, {{UNBLOCK_DATE}}, {{SUPPORT_EMAIL}}, {{UNBLOCK_REASON}}',
     'NGO_BLOCK': 'Available placeholders: {{NGO_NAME}}, {{BLOCK_DATE}}, {{BLOCK_REASON}}, {{SUPPORT_EMAIL}}'
-  };
-
-  // Analytics data
+  };
   analytics: any = {
     donations: {
       breakdown: [],
@@ -129,50 +124,51 @@ export class AdminDashboardComponent implements OnInit {
       withContributions: 0,
       topDonors: [],
     },
-  };
-  
-  // Filters for contributions
+  };
   filterDonorId: string = '';
   filterNgoId: string = '';
   filterDonationType: string = '';
   filterFromDate: string = '';
-  filterToDate: string = '';
-  
-  // Pagination
+  filterToDate: string = '';
   currentPage: number = 1;
   pageSize: number = 50;
-  totalContributions: number = 0;
-  
-  // Math reference for template
-  Math = Math;
-  
-  // Chart view toggle (Amount or Donors)
-  chartViewMode: 'amount' | 'donors' = 'amount';
-
-  // Slider management
+  totalContributions: number = 0;
+  Math = Math;
+  chartViewMode: 'amount' | 'donors' = 'amount';
   sliders: any[] = [];
   isLoadingSliders: boolean = false;
 
   constructor(
     private apiService: ApiService,
     private authService: AuthService,
+    private socketService: SocketService,
     private snackBar: MatSnackBar,
     private dialog: MatDialog
   ) {}
 
   async ngOnInit() {
-    if (!this.authService.hasRole('ADMIN')) {
-      // Redirect if not admin
+    if (!this.authService.hasRole('ADMIN')) {
       return;
+    }
+    const token = localStorage.getItem('token');
+    if (token) {
+      this.socketService.connect(token);
     }
     await Promise.all([
       this.loadAnalytics(),
       this.loadContributions(),
       this.loadDonors(),
       this.loadNgos()
-    ]);
-    // Populate allNgos for filter dropdown
+    ]);
     this.allNgos = this.ngos;
+  }
+
+  ngOnDestroy() {
+    this.socketService.offNgoStatsUpdate();
+    this.socketService.offDonationCreated();
+    this.socketService.offDonorStatsUpdate();
+    this.socketService.offContributionStatusUpdate();
+    this.socketService.disconnect();
   }
   
   async loadAnalytics() {
@@ -402,9 +398,7 @@ export class AdminDashboardComponent implements OnInit {
       console.error('[Admin Dashboard] Error restoring default template:', error);
       this.snackBar.open(error?.error?.message || 'Failed to restore default template', 'Close', { duration: 3000 });
     }
-  }
-  
-  // Chart helper methods
+  }
   getDonationBreakdownItems(): any[] {
     if (!this.analytics?.donations?.breakdown) return [];
     return this.analytics.donations.breakdown.filter((item: any) => item.count > 0);
@@ -448,8 +442,7 @@ export class AdminDashboardComponent implements OnInit {
   getChartMaxValue(): number {
     const values = this.getChartData();
     if (values.length === 0) return 1;
-    const max = Math.max(...values);
-    // Round up to nearest nice number
+    const max = Math.max(...values);
     const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
     return Math.ceil(max / magnitude) * magnitude;
   }
@@ -463,9 +456,7 @@ export class AdminDashboardComponent implements OnInit {
       const y = 250 - ((value / max) * 200);
       return { x, y };
     });
-  }
-  
-  // Create smooth bezier curve path
+  }
   getSmoothCurvePath(): string {
     const points = this.getChartPoints();
     if (points.length === 0) return '';
@@ -488,9 +479,7 @@ export class AdminDashboardComponent implements OnInit {
     }
     
     return path;
-  }
-  
-  // Create smooth area path for filling
+  }
   getSmoothAreaPath(): string {
     const points = this.getChartPoints();
     if (points.length === 0) return '';
@@ -610,12 +599,9 @@ export class AdminDashboardComponent implements OnInit {
     this.filterToDate = '';
     this.currentPage = 1;
     this.loadContributions();
-  }
-  
-  // Report Download Functions
+  }
   async downloadReport(format: 'csv' | 'excel' | 'pdf') {
-    try {
-      // Fetch all data (without pagination) for the report
+    try {
       const params: any = { limit: 10000 }; // Large limit to get all records
       
       if (this.filterDonorId) params.donorId = this.filterDonorId;
@@ -674,15 +660,11 @@ export class AdminDashboardComponent implements OnInit {
     document.body.removeChild(link);
   }
   
-  downloadExcel(data: any[]) {
-    // For Excel, we'll generate CSV with .xlsx extension (requires a library like xlsx for proper Excel)
-    // For now, using CSV format
+  downloadExcel(data: any[]) {
     this.downloadCSV(data);
   }
   
-  downloadPDF(data: any[]) {
-    // Simple PDF generation using window.print or a library
-    // For now, we'll create a simple HTML table and print it
+  downloadPDF(data: any[]) {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     
@@ -779,9 +761,7 @@ export class AdminDashboardComponent implements OnInit {
       }
     } catch (error: any) {
       console.error('[Admin Dashboard] Error loading NGOs:', error);
-      this.errorMessage = error?.error?.message || error?.message || 'Failed to load NGOs';
-      
-      // Check if it's a 403 error
+      this.errorMessage = error?.error?.message || error?.message || 'Failed to load NGOs';
       if (error?.status === 403) {
         console.error('[Admin Dashboard] 403 Forbidden - Check authentication');
         this.errorMessage = 'Access denied. Please check your admin permissions.';
@@ -812,9 +792,7 @@ export class AdminDashboardComponent implements OnInit {
       }
     } catch (error: any) {
       console.error('[Admin Dashboard] Error loading Donors:', error);
-      this.errorMessage = error?.error?.message || error?.message || 'Failed to load Donors';
-      
-      // Check if it's a 403 error
+      this.errorMessage = error?.error?.message || error?.message || 'Failed to load Donors';
       if (error?.status === 403) {
         console.error('[Admin Dashboard] 403 Forbidden - Check authentication');
         this.errorMessage = 'Access denied. Please check your admin permissions.';
@@ -838,8 +816,7 @@ export class AdminDashboardComponent implements OnInit {
 
   async toggleBlockNgo(ngo: any) {
     try {
-      if (ngo.isBlocked) {
-        // Show dialog for unblock reason
+      if (ngo.isBlocked) {
         const dialogRef = this.dialog.open(UnblockNgoDialogComponent, {
           width: '500px',
           data: { ngoName: ngo.name }
@@ -856,8 +833,7 @@ export class AdminDashboardComponent implements OnInit {
             }
           }
         });
-      } else {
-        // Show dialog for block reason
+      } else {
         const dialogRef = this.dialog.open(BlockNgoDialogComponent, {
           width: '500px',
           data: { ngoName: ngo.name }
@@ -952,8 +928,7 @@ export class AdminDashboardComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result?.reload) {
-        // Reload NGOs list if profile update was approved/rejected
+      if (result?.reload) {
         this.loadNgos();
       }
     });

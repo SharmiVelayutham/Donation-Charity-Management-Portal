@@ -1,5 +1,4 @@
 <div class="create-request-container">
-  <!-- Header -->
   <header class="request-header">
     <button mat-icon-button class="back-button" (click)="goBack()">
       <mat-icon>arrow_back</mat-icon>
@@ -12,8 +11,6 @@
       <p class="page-subtitle">Specify what you need. Donors will provide their donation details when they contribute.</p>
     </div>
   </header>
-
-  <!-- NGO Info Header -->
   <mat-card class="ngo-info-card" *ngIf="ngoName">
     <mat-card-content>
       <div class="ngo-info-header">
@@ -34,8 +31,6 @@
       </div>
     </mat-card-content>
   </mat-card>
-
-  <!-- Main Form Card -->
   <mat-card class="form-card">
     <mat-card-header>
       <mat-card-title>
@@ -46,7 +41,6 @@
 
     <mat-card-content>
       <form class="donation-form" (ngSubmit)="onSubmit()">
-        <!-- Error/Success Messages -->
         <div *ngIf="errorMessage" class="error-message">
           <mat-icon>error</mat-icon>
           <span>{{ errorMessage }}</span>
@@ -55,8 +49,6 @@
           <mat-icon>check_circle</mat-icon>
           <span>{{ successMessage }}</span>
         </div>
-
-        <!-- Info Box -->
         <div class="info-box" *ngIf="donationType">
           <mat-icon>info</mat-icon>
           <div>
@@ -68,8 +60,6 @@
             </p>
           </div>
         </div>
-
-        <!-- Donation Type -->
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Donation Type *</mat-label>
           <mat-select [(ngModel)]="donationType" name="donationType" (selectionChange)="onDonationTypeChange()" required>
@@ -90,8 +80,6 @@
           <mat-icon matPrefix>category</mat-icon>
           <mat-hint>Select the type of donation you need</mat-hint>
         </mat-form-field>
-
-        <!-- Quantity/Amount Required (Dynamic Label) -->
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>{{ getQuantityOrAmountLabel() }} *</mat-label>
           <input matInput 
@@ -105,8 +93,6 @@
           <mat-icon matPrefix>numbers</mat-icon>
           <mat-hint>{{ getQuantityOrAmountHint() }}</mat-hint>
         </mat-form-field>
-
-        <!-- Account Details for FUNDS (Optional but recommended) -->
         <div *ngIf="showAccountDetails" class="account-details-section" style="margin-top: 24px; padding: 20px; background: #F5F5F5; border-radius: 8px; border: 1px solid #E0E0E0;">
           <h3 style="margin-top: 0; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
             <mat-icon>account_balance</mat-icon>
@@ -154,8 +140,6 @@
             </mat-form-field>
           </div>
         </div>
-
-        <!-- Description (Optional) -->
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Description (Optional)</mat-label>
           <textarea matInput 
@@ -166,8 +150,6 @@
           <mat-icon matPrefix>description</mat-icon>
           <mat-hint>Optional: Provide additional information about the donation need</mat-hint>
         </mat-form-field>
-
-        <!-- Image Upload (Multiple) -->
         <div class="image-upload-section">
           <mat-divider></mat-divider>
           <label class="upload-label">
@@ -201,8 +183,6 @@
           </button>
           <p class="upload-hint">Recommended: JPG or PNG, max 5MB per image. You can upload up to 5 images.</p>
         </div>
-
-        <!-- Form Actions -->
         <div class="form-actions">
           <button mat-raised-button 
                   color="primary" 

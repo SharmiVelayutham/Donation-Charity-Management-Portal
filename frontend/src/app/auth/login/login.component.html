@@ -33,8 +33,6 @@
       <div class="forgot">
         <a href="#">Forgot Password?</a>
       </div>
-
-      <!-- LOGIN BUTTON -->
       <button 
         type="button" 
         class="login-btn" 
@@ -42,8 +40,6 @@
         [disabled]="isLoading">
         {{ isLoading ? 'Logging in...' : 'Login' }}
       </button>
-      
-      <!-- TEXT LINK (NOT BUTTON) -->
       <p class="signup-text">
         New user?
         <a routerLink="/signup">Sign up</a>

@@ -1,0 +1,16 @@
+
+
+@media (max-width: 768px) {
+  .donor-dashboard-container {
+    min-height: auto;
+  }
+  
+  .section-title {
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .stats-section {
+    margin-top: 0;
+    margin-bottom: 1rem;
+  }
+}

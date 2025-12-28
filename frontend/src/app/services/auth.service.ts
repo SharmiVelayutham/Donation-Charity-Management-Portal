@@ -12,10 +12,6 @@ export class AuthService {
   public authStatus$: Observable<boolean> = this.authStatusSubject.asObservable();
 
   constructor(private router: Router) {}
-
-  /**
-   * Get current user role from localStorage
-   */
   getCurrentRole(): UserRole | null {
     const role = localStorage.getItem('userRole')?.toUpperCase();
     if (role === 'DONOR' || role === 'NGO' || role === 'ADMIN') {
@@ -23,83 +19,43 @@ export class AuthService {
     }
     return null;
   }
-
-  /**
-   * Check if user is authenticated
-   */
   isAuthenticated(): boolean {
     return !!localStorage.getItem('token');
   }
-
-  /**
-   * Check if user has specific role
-   */
   hasRole(role: UserRole): boolean {
     return this.getCurrentRole() === role;
   }
-
-  /**
-   * Get user data from localStorage
-   */
   getUser(): any {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   }
-
-  /**
-   * Store user data after login/registration
-   */
-  setUser(token: string, user: any): void {
-    // Ensure user object exists
+  setUser(token: string, user: any): void {
     if (!user) {
       console.error('setUser: user object is null or undefined');
       return;
-    }
-    
-    // Ensure role is set - check multiple possible locations
-    let role = user.role || (user as any).admin?.role || '';
-    
-    // If still no role, try to infer from the data structure
-    if (!role && user.id) {
-      // This might be admin data without role field
+    }
+    let role = user.role || (user as any).admin?.role || '';
+    if (!role && user.id) {
       console.warn('setUser: Role not found in user object, attempting to infer from context');
-    }
-    
-    // Normalize role to uppercase
-    const normalizedRole = role.toUpperCase();
-    
-    // Ensure role is valid
+    }
+    const normalizedRole = role.toUpperCase();
     if (!['DONOR', 'NGO', 'ADMIN'].includes(normalizedRole)) {
-      console.error('setUser: Invalid role:', normalizedRole, 'User object:', user);
-      // Don't proceed if role is invalid
+      console.error('setUser: Invalid role:', normalizedRole, 'User object:', user);
       return;
-    }
-    
-    // Ensure user object has role field
+    }
     if (!user.role) {
       user.role = normalizedRole;
-    }
-    
-    // Store in localStorage
+    }
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('userRole', normalizedRole);
-    
-    // Update auth status
-    this.authStatusSubject.next(true);
-    
-    // Debug: Verify what was stored
-    console.log('setUser: Stored data:', {
-      token: !!token,
-      user: user,
+    localStorage.setItem('userRole', normalizedRole);
+    this.authStatusSubject.next(true);
+    console.debug('setUser: Stored data keys:', {
+      tokenPresent: !!token,
       role: normalizedRole,
       localStorageRole: localStorage.getItem('userRole')
     });
   }
-
-  /**
-   * Clear user data (logout)
-   */
   logout(): void {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -107,14 +63,10 @@ export class AuthService {
     this.authStatusSubject.next(false);
     this.router.navigate(['/login']);
   }
-
-  /**
-   * Navigate to appropriate dashboard based on role
-   */
   navigateToDashboard(role?: UserRole | string): void {
     const userRole = (role || this.getCurrentRole() || '').toString().toUpperCase();
     
-    console.log('Navigating to dashboard for role:', userRole);
+    console.debug('Navigating to dashboard for role:', userRole);
     
     if (userRole === 'DONOR') {
       this.router.navigate(['/dashboard/donor']).catch(err => {
@@ -124,8 +76,7 @@ export class AuthService {
       this.router.navigate(['/dashboard/ngo']).catch(err => {
         console.error('Failed to navigate to NGO dashboard:', err);
       });
-    } else if (userRole === 'ADMIN') {
-      // Admin dashboard route if exists
+    } else if (userRole === 'ADMIN') {
       this.router.navigate(['/admin/dashboard']).catch(() => {
         this.router.navigate(['/login']);
       });

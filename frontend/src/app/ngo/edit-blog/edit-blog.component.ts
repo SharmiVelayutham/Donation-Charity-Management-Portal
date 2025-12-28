@@ -61,23 +61,17 @@ export class EditBlogComponent implements OnInit {
     try {
       const response = await lastValueFrom(this.apiService.getBlogById(this.blogId));
       if (response.success && response.data) {
-        const blog = response.data.blog;
-        
-        // Check if user is the author
+        const blog = response.data.blog;
         const user = this.authService.getUser();
         if (!user || parseInt(user.id) !== blog.author_ngo_id) {
           alert('You do not have permission to edit this blog');
           this.router.navigate(['/blog', this.blogId]);
           return;
-        }
-
-        // Populate form
+        }
         this.blogForm.title = blog.title;
         this.blogForm.content = blog.content;
         this.blogForm.category = blog.category;
-        this.existingImageUrl = blog.image_url;
-        
-        // Set preview if image exists
+        this.existingImageUrl = blog.image_url;
         if (blog.image_url) {
           const baseUrl = environment.apiUrl.replace('/api', '');
           this.imagePreview = `${baseUrl}${blog.image_url}`;
@@ -96,9 +90,7 @@ export class EditBlogComponent implements OnInit {
   onImageSelect(event: any) {
     const file = event.target.files[0];
     if (file) {
-      this.blogForm.image = file;
-      
-      // Create preview
+      this.blogForm.image = file;
       const reader = new FileReader();
       reader.onload = (e: any) => {
         this.imagePreview = e.target.result;
@@ -118,8 +110,7 @@ export class EditBlogComponent implements OnInit {
     this.router.navigate(['/blog', this.blogId]);
   }
 
-  async onSubmit() {
-    // Validation
+  async onSubmit() {
     if (!this.blogForm.title || !this.blogForm.content || !this.blogForm.category) {
       this.errorMessage = 'Please fill in all required fields';
       return;
@@ -129,8 +120,7 @@ export class EditBlogComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    try {
-      // Create FormData
+    try {
       const formData = new FormData();
       formData.append('title', this.blogForm.title);
       formData.append('content', this.blogForm.content);
