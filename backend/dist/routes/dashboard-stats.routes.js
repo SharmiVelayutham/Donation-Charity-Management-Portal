@@ -5,12 +5,6 @@ const dashboard_stats_controller_1 = require("../controllers/dashboard-stats.con
 const auth_middleware_1 = require("../middleware/auth.middleware");
 const role_middleware_1 = require("../middleware/role.middleware");
 const router = (0, express_1.Router)();
-/**
- * Dashboard Statistics Routes
- * Real-time statistics for NGO and Donor dashboards
- */
-// NGO dashboard stats (requires NGO authentication)
 router.get('/ngo/dashboard-stats', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['NGO']), dashboard_stats_controller_1.getNgoDashboardStats);
-// Donor dashboard stats (requires Donor authentication)
 router.get('/donor/dashboard-stats', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['DONOR']), dashboard_stats_controller_1.getDonorDashboardStats);
 exports.default = router;

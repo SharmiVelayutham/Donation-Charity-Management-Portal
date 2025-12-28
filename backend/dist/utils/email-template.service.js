@@ -5,9 +5,6 @@ exports.replaceTemplatePlaceholders = replaceTemplatePlaceholders;
 exports.getSupportEmail = getSupportEmail;
 const mysql_1 = require("../config/mysql");
 const env_1 = require("../config/env");
-/**
- * Default NGO unblock email template
- */
 function getDefaultNgoUnblockTemplate() {
     return {
         subject: 'NGO Account Unblocked - Donation & Charity Portal',
@@ -81,9 +78,6 @@ function getDefaultNgoUnblockTemplate() {
 </html>`,
     };
 }
-/**
- * Get email template from database or return default
- */
 async function getEmailTemplate(templateType) {
     try {
         console.log(`[Email Template] Fetching template from database: ${templateType}`);
@@ -103,20 +97,311 @@ async function getEmailTemplate(templateType) {
         console.error('[Email Template] Error fetching email template from database:', error.message);
         console.error('[Email Template] Stack:', error.stack);
     }
-    // Fallback to default
-    if (templateType === 'NGO_UNBLOCK') {
-        console.log('[Email Template] Using default NGO_UNBLOCK template');
-        return getDefaultNgoUnblockTemplate();
-    }
-    if (templateType === 'NGO_BLOCK') {
-        console.log('[Email Template] Using default NGO_BLOCK template');
-        return getDefaultNgoBlockTemplate();
+    const defaultTemplates = {
+        'NGO_UNBLOCK': getDefaultNgoUnblockTemplate,
+        'NGO_BLOCK': getDefaultNgoBlockTemplate,
+        'OTP_REGISTRATION': getDefaultOTPRegistrationTemplate,
+        'OTP_PASSWORD_RESET': getDefaultOTPPasswordResetTemplate,
+        'OTP_EMAIL_CHANGE': getDefaultOTPEmailChangeTemplate,
+        'OTP_ADMIN_REGISTRATION': getDefaultOTPAdminRegistrationTemplate,
+        'NGO_DONATION_RECEIVED': getDefaultNgoDonationReceivedTemplate,
+        'DONOR_DONATION_CONFIRMATION': getDefaultDonorDonationConfirmationTemplate,
+    };
+    if (defaultTemplates[templateType]) {
+        console.log(`[Email Template] Using default ${templateType} template`);
+        return defaultTemplates[templateType]();
     }
     throw new Error(`No template found for type: ${templateType}`);
 }
-/**
- * Default NGO block email template
- */
+function getDefaultOTPRegistrationTemplate() {
+    return {
+        subject: 'Registration - OTP Verification Code',
+        bodyHtml: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTP Verification</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Donation & Charity Portal</h1>
+  </div>
+  
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+    <h2 style="color: #0f172a; margin-top: 0;">Registration - OTP Verification</h2>
+    
+    <p style="font-size: 16px; color: #64748b;">Hello,</p>
+    
+    <p style="font-size: 16px; color: #0f172a;">You have requested to register your account. Please use the following OTP code to verify your email address:</p>
+    
+    <div style="background: white; border: 2px dashed #1976d2; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
+      <div style="font-size: 36px; font-weight: bold; color: #1976d2; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+        {{OTP_CODE}}
+      </div>
+    </div>
+    
+    <p style="font-size: 14px; color: #64748b; text-align: center;">
+      This code will expire in <strong>10 minutes</strong>. Please do not share this code with anyone.
+    </p>
+    
+    <p style="font-size: 16px; color: #0f172a; margin-top: 30px;">
+      If you did not request this code, please ignore this email or contact support if you have concerns.
+    </p>
+    
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+    
+    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+      This is an automated email. Please do not reply to this message.<br>
+      © ${new Date().getFullYear()} Donation & Charity Management Portal
+    </p>
+  </div>
+</body>
+</html>`,
+    };
+}
+function getDefaultOTPPasswordResetTemplate() {
+    return {
+        subject: 'Password Reset - OTP Verification Code',
+        bodyHtml: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTP Verification</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Donation & Charity Portal</h1>
+  </div>
+  
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+    <h2 style="color: #0f172a; margin-top: 0;">Password Reset - OTP Verification</h2>
+    
+    <p style="font-size: 16px; color: #64748b;">Hello,</p>
+    
+    <p style="font-size: 16px; color: #0f172a;">You have requested to reset your password. Please use the following OTP code to verify your email address:</p>
+    
+    <div style="background: white; border: 2px dashed #1976d2; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
+      <div style="font-size: 36px; font-weight: bold; color: #1976d2; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+        {{OTP_CODE}}
+      </div>
+    </div>
+    
+    <p style="font-size: 14px; color: #64748b; text-align: center;">
+      This code will expire in <strong>10 minutes</strong>. Please do not share this code with anyone.
+    </p>
+    
+    <p style="font-size: 16px; color: #0f172a; margin-top: 30px;">
+      If you did not request a password reset, please ignore this email or contact support immediately.
+    </p>
+    
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+    
+    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+      This is an automated email. Please do not reply to this message.<br>
+      © ${new Date().getFullYear()} Donation & Charity Management Portal
+    </p>
+  </div>
+</body>
+</html>`,
+    };
+}
+function getDefaultOTPEmailChangeTemplate() {
+    return {
+        subject: 'Email Change - OTP Verification Code',
+        bodyHtml: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTP Verification</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Donation & Charity Portal</h1>
+  </div>
+  
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+    <h2 style="color: #0f172a; margin-top: 0;">Email Change - OTP Verification</h2>
+    
+    <p style="font-size: 16px; color: #64748b;">Hello,</p>
+    
+    <p style="font-size: 16px; color: #0f172a;">You have requested to change your email address. Please use the following OTP code to verify your new email address:</p>
+    
+    <div style="background: white; border: 2px dashed #1976d2; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
+      <div style="font-size: 36px; font-weight: bold; color: #1976d2; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+        {{OTP_CODE}}
+      </div>
+    </div>
+    
+    <p style="font-size: 14px; color: #64748b; text-align: center;">
+      This code will expire in <strong>10 minutes</strong>. Please do not share this code with anyone.
+    </p>
+    
+    <p style="font-size: 16px; color: #0f172a; margin-top: 30px;">
+      If you did not request an email change, please ignore this email or contact support immediately.
+    </p>
+    
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+    
+    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+      This is an automated email. Please do not reply to this message.<br>
+      © ${new Date().getFullYear()} Donation & Charity Management Portal
+    </p>
+  </div>
+</body>
+</html>`,
+    };
+}
+function getDefaultOTPAdminRegistrationTemplate() {
+    return {
+        subject: 'Admin Registration - OTP Verification Code',
+        bodyHtml: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTP Verification</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Donation & Charity Portal</h1>
+  </div>
+  
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+    <h2 style="color: #0f172a; margin-top: 0;">Admin Registration - OTP Verification</h2>
+    
+    <p style="font-size: 16px; color: #64748b;">Hello,</p>
+    
+    <p style="font-size: 16px; color: #0f172a;">You have requested to register as an Admin. Please use the following OTP code to verify your email address:</p>
+    
+    <div style="background: white; border: 2px dashed #1976d2; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
+      <div style="font-size: 36px; font-weight: bold; color: #1976d2; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+        {{OTP_CODE}}
+      </div>
+    </div>
+    
+    <p style="font-size: 14px; color: #64748b; text-align: center;">
+      This code will expire in <strong>10 minutes</strong>. Please do not share this code with anyone.
+    </p>
+    
+    <p style="font-size: 16px; color: #0f172a; margin-top: 30px;">
+      If you did not request this code, please ignore this email or contact support if you have concerns.
+    </p>
+    
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+    
+    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+      This is an automated email. Please do not reply to this message.<br>
+      © ${new Date().getFullYear()} Donation & Charity Management Portal
+    </p>
+  </div>
+</body>
+</html>`,
+    };
+}
+function getDefaultNgoDonationReceivedTemplate() {
+    return {
+        subject: 'New Donation Received from {{DONOR_NAME}}',
+        bodyHtml: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Donation Received</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">💰 New Donation Received</h1>
+  </div>
+  
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+    <p style="font-size: 16px; color: #0f172a;">Dear {{NGO_NAME}},</p>
+    
+    <p style="font-size: 16px; color: #0f172a;">
+      Great news! You have received a new donation:
+    </p>
+    
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #0f172a; margin-top: 0;">Donation Details:</h3>
+      <p style="margin: 10px 0;"><strong>Donor:</strong> {{DONOR_NAME}} ({{DONOR_EMAIL}})</p>
+      <p style="margin: 10px 0;"><strong>Type:</strong> {{DONATION_TYPE}}</p>
+      <p style="margin: 10px 0;"><strong>Amount/Quantity:</strong> {{AMOUNT_OR_QUANTITY}}</p>
+    </div>
+    
+    <p style="font-size: 16px; color: #0f172a;">
+      Please check your dashboard for more details and to manage this donation.
+    </p>
+    
+    <p style="font-size: 16px; color: #0f172a; margin-top: 30px;">
+      Thank you for using our platform!
+    </p>
+    
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+    
+    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+      This is an automated email. Please do not reply to this message.<br>
+      © ${new Date().getFullYear()} Donation & Charity Management Portal
+    </p>
+  </div>
+</body>
+</html>`,
+    };
+}
+function getDefaultDonorDonationConfirmationTemplate() {
+    return {
+        subject: 'Thank You for Your Donation to {{NGO_NAME}}',
+        bodyHtml: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thank You for Your Donation</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">🙏 Thank You for Your Generous Donation!</h1>
+  </div>
+  
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e2e8f0;">
+    <p style="font-size: 16px; color: #0f172a;">Dear {{DONOR_NAME}},</p>
+    
+    <p style="font-size: 16px; color: #0f172a;">
+      We are grateful for your contribution! Your donation has been received and is currently under review by the NGO team.
+    </p>
+    
+    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #0f172a; margin-top: 0;">Contribution Details:</h3>
+      <p style="margin: 10px 0;"><strong>NGO:</strong> {{NGO_NAME}}</p>
+      <p style="margin: 10px 0;"><strong>Type:</strong> {{DONATION_TYPE}}</p>
+      <p style="margin: 10px 0;"><strong>Amount/Quantity:</strong> {{AMOUNT_OR_QUANTITY}}</p>
+      <p style="margin: 10px 0;"><strong>Status:</strong> <span style="color: #f59e0b; font-weight: bold;">UNDER REVIEW</span></p>
+    </div>
+    
+    <p style="font-size: 16px; color: #0f172a;">
+      Our team will review your contribution and you will receive an update via email once the review is complete.
+    </p>
+    
+    <p style="font-size: 16px; color: #0f172a; margin-top: 30px;">
+      Your donation will make a significant impact. Thank you for your generosity!
+    </p>
+    
+    <p style="font-size: 16px; color: #0f172a;">
+      You can view your donation history in your dashboard.
+    </p>
+    
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+    
+    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+      This is an automated email. Please do not reply to this message.<br>
+      © ${new Date().getFullYear()} Donation & Charity Management Portal
+    </p>
+  </div>
+</body>
+</html>`,
+    };
+}
 function getDefaultNgoBlockTemplate() {
     return {
         subject: 'NGO Account Blocked - Donation & Charity Portal',
@@ -188,13 +473,9 @@ function getDefaultNgoBlockTemplate() {
 </html>`,
     };
 }
-/**
- * Replace placeholders in email template
- */
 function replaceTemplatePlaceholders(template, placeholders) {
     let result = template;
     for (const [key, value] of Object.entries(placeholders)) {
-        // Escape special regex characters and match {{KEY}} pattern
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g');
         result = result.replace(regex, value);
@@ -202,9 +483,6 @@ function replaceTemplatePlaceholders(template, placeholders) {
     }
     return result;
 }
-/**
- * Get support email from environment or use SMTP from address
- */
 function getSupportEmail() {
     return env_1.env.smtpFrom || env_1.env.smtpUser || 'support@donationcharityportal.com';
 }

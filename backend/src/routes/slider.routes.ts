@@ -10,14 +10,8 @@ import {
   upload
 } from '../controllers/slider.controller';
 
-const router = Router();
-
-console.log('🔧 Setting up slider routes...');
-
-// Public route - get active sliders
-router.get('/', getAllSliders);
-
-// Admin routes
+const router = Router();
+router.get('/', getAllSliders);
 router.get(
   '/all',
   authenticate,
@@ -47,8 +41,6 @@ router.delete(
   requireRole(['ADMIN']),
   deleteSlider
 );
-
-console.log('✅ Slider routes configured successfully');
 
 export default router;
 

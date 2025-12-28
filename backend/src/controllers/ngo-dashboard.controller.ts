@@ -5,16 +5,9 @@ import { query, queryOne, insert, update } from '../config/mysql';
 import fs from 'fs';
 import path from 'path';
 
-const isFutureDate = (value: string | Date) => new Date(value).getTime() > Date.now();
-
-// Valid donation categories for NGO Admin Dashboard
+const isFutureDate = (value: string | Date) => new Date(value).getTime() > Date.now();
 const VALID_DONATION_CATEGORIES = ['CLOTHES', 'FOOD', 'MONEY'] as const;
 type DonationCategory = typeof VALID_DONATION_CATEGORIES[number];
-
-/**
- * Create donation request (NGO Admin Dashboard)
- * POST /api/ngo/donations
- */
 export const createNgoDonation = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = parseInt(req.user!.id);
@@ -25,47 +18,36 @@ export const createNgoDonation = async (req: AuthRequest, res: Response) => {
       quantityOrAmount,
       pickupDateTime,
       timezone,
-      priority,
-      // Payment details for MONEY donations
+      priority,
       qrCodeImage,
       bankAccountNumber,
       bankName,
       ifscCode,
       accountHolderName,
-    } = req.body;
-
-    // Validation: Required fields
+    } = req.body;
     if (!donationCategory || !purpose || !description || !quantityOrAmount) {
       return res.status(400).json({
         success: false,
         message: 'Missing required fields: donationCategory, purpose, description, quantityOrAmount',
       });
-    }
-
-    // Validate donation category
+    }
     const normalizedCategory = (donationCategory as string).toUpperCase() as DonationCategory;
     if (!VALID_DONATION_CATEGORIES.includes(normalizedCategory)) {
       return res.status(400).json({
         success: false,
         message: `Invalid donation category. Valid categories: ${VALID_DONATION_CATEGORIES.join(', ')}`,
       });
-    }
-
-    // Validate purpose and description
+    }
     if (typeof purpose !== 'string' || purpose.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'Purpose cannot be empty' });
     }
     if (typeof description !== 'string' || description.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'Description cannot be empty' });
-    }
-
-    // Validate quantity/amount
+    }
     const quantity = Number(quantityOrAmount);
     if (Number.isNaN(quantity) || quantity <= 0) {
       return res.status(400).json({ success: false, message: 'Quantity/Amount must be greater than 0' });
-    }
-
-    // Get NGO profile to use registered address
+    }
     const ngoProfile = await queryOne<any>(
       'SELECT address, city, state, pincode FROM users WHERE id = ?',
       [ngoId]
@@ -73,9 +55,7 @@ export const createNgoDonation = async (req: AuthRequest, res: Response) => {
 
     if (!ngoProfile) {
       return res.status(404).json({ success: false, message: 'NGO profile not found' });
-    }
-
-    // Build address from NGO profile
+    }
     const ngoAddress = [
       ngoProfile.address,
       ngoProfile.city,
@@ -88,9 +68,7 @@ export const createNgoDonation = async (req: AuthRequest, res: Response) => {
         success: false,
         message: 'NGO address not found. Please complete your profile with address details first.',
       });
-    }
-
-    // For MONEY donations, validate payment details
+    }
     if (normalizedCategory === 'MONEY') {
       if (!qrCodeImage || !bankAccountNumber || !bankName || !ifscCode || !accountHolderName) {
         return res.status(400).json({
@@ -99,17 +77,14 @@ export const createNgoDonation = async (req: AuthRequest, res: Response) => {
             'Missing payment details for MONEY donation: qrCodeImage, bankAccountNumber, bankName, ifscCode, accountHolderName are required',
         });
       }
-    } else {
-      // For FOOD/CLOTHES donations, validate pickup date/time
+    } else {
       if (!pickupDateTime) {
         return res.status(400).json({
           success: false,
           message: 'Missing required field for FOOD/CLOTHES donation: pickupDateTime',
         });
       }
-    }
-
-    // Validate pickup date/time (for FOOD/CLOTHES only)
+    }
     let pickupDate: Date | null = null;
     if (normalizedCategory !== 'MONEY') {
       pickupDate = new Date(pickupDateTime);
@@ -119,13 +94,9 @@ export const createNgoDonation = async (req: AuthRequest, res: Response) => {
       if (!isFutureDate(pickupDate)) {
         return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
       }
-    }
-
-    // Handle image uploads
+    }
     const files = (req.files as Express.Multer.File[]) || [];
-    const imagePaths = files.map((file) => file.path);
-
-    // Insert donation into MySQL
+    const imagePaths = files.map((file) => file.path);
     const donationId = await insert(
       `INSERT INTO donations (
         ngo_id, donation_type, donation_category, purpose, description,
@@ -145,9 +116,7 @@ export const createNgoDonation = async (req: AuthRequest, res: Response) => {
         'ACTIVE',
         priority || 'NORMAL',
       ]
-    );
-
-    // Insert images if any
+    );
     if (imagePaths.length > 0) {
       for (let i = 0; i < imagePaths.length; i++) {
         await insert(
@@ -155,9 +124,7 @@ export const createNgoDonation = async (req: AuthRequest, res: Response) => {
           [donationId, imagePaths[i], i]
         );
       }
-    }
-
-    // Insert payment details for MONEY donations
+    }
     if (normalizedCategory === 'MONEY') {
       await insert(
         `INSERT INTO donation_payment_details (
@@ -172,9 +139,7 @@ export const createNgoDonation = async (req: AuthRequest, res: Response) => {
           accountHolderName.trim(),
         ]
       );
-    }
-
-    // Fetch created donation with NGO details
+    }
     const donation = await queryOne<any>(
       `SELECT d.*, 
         u.name as ngo_name, u.email as ngo_email, u.contact_info as ngo_contact_info,
@@ -183,9 +148,7 @@ export const createNgoDonation = async (req: AuthRequest, res: Response) => {
        INNER JOIN users u ON d.ngo_id = u.id
        WHERE d.id = ?`,
       [donationId]
-    );
-
-    // Get images
+    );
     const images = await query<any>(
       'SELECT image_path FROM donation_images WHERE donation_id = ? ORDER BY image_order',
       [donationId]
@@ -205,11 +168,6 @@ export const createNgoDonation = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Get all donations created by logged-in NGO
- * GET /api/ngo/donations
- */
 export const getNgoDonations = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = parseInt(req.user!.id);
@@ -246,9 +204,7 @@ export const getNgoDonations = async (req: AuthRequest, res: Response) => {
 
     const donations = await query<any>(sql, params);
 
-    console.log(`[NGO Donations] 📊 Found ${donations.length} donations in database`);
-
-    // Get images for each donation
+    console.log(`[NGO Donations] 📊 Found ${donations.length} donations in database`);
     const donationsWithImages = await Promise.all(
       donations.map(async (donation: any) => {
         const images = await query<any>(
@@ -273,11 +229,6 @@ export const getNgoDonations = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Get donation details (only own donation)
- * GET /api/ngo/donations/:id
- */
 export const getNgoDonationById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -302,15 +253,11 @@ export const getNgoDonationById = async (req: AuthRequest, res: Response) => {
         success: false,
         message: 'Donation not found or you do not have permission to access it',
       });
-    }
-
-    // Get images
+    }
     const images = await query<any>(
       'SELECT image_path FROM donation_images WHERE donation_id = ? ORDER BY image_order',
       [donationId]
-    );
-
-    // Get contribution counts
+    );
     const contributionCount = await queryOne<{ count: number }>(
       'SELECT COUNT(*) as count FROM contributions WHERE donation_id = ?',
       [donationId]
@@ -335,16 +282,9 @@ export const getNgoDonationById = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Get NGO donation request contributions with donor details
- * GET /api/ngo/dashboard/donations/details
- */
 export const getNgoDonationDetails = async (req: AuthRequest, res: Response) => {
   try {
-    const ngoId = parseInt(req.user!.id);
-
-    // Get all donation request contributions for this NGO's requests
+    const ngoId = parseInt(req.user!.id);
     const contributions = await query<any>(`
       SELECT 
         drc.id as contribution_id,
@@ -367,9 +307,7 @@ export const getNgoDonationDetails = async (req: AuthRequest, res: Response) => 
       INNER JOIN donors d ON drc.donor_id = d.id
       WHERE dr.ngo_id = ?
       ORDER BY drc.created_at DESC
-    `, [ngoId]);
-
-    // Format the response
+    `, [ngoId]);
     const formattedContributions = contributions.map((cont: any) => ({
       contributionId: cont.contribution_id,
       requestId: cont.request_id,
@@ -391,9 +329,7 @@ export const getNgoDonationDetails = async (req: AuthRequest, res: Response) => 
         id: cont.request_id,
         description: cont.request_description
       }
-    }));
-
-    // Set cache-control headers to prevent caching
+    }));
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -407,11 +343,6 @@ export const getNgoDonationDetails = async (req: AuthRequest, res: Response) => 
     });
   }
 };
-
-/**
- * Update donation request contribution status
- * PUT /api/ngo/dashboard/donations/:id/status
- */
 export const updateDonationRequestContributionStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -435,9 +366,7 @@ export const updateDonationRequestContributionStatus = async (req: AuthRequest, 
       });
     }
 
-    console.log('[updateContributionStatus] Parsed - NGO ID:', ngoId, 'Contribution ID:', contributionId, 'Status:', status);
-
-    // Verify the contribution belongs to this NGO's donation request
+    console.log('[updateContributionStatus] Parsed - NGO ID:', ngoId, 'Contribution ID:', contributionId, 'Status:', status);
     const contribution = await queryOne<any>(`
       SELECT drc.*, dr.ngo_id
       FROM donation_request_contributions drc
@@ -450,17 +379,13 @@ export const updateDonationRequestContributionStatus = async (req: AuthRequest, 
         success: false,
         message: 'Contribution not found or you do not have permission to update it'
       });
-    }
-
-    // Update status
+    }
     await update(
       'UPDATE donation_request_contributions SET status = ? WHERE id = ?',
       [status, contributionId]
     );
 
-    console.log('[NGO Donations] Updated contribution', contributionId, 'status to', status);
-
-    // Get updated contribution with all details
+    console.log('[NGO Donations] Updated contribution', contributionId, 'status to', status);
     const updated = await queryOne<any>(`
       SELECT 
         drc.id as contribution_id,
@@ -497,11 +422,6 @@ export const updateDonationRequestContributionStatus = async (req: AuthRequest, 
     });
   }
 };
-
-/**
- * Update donation request
- * PUT /api/ngo/donations/:id
- */
 export const updateNgoDonation = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -510,9 +430,7 @@ export const updateNgoDonation = async (req: AuthRequest, res: Response) => {
 
     if (isNaN(donationId)) {
       return res.status(400).json({ success: false, message: 'Invalid donation id' });
-    }
-
-    // Verify ownership
+    }
     const existingDonation = await queryOne<any>(
       'SELECT status FROM donations WHERE id = ? AND ngo_id = ?',
       [donationId, ngoId]
@@ -523,9 +441,7 @@ export const updateNgoDonation = async (req: AuthRequest, res: Response) => {
         success: false,
         message: 'Donation not found or you do not have permission to update it',
       });
-    }
-
-    // Cannot update cancelled or completed donations
+    }
     if (existingDonation.status === 'CANCELLED' || existingDonation.status === 'COMPLETED') {
       return res.status(400).json({
         success: false,
@@ -545,9 +461,7 @@ export const updateNgoDonation = async (req: AuthRequest, res: Response) => {
     } = req.body;
 
     const updates: string[] = [];
-    const params: any[] = [];
-
-    // Update donation category
+    const params: any[] = [];
     if (donationCategory) {
       const normalizedCategory = (donationCategory as string).toUpperCase();
       if (!VALID_DONATION_CATEGORIES.includes(normalizedCategory as DonationCategory)) {
@@ -558,27 +472,21 @@ export const updateNgoDonation = async (req: AuthRequest, res: Response) => {
       }
       updates.push('donation_category = ?', 'donation_type = ?');
       params.push(normalizedCategory, normalizedCategory);
-    }
-
-    // Update purpose
+    }
     if (purpose !== undefined) {
       if (typeof purpose !== 'string' || purpose.trim().length === 0) {
         return res.status(400).json({ success: false, message: 'Purpose cannot be empty' });
       }
       updates.push('purpose = ?');
       params.push(purpose.trim());
-    }
-
-    // Update description
+    }
     if (description !== undefined) {
       if (typeof description !== 'string' || description.trim().length === 0) {
         return res.status(400).json({ success: false, message: 'Description cannot be empty' });
       }
       updates.push('description = ?');
       params.push(description.trim());
-    }
-
-    // Update quantity/amount
+    }
     if (quantityOrAmount !== undefined) {
       const quantity = Number(quantityOrAmount);
       if (Number.isNaN(quantity) || quantity <= 0) {
@@ -586,9 +494,7 @@ export const updateNgoDonation = async (req: AuthRequest, res: Response) => {
       }
       updates.push('quantity_or_amount = ?');
       params.push(quantity);
-    }
-
-    // Update pickup date/time
+    }
     if (pickupDateTime !== undefined) {
       const pickupDate = new Date(pickupDateTime);
       if (isNaN(pickupDate.getTime())) {
@@ -599,30 +505,21 @@ export const updateNgoDonation = async (req: AuthRequest, res: Response) => {
       }
       updates.push('pickup_date_time = ?');
       params.push(pickupDate);
-    }
-
-    // Update timezone
+    }
     if (timezone !== undefined) {
       updates.push('timezone = ?');
       params.push(timezone || null);
-    }
-
-    // Update status
+    }
     if (status && ['PENDING', 'CONFIRMED', 'COMPLETED'].includes(status)) {
       updates.push('status = ?');
       params.push(status);
-    }
-
-    // Update priority
+    }
     if (priority && ['NORMAL', 'URGENT'].includes(priority)) {
       updates.push('priority = ?');
       params.push(priority);
-    }
-
-    // Handle image updates
+    }
     const files = (req.files as Express.Multer.File[]) || [];
-    if (files.length > 0) {
-      // Delete old images
+    if (files.length > 0) {
       const oldImages = await query<any>(
         'SELECT image_path FROM donation_images WHERE donation_id = ?',
         [donationId]
@@ -637,27 +534,21 @@ export const updateNgoDonation = async (req: AuthRequest, res: Response) => {
           }
         }
       });
-      await query('DELETE FROM donation_images WHERE donation_id = ?', [donationId]);
-
-      // Insert new images
+      await query('DELETE FROM donation_images WHERE donation_id = ?', [donationId]);
       for (let i = 0; i < files.length; i++) {
         await insert(
           'INSERT INTO donation_images (donation_id, image_path, image_order) VALUES (?, ?, ?)',
           [donationId, files[i].path, i]
         );
       }
-    }
-
-    // Update donation if there are updates
+    }
     if (updates.length > 0) {
       params.push(donationId);
       await update(
         `UPDATE donations SET ${updates.join(', ')} WHERE id = ?`,
         params
       );
-    }
-
-    // Fetch updated donation
+    }
     const updated = await queryOne<any>(
       `SELECT d.*, 
         u.name as ngo_name, u.email as ngo_email, u.contact_info as ngo_contact_info
@@ -665,9 +556,7 @@ export const updateNgoDonation = async (req: AuthRequest, res: Response) => {
        INNER JOIN users u ON d.ngo_id = u.id
        WHERE d.id = ?`,
       [donationId]
-    );
-
-    // Get images
+    );
     const images = await query<any>(
       'SELECT image_path FROM donation_images WHERE donation_id = ? ORDER BY image_order',
       [donationId]
@@ -686,11 +575,6 @@ export const updateNgoDonation = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Update donation priority only
- * PATCH /api/ngo/donations/:id/priority
- */
 export const updateNgoDonationPriority = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -707,9 +591,7 @@ export const updateNgoDonationPriority = async (req: AuthRequest, res: Response)
         success: false,
         message: 'Priority is required and must be either NORMAL or URGENT',
       });
-    }
-
-    // Verify ownership
+    }
     const donation = await queryOne<any>(
       'SELECT id FROM donations WHERE id = ? AND ngo_id = ?',
       [donationId, ngoId]
@@ -741,11 +623,6 @@ export const updateNgoDonationPriority = async (req: AuthRequest, res: Response)
     });
   }
 };
-
-/**
- * Cancel donation request
- * DELETE /api/ngo/donations/:id
- */
 export const cancelNgoDonation = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -754,9 +631,7 @@ export const cancelNgoDonation = async (req: AuthRequest, res: Response) => {
 
     if (isNaN(donationId)) {
       return res.status(400).json({ success: false, message: 'Invalid donation id' });
-    }
-
-    // Verify ownership
+    }
     const donation = await queryOne<any>(
       'SELECT status FROM donations WHERE id = ? AND ngo_id = ?',
       [donationId, ngoId]
@@ -767,9 +642,7 @@ export const cancelNgoDonation = async (req: AuthRequest, res: Response) => {
         success: false,
         message: 'Donation not found or you do not have permission to cancel it',
       });
-    }
-
-    // Cannot cancel already completed donations
+    }
     if (donation.status === 'COMPLETED') {
       return res.status(400).json({ success: false, message: 'Cannot cancel completed donation' });
     }

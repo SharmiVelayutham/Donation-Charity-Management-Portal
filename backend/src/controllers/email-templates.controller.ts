@@ -1,9 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
-import { query, queryOne, update, insert } from '../config/mysql';
-
-// Supported template types
+import { query, queryOne, update, insert } from '../config/mysql';
 const SUPPORTED_TEMPLATE_TYPES = [
   'OTP_REGISTRATION',
   'OTP_PASSWORD_RESET',
@@ -16,10 +14,6 @@ const SUPPORTED_TEMPLATE_TYPES = [
 ] as const;
 
 type TemplateType = typeof SUPPORTED_TEMPLATE_TYPES[number];
-
-/**
- * Get default template by type
- */
 function getDefaultTemplate(templateType: TemplateType): { subject: string; bodyHtml: string } {
   switch (templateType) {
     case 'NGO_UNBLOCK':
@@ -42,10 +36,6 @@ function getDefaultTemplate(templateType: TemplateType): { subject: string; body
       throw new Error(`No default template for type: ${templateType}`);
   }
 }
-
-/**
- * Get default NGO unblock email template
- */
 function getDefaultNgoUnblockTemplate() {
   return {
     subject: 'NGO Account Unblocked - Donation & Charity Portal',
@@ -115,11 +105,6 @@ function getDefaultNgoUnblockTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get email template by type
- * GET /api/admin/email-templates/:templateType
- */
 export const getEmailTemplate = async (req: AuthRequest, res: Response) => {
   try {
     const { templateType } = req.params;
@@ -129,15 +114,11 @@ export const getEmailTemplate = async (req: AuthRequest, res: Response) => {
         success: false,
         message: `Invalid template type. Supported types: ${SUPPORTED_TEMPLATE_TYPES.join(', ')}`,
       });
-    }
-
-    // Try to get from database
+    }
     const template = await queryOne<any>(
       'SELECT id, template_type, subject, body_html, is_default, updated_at FROM email_templates WHERE template_type = ?',
       [templateType]
-    );
-
-    // If not found in DB, return default
+    );
     if (!template) {
       const defaultTemplate = getDefaultTemplate(templateType as TemplateType);
       return sendSuccess(
@@ -171,11 +152,6 @@ export const getEmailTemplate = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Update email template
- * PUT /api/admin/email-templates/:templateType
- */
 export const updateEmailTemplate = async (req: AuthRequest, res: Response) => {
   try {
     const { templateType } = req.params;
@@ -193,22 +169,18 @@ export const updateEmailTemplate = async (req: AuthRequest, res: Response) => {
         success: false,
         message: 'Subject and bodyHtml are required',
       });
-    }
-
-    // Check if template exists
+    }
     const existing = await queryOne<any>(
       'SELECT id FROM email_templates WHERE template_type = ?',
       [templateType]
     );
 
-    if (existing) {
-      // Update existing
+    if (existing) {
       await update(
         'UPDATE email_templates SET subject = ?, body_html = ?, is_default = FALSE, updated_at = CURRENT_TIMESTAMP WHERE template_type = ?',
         [subject.trim(), bodyHtml.trim(), templateType]
       );
-    } else {
-      // Insert new
+    } else {
       await insert(
         'INSERT INTO email_templates (template_type, subject, body_html, is_default) VALUES (?, ?, ?, FALSE)',
         [templateType, subject.trim(), bodyHtml.trim()]
@@ -239,11 +211,6 @@ export const updateEmailTemplate = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Restore default template
- * POST /api/admin/email-templates/:templateType/restore-default
- */
 export const restoreDefaultTemplate = async (req: AuthRequest, res: Response) => {
   try {
     const { templateType } = req.params;
@@ -255,22 +222,18 @@ export const restoreDefaultTemplate = async (req: AuthRequest, res: Response) =>
       });
     }
 
-    const defaultTemplate = getDefaultTemplate(templateType as TemplateType);
-
-    // Check if template exists
+    const defaultTemplate = getDefaultTemplate(templateType as TemplateType);
     const existing = await queryOne<any>(
       'SELECT id FROM email_templates WHERE template_type = ?',
       [templateType]
     );
 
-    if (existing) {
-      // Update to default
+    if (existing) {
       await update(
         'UPDATE email_templates SET subject = ?, body_html = ?, is_default = TRUE, updated_at = CURRENT_TIMESTAMP WHERE template_type = ?',
         [defaultTemplate.subject, defaultTemplate.bodyHtml, templateType]
       );
-    } else {
-      // Insert default
+    } else {
       await insert(
         'INSERT INTO email_templates (template_type, subject, body_html, is_default) VALUES (?, ?, ?, TRUE)',
         [templateType, defaultTemplate.subject, defaultTemplate.bodyHtml]
@@ -295,10 +258,6 @@ export const restoreDefaultTemplate = async (req: AuthRequest, res: Response) =>
     });
   }
 };
-
-/**
- * Get default NGO block email template
- */
 function getDefaultNgoBlockTemplate() {
   return {
     subject: 'NGO Account Blocked - Donation & Charity Portal',
@@ -370,10 +329,6 @@ function getDefaultNgoBlockTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get default OTP Registration template
- */
 function getDefaultOTPRegistrationTemplate() {
   return {
     subject: 'Registration - OTP Verification Code',
@@ -421,10 +376,6 @@ function getDefaultOTPRegistrationTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get default OTP Password Reset template
- */
 function getDefaultOTPPasswordResetTemplate() {
   return {
     subject: 'Password Reset - OTP Verification Code',
@@ -472,10 +423,6 @@ function getDefaultOTPPasswordResetTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get default OTP Email Change template
- */
 function getDefaultOTPEmailChangeTemplate() {
   return {
     subject: 'Email Change - OTP Verification Code',
@@ -523,10 +470,6 @@ function getDefaultOTPEmailChangeTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get default OTP Admin Registration template
- */
 function getDefaultOTPAdminRegistrationTemplate() {
   return {
     subject: 'Admin Registration - OTP Verification Code',
@@ -574,10 +517,6 @@ function getDefaultOTPAdminRegistrationTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get default NGO Donation Received template
- */
 function getDefaultNgoDonationReceivedTemplate() {
   return {
     subject: 'New Donation Received from {{DONOR_NAME}}',
@@ -626,10 +565,6 @@ function getDefaultNgoDonationReceivedTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get default Donor Donation Confirmation template
- */
 function getDefaultDonorDonationConfirmationTemplate() {
   return {
     subject: 'Thank You for Your Donation to {{NGO_NAME}}',

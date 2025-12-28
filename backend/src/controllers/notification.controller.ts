@@ -2,17 +2,10 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
 import { query, queryOne, update } from '../config/mysql';
-
-/**
- * Get notifications for logged-in user
- * GET /api/notifications
- */
 export const getNotifications = async (req: AuthRequest, res: Response) => {
   try {
     const userId = parseInt(req.user!.id);
-    const userRole = req.user!.role;
-    
-    // Map role to user_type
+    const userRole = req.user!.role;
     let userType: 'NGO' | 'ADMIN' | 'DONOR';
     if (userRole === 'NGO') {
       userType = 'NGO';
@@ -39,9 +32,7 @@ export const getNotifications = async (req: AuthRequest, res: Response) => {
     sql += ' ORDER BY created_at DESC LIMIT ?';
     params.push(parseInt(limit as string) || 50);
 
-    const notifications = await query<any>(sql, params);
-
-    // Parse metadata JSON
+    const notifications = await query<any>(sql, params);
     const formattedNotifications = notifications.map((notif: any) => ({
       id: notif.id,
       title: notif.title,
@@ -53,9 +44,7 @@ export const getNotifications = async (req: AuthRequest, res: Response) => {
       metadata: notif.metadata ? JSON.parse(notif.metadata) : null,
       createdAt: notif.created_at,
       readAt: notif.read_at
-    }));
-
-    // Get unread count
+    }));
     const unreadCountResult = await queryOne<{ count: number }>(
       'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND user_type = ? AND is_read = FALSE',
       [userId, userType]
@@ -74,11 +63,6 @@ export const getNotifications = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Mark notification as read
- * PUT /api/notifications/:id/read
- */
 export const markNotificationAsRead = async (req: AuthRequest, res: Response) => {
   try {
     const userId = parseInt(req.user!.id);
@@ -87,9 +71,7 @@ export const markNotificationAsRead = async (req: AuthRequest, res: Response) =>
 
     if (isNaN(notificationId)) {
       return res.status(400).json({ success: false, message: 'Invalid notification ID' });
-    }
-
-    // Map role to user_type
+    }
     let userType: 'NGO' | 'ADMIN' | 'DONOR';
     if (userRole === 'NGO') {
       userType = 'NGO';
@@ -97,9 +79,7 @@ export const markNotificationAsRead = async (req: AuthRequest, res: Response) =>
       userType = 'ADMIN';
     } else {
       userType = 'DONOR';
-    }
-
-    // Verify notification belongs to user
+    }
     const notification = await queryOne<any>(
       'SELECT id FROM notifications WHERE id = ? AND user_id = ? AND user_type = ?',
       [notificationId, userId, userType]
@@ -107,9 +87,7 @@ export const markNotificationAsRead = async (req: AuthRequest, res: Response) =>
 
     if (!notification) {
       return res.status(404).json({ success: false, message: 'Notification not found' });
-    }
-
-    // Mark as read
+    }
     await update(
       'UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE id = ?',
       [notificationId]
@@ -124,17 +102,10 @@ export const markNotificationAsRead = async (req: AuthRequest, res: Response) =>
     });
   }
 };
-
-/**
- * Mark all notifications as read
- * PUT /api/notifications/read-all
- */
 export const markAllNotificationsAsRead = async (req: AuthRequest, res: Response) => {
   try {
     const userId = parseInt(req.user!.id);
-    const userRole = req.user!.role;
-
-    // Map role to user_type
+    const userRole = req.user!.role;
     let userType: 'NGO' | 'ADMIN' | 'DONOR';
     if (userRole === 'NGO') {
       userType = 'NGO';
@@ -142,9 +113,7 @@ export const markAllNotificationsAsRead = async (req: AuthRequest, res: Response
       userType = 'ADMIN';
     } else {
       userType = 'DONOR';
-    }
-
-    // Mark all as read
+    }
     const result = await update(
       'UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE user_id = ? AND user_type = ? AND is_read = FALSE',
       [userId, userType]
@@ -159,11 +128,6 @@ export const markAllNotificationsAsRead = async (req: AuthRequest, res: Response
     });
   }
 };
-
-/**
- * Delete notification
- * DELETE /api/notifications/:id
- */
 export const deleteNotification = async (req: AuthRequest, res: Response) => {
   try {
     const userId = parseInt(req.user!.id);
@@ -172,9 +136,7 @@ export const deleteNotification = async (req: AuthRequest, res: Response) => {
 
     if (isNaN(notificationId)) {
       return res.status(400).json({ success: false, message: 'Invalid notification ID' });
-    }
-
-    // Map role to user_type
+    }
     let userType: 'NGO' | 'ADMIN' | 'DONOR';
     if (userRole === 'NGO') {
       userType = 'NGO';
@@ -182,9 +144,7 @@ export const deleteNotification = async (req: AuthRequest, res: Response) => {
       userType = 'ADMIN';
     } else {
       userType = 'DONOR';
-    }
-
-    // Verify notification belongs to user
+    }
     const notification = await queryOne<any>(
       'SELECT id FROM notifications WHERE id = ? AND user_id = ? AND user_type = ?',
       [notificationId, userId, userType]
@@ -192,9 +152,7 @@ export const deleteNotification = async (req: AuthRequest, res: Response) => {
 
     if (!notification) {
       return res.status(404).json({ success: false, message: 'Notification not found' });
-    }
-
-    // Delete notification
+    }
     await update('DELETE FROM notifications WHERE id = ?', [notificationId]);
 
     return sendSuccess(res, { id: notificationId }, 'Notification deleted');

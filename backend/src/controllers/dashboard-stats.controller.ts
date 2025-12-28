@@ -2,32 +2,15 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
 import { queryOne } from '../config/mysql';
-
-/**
- * Get NGO dashboard statistics (Real-Time)
- * GET /api/ngo/dashboard-stats
- * 
- * Returns:
- * - totalDonationRequests: Count of donation requests created by this NGO
- * - totalDonors: Count of distinct donors who contributed to this NGO's requests
- */
 export const getNgoDashboardStats = async (req: AuthRequest, res: Response) => {
   try {
-    const ngoId = parseInt(req.user!.id);
-
-    // Count total donation requests created by this NGO
+    const ngoId = parseInt(req.user!.id);
     const totalRequestsResult = await queryOne<{ count: number }>(
       'SELECT COUNT(*) as count FROM donation_requests WHERE ngo_id = ?',
       [ngoId]
-    );
-
-    // Count distinct donors who contributed to this NGO's donation requests
+    );
     const totalDonorsResult = await queryOne<{ count: number }>(
-      `SELECT COUNT(DISTINCT drc.donor_id) as count
-       FROM donation_request_contributions drc
-       INNER JOIN donation_requests dr ON drc.request_id = dr.id
-       WHERE dr.ngo_id = ?`,
-      [ngoId]
+      'SELECT COUNT(*) as count FROM donors'
     );
 
     const stats = {
@@ -44,19 +27,9 @@ export const getNgoDashboardStats = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Get Donor dashboard statistics (Real-Time)
- * GET /api/donor/dashboard-stats
- * 
- * Returns:
- * - totalDonations: Count of times this donor has contributed
- */
 export const getDonorDashboardStats = async (req: AuthRequest, res: Response) => {
   try {
-    const donorId = parseInt(req.user!.id);
-
-    // Count total contributions by this donor
+    const donorId = parseInt(req.user!.id);
     const totalDonationsResult = await queryOne<{ count: number }>(
       'SELECT COUNT(*) as count FROM donation_request_contributions WHERE donor_id = ?',
       [donorId]

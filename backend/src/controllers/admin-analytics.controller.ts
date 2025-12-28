@@ -2,14 +2,8 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
 import { query, queryOne } from '../config/mysql';
-
-/**
- * Get comprehensive platform analytics for admin dashboard
- * GET /api/admin/analytics
- */
 export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
-  try {
-    // 1. Total Donations Analysis - by type
+  try {
     const donationsByType = await query<any>(`
       SELECT 
         'old' as source,
@@ -30,9 +24,7 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
       FROM donation_request_contributions drc
       INNER JOIN donation_requests dr ON drc.request_id = dr.id
       GROUP BY dr.donation_type
-    `);
-
-    // Aggregate donation types
+    `);
     const donationTypeMap = new Map<string, { count: number; amount: number }>();
     donationsByType.forEach((item: any) => {
       const type = item.donation_type;
@@ -48,9 +40,7 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
       type,
       count: data.count,
       amount: data.amount,
-    }));
-
-    // 2. Monthly Trends - Last 6 months
+    }));
     const monthlyTrends = await query<any>(`
       SELECT 
         DATE_FORMAT(c.created_at, '%Y-%m') as month,
@@ -73,9 +63,7 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
       WHERE drc.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
       GROUP BY DATE_FORMAT(drc.created_at, '%Y-%m')
       ORDER BY month ASC
-    `);
-
-    // Combine monthly trends
+    `);
     const monthlyMap = new Map<string, { count: number; amount: number }>();
     [...monthlyTrends, ...monthlyTrendsNew].forEach((item: any) => {
       const month = item.month;
@@ -93,9 +81,7 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
         month,
         count: data.count,
         amount: data.amount,
-      }));
-
-    // 3. NGO Statistics
+      }));
     const ngoStats = await queryOne<any>(`
       SELECT 
         COUNT(*) as total_ngos,
@@ -106,9 +92,7 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
         SUM(CASE WHEN is_blocked = 0 AND verification_status = 'VERIFIED' THEN 1 ELSE 0 END) as active_ngos
       FROM users
       WHERE role = 'NGO'
-    `);
-
-    // 4. Donor Statistics
+    `);
     const donorStats = await queryOne<any>(`
       SELECT 
         COUNT(DISTINCT d.id) as total_donors,
@@ -118,17 +102,12 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
       FROM donors d
       LEFT JOIN contributions c ON d.id = c.donor_id
       LEFT JOIN donation_request_contributions drc ON d.id = drc.donor_id
-    `);
-
-    // 5. Total Contributions Summary
-    // Count all contributions from both old and new systems
+    `);
     const totalContributionsResult = await queryOne<any>(`
       SELECT 
         (SELECT COUNT(*) FROM contributions) +
         (SELECT COUNT(*) FROM donation_request_contributions) as total_contributions
-    `);
-
-    // Calculate total funds from both old and new systems
+    `);
     const totalFundsResult = await queryOne<any>(`
       SELECT 
         COALESCE(
@@ -140,10 +119,7 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
            INNER JOIN donation_requests dr ON drc.request_id = dr.id 
            WHERE dr.donation_type IN ('FUNDS', 'MONEY')), 0
         ) as total_funds
-    `);
-
-    // 6. Funds Received (ACCEPTED status) and Funds Pending (PENDING status)
-    // Calculate funds from new donation request system only
+    `);
     const fundsSummary = await queryOne<any>(`
       SELECT 
         COALESCE(SUM(CASE 
@@ -160,10 +136,7 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
       FROM donation_request_contributions drc
       INNER JOIN donation_requests dr ON drc.request_id = dr.id
       WHERE dr.donation_type IN ('FUNDS', 'MONEY')
-    `);
-
-    // 7. Top NGOs by received funds only (ACCEPTED status contributions)
-    // Only count contributions with ACCEPTED/COMPLETED status (received funds)
+    `);
     const topNgos = await query<any>(`
       SELECT 
         u.id,
@@ -190,10 +163,7 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
       HAVING total_amount > 0
       ORDER BY total_amount DESC, contribution_count DESC
       LIMIT 100
-    `);
-
-    // 8. Top Donors by received funds only (ACCEPTED status contributions)
-    // Only count contributions with ACCEPTED/COMPLETED status (received funds)
+    `);
     const topDonors = await query<any>(`
       SELECT 
         d.id,
@@ -220,9 +190,7 @@ export const getAdminAnalytics = async (req: AuthRequest, res: Response) => {
       HAVING total_amount > 0
       ORDER BY total_amount DESC, contribution_count DESC
       LIMIT 100
-    `);
-
-    // Build comprehensive analytics response object
+    `);
     const analytics = {
       donations: {
         breakdown: donationsBreakdown,

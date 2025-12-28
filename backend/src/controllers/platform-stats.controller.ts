@@ -1,20 +1,14 @@
 import { Request, Response } from 'express';
 import { query, queryOne } from '../config/mysql';
 import { sendSuccess } from '../utils/response';
-
-/**
- * Get platform-wide statistics (Public endpoint)
- * GET /api/platform/stats
- */
 export const getPlatformStats = async (req: Request, res: Response) => {
   try {
-    // Get total donations (from donation_requests table)
+
     const totalDonationsResult = await queryOne<{ count: number }>(
       'SELECT COUNT(*) as count FROM donation_requests WHERE status = "ACTIVE"'
     );
     const totalDonations = totalDonationsResult?.count || 0;
 
-    // Get active NGOs (verified and not blocked)
     const activeNGOsResult = await queryOne<{ count: number }>(
       `SELECT COUNT(*) as count 
        FROM users 
@@ -24,7 +18,6 @@ export const getPlatformStats = async (req: Request, res: Response) => {
     );
     const activeNGOs = activeNGOsResult?.count || 0;
 
-    // Get active donors (not blocked) - donors are in separate donors table
     const activeDonorsResult = await queryOne<{ count: number }>(
       `SELECT COUNT(*) as count 
        FROM donors 
@@ -32,8 +25,20 @@ export const getPlatformStats = async (req: Request, res: Response) => {
     );
     const activeDonors = activeDonorsResult?.count || 0;
 
+    // Total contributions across both legacy contributions (COMPLETED) and
+    // new donation_request_contributions (ACCEPTED)
+    const completedContributionsResult = await queryOne<{ count: number }>(
+      `SELECT COUNT(*) as count FROM contributions WHERE status = 'COMPLETED'`
+    );
+    const acceptedRequestContributionsResult = await queryOne<{ count: number }>(
+      `SELECT COUNT(*) as count FROM donation_request_contributions 
+       WHERE UPPER(TRIM(COALESCE(status, ''))) = 'ACCEPTED'`
+    );
+    const totalContributions = (completedContributionsResult?.count || 0) + (acceptedRequestContributionsResult?.count || 0);
+
     const stats = {
       totalDonations,
+      totalContributions,
       activeNGOs,
       activeDonors
     };

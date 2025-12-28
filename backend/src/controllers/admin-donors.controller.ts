@@ -2,11 +2,6 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
 import { query, queryOne } from '../config/mysql';
-
-/**
- * Get all donors with summary statistics
- * GET /api/admin/donors
- */
 export const getAllDonors = async (req: AuthRequest, res: Response) => {
   try {
     const { page = 1, limit = 100, search } = req.query;
@@ -43,9 +38,7 @@ export const getAllDonors = async (req: AuthRequest, res: Response) => {
     `;
     params.push(Number(limit), offset);
 
-    const donors = await query<any>(sql, params);
-
-    // Get total count
+    const donors = await query<any>(sql, params);
     let countSql = 'SELECT COUNT(DISTINCT d.id) as total FROM donors d';
     const countParams: any[] = [];
     if (search) {
@@ -86,11 +79,6 @@ export const getAllDonors = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: error.message || 'Failed to fetch donors' });
   }
 };
-
-/**
- * Get all contributions with donor, NGO, and donation details
- * GET /api/admin/contributions
- */
 export const getAllContributions = async (req: AuthRequest, res: Response) => {
   try {
     const { 
@@ -102,9 +90,7 @@ export const getAllContributions = async (req: AuthRequest, res: Response) => {
       page = 1,
       limit = 100
     } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
-
-    // Query for contributions from donations table (old system)
+    const offset = (Number(page) - 1) * Number(limit);
     let contributionsSql = `
       SELECT 
         c.id as contribution_id,
@@ -127,9 +113,7 @@ export const getAllContributions = async (req: AuthRequest, res: Response) => {
       INNER JOIN donors donor ON c.donor_id = donor.id
       WHERE 1=1
     `;
-    const params: any[] = [];
-
-    // Query for contributions from donation_requests table (new system)
+    const params: any[] = [];
     let requestContributionsSql = `
       SELECT 
         drc.id as contribution_id,
@@ -152,9 +136,7 @@ export const getAllContributions = async (req: AuthRequest, res: Response) => {
       INNER JOIN donors donor ON drc.donor_id = donor.id
       WHERE 1=1
     `;
-    const requestParams: any[] = [];
-
-    // Apply filters
+    const requestParams: any[] = [];
     if (donorId) {
       contributionsSql += ' AND c.donor_id = ?';
       params.push(donorId);
@@ -191,13 +173,9 @@ export const getAllContributions = async (req: AuthRequest, res: Response) => {
     }
 
     contributionsSql += ' ORDER BY c.created_at DESC';
-    requestContributionsSql += ' ORDER BY drc.created_at DESC';
-
-    // Fetch both types of contributions
+    requestContributionsSql += ' ORDER BY drc.created_at DESC';
     const contributions = await query<any>(contributionsSql, params);
-    const requestContributions = await query<any>(requestContributionsSql, requestParams);
-
-    // Combine and format results
+    const requestContributions = await query<any>(requestContributionsSql, requestParams);
     const allContributions = [
       ...contributions.map((c: any) => ({
         contributionId: c.contribution_id,
@@ -231,14 +209,10 @@ export const getAllContributions = async (req: AuthRequest, res: Response) => {
         contributionStatus: c.contribution_status,
         contributionSource: c.contribution_source,
       })),
-    ];
-
-    // Sort by date descending
+    ];
     allContributions.sort((a, b) => 
       new Date(b.contributedDate).getTime() - new Date(a.contributedDate).getTime()
-    );
-
-    // Apply pagination
+    );
     const total = allContributions.length;
     const paginatedContributions = allContributions.slice(offset, offset + Number(limit));
 
@@ -260,16 +234,9 @@ export const getAllContributions = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: error.message || 'Failed to fetch contributions' });
   }
 };
-
-/**
- * Get detailed contribution history for a specific donor
- * GET /api/admin/contributions/:donorId
- */
 export const getDonorContributions = async (req: AuthRequest, res: Response) => {
   try {
-    const { donorId } = req.params;
-
-    // Get contributions from donations table
+    const { donorId } = req.params;
     const contributions = await query<any>(`
       SELECT 
         c.id as contribution_id,
@@ -287,9 +254,7 @@ export const getDonorContributions = async (req: AuthRequest, res: Response) => 
       INNER JOIN users u ON d.ngo_id = u.id
       WHERE c.donor_id = ?
       ORDER BY c.created_at DESC
-    `, [donorId]);
-
-    // Get contributions from donation_requests table
+    `, [donorId]);
     const requestContributions = await query<any>(`
       SELECT 
         drc.id as contribution_id,
@@ -307,9 +272,7 @@ export const getDonorContributions = async (req: AuthRequest, res: Response) => 
       INNER JOIN users u ON dr.ngo_id = u.id
       WHERE drc.donor_id = ?
       ORDER BY drc.created_at DESC
-    `, [donorId]);
-
-    // Get donor details
+    `, [donorId]);
     const donor = await queryOne<any>(`
       SELECT id, name, email, role, is_blocked, created_at
       FROM donors
@@ -318,9 +281,7 @@ export const getDonorContributions = async (req: AuthRequest, res: Response) => 
 
     if (!donor) {
       return res.status(404).json({ success: false, message: 'Donor not found' });
-    }
-
-    // Combine contributions
+    }
     const allContributions = [
       ...contributions.map((c: any) => ({
         contributionId: c.contribution_id,

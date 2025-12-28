@@ -1,5 +1,5 @@
 import { query, insert, update } from '../config/mysql';
-import { emitToNgo, emitToAdmin } from '../socket/socket.server';
+import { emitToNgo, emitToAdmin, emitToDonor } from '../socket/socket.server';
 import { sendEmail } from '../utils/email.service';
 import { getEmailTemplate, replaceTemplatePlaceholders, getSupportEmail } from '../utils/email-template.service';
 
@@ -13,13 +13,9 @@ export interface NotificationData {
   relatedEntityId?: number;
   metadata?: any;
 }
-
-/**
- * Create a notification in the database
- */
 export const createNotification = async (data: NotificationData): Promise<number> => {
   try {
-    const result = await insert(
+    const notificationId = await insert(
       `INSERT INTO notifications 
        (user_id, user_type, title, message, type, related_entity_type, related_entity_id, metadata)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -34,21 +30,15 @@ export const createNotification = async (data: NotificationData): Promise<number
         data.metadata ? JSON.stringify(data.metadata) : null
       ]
     );
-    return result.insertId;
+    return notificationId;
   } catch (error: any) {
     console.error('[Notification Service] Error creating notification:', error);
     throw error;
   }
 };
-
-/**
- * Create notification and emit real-time event
- */
 export const createAndEmitNotification = async (data: NotificationData): Promise<number> => {
   try {
-    const notificationId = await createNotification(data);
-    
-    // Emit real-time notification
+    const notificationId = await createNotification(data);
     if (data.userType === 'NGO') {
       emitToNgo(data.userId, 'notification:new', {
         id: notificationId,
@@ -61,6 +51,12 @@ export const createAndEmitNotification = async (data: NotificationData): Promise
         ...data,
         createdAt: new Date().toISOString()
       });
+    } else if (data.userType === 'DONOR') {
+      emitToDonor(data.userId, 'notification:new', {
+        id: notificationId,
+        ...data,
+        createdAt: new Date().toISOString()
+      });
     }
     
     return notificationId;
@@ -69,13 +65,8 @@ export const createAndEmitNotification = async (data: NotificationData): Promise
     throw error;
   }
 };
-
-/**
- * Notify NGO when donor registers for first time
- */
 export const notifyNgoOnDonorRegistration = async (donorId: number, donorName: string, donorEmail: string): Promise<void> => {
-  try {
-    // Get all NGOs to notify them
+  try {
     const ngos = await query<any>('SELECT id, name, email FROM users WHERE role = "NGO"');
     
     for (const ngo of ngos) {
@@ -94,13 +85,8 @@ export const notifyNgoOnDonorRegistration = async (donorId: number, donorName: s
     console.error('[Notification Service] Error notifying NGOs on donor registration:', error);
   }
 };
-
-/**
- * Notify Admin when NGO registers for first time
- */
 export const notifyAdminOnNgoRegistration = async (ngoId: number, ngoName: string, ngoEmail: string): Promise<void> => {
-  try {
-    // Get all admins
+  try {
     const admins = await query<any>('SELECT id, name, email FROM admins');
     
     for (const admin of admins) {
@@ -119,13 +105,8 @@ export const notifyAdminOnNgoRegistration = async (ngoId: number, ngoName: strin
     console.error('[Notification Service] Error notifying admin on NGO registration:', error);
   }
 };
-
-/**
- * Notify Admin when Donor registers for first time
- */
 export const notifyAdminOnDonorRegistration = async (donorId: number, donorName: string, donorEmail: string): Promise<void> => {
-  try {
-    // Get all admins
+  try {
     const admins = await query<any>('SELECT id, name, email FROM admins');
     
     for (const admin of admins) {
@@ -144,10 +125,6 @@ export const notifyAdminOnDonorRegistration = async (donorId: number, donorName:
     console.error('[Notification Service] Error notifying admin on donor registration:', error);
   }
 };
-
-/**
- * Notify NGO when donor donates
- */
 export const notifyNgoOnDonation = async (
   ngoId: number,
   donorId: number,
@@ -157,8 +134,7 @@ export const notifyNgoOnDonation = async (
   amount: number,
   contributionId: number
 ): Promise<void> => {
-  try {
-    // Create notification
+  try {
     await createAndEmitNotification({
       userId: ngoId,
       userType: 'NGO',
@@ -168,9 +144,7 @@ export const notifyNgoOnDonation = async (
       relatedEntityType: 'contribution',
       relatedEntityId: contributionId,
       metadata: { donorName, donorEmail, donationType, amount, contributionId }
-    });
-
-    // Send email to NGO using template
+    });
     const ngo = await query<any>('SELECT name, email FROM users WHERE id = ?', [ngoId]);
     if (ngo && ngo.length > 0) {
       try {
@@ -202,10 +176,6 @@ export const notifyNgoOnDonation = async (
     console.error('[Notification Service] Error notifying NGO on donation:', error);
   }
 };
-
-/**
- * Notify Admin when donor donates
- */
 export const notifyAdminOnDonation = async (
   donorId: number,
   donorName: string,
@@ -214,8 +184,7 @@ export const notifyAdminOnDonation = async (
   amount: number,
   contributionId: number
 ): Promise<void> => {
-  try {
-    // Get all admins
+  try {
     const admins = await query<any>('SELECT id, name, email FROM admins');
     
     for (const admin of admins) {
@@ -234,10 +203,6 @@ export const notifyAdminOnDonation = async (
     console.error('[Notification Service] Error notifying admin on donation:', error);
   }
 };
-
-/**
- * Send email to donor when they donate
- */
 export const sendDonorDonationEmail = async (
   donorEmail: string,
   donorName: string,
@@ -269,10 +234,6 @@ export const sendDonorDonationEmail = async (
     console.error('[Notification Service] Failed to send donation email to donor:', error);
   }
 };
-
-/**
- * Create system error notification
- */
 export const createSystemErrorNotification = async (
   userType: 'NGO' | 'ADMIN',
   userId: number,

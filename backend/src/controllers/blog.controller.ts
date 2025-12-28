@@ -4,9 +4,7 @@ import { sendSuccess, sendError } from '../utils/response';
 import { query, queryOne, insert, update } from '../config/mysql';
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
-
-// Configure multer for blog image uploads
+import fs from 'fs';
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join(process.cwd(), 'uploads', 'blogs');
@@ -34,16 +32,9 @@ export const upload = multer({
     cb(new Error('Only image files are allowed'));
   }
 });
-
-/**
- * Create blog (NGO only)
- * POST /api/blogs
- */
 export const createBlog = async (req: AuthRequest, res: Response) => {
   try {
-    const ngoId = parseInt(req.user!.id);
-    
-    // Verify user is NGO
+    const ngoId = parseInt(req.user!.id);
     const ngo = await queryOne<any>(
       'SELECT id, name FROM users WHERE id = ? AND role = "NGO"',
       [ngoId]
@@ -56,27 +47,19 @@ export const createBlog = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const { title, content, category } = req.body;
-
-    // Validation
+    const { title, content, category } = req.body;
     if (!title || !content || !category) {
       return res.status(400).json({ 
         success: false, 
         message: 'Title, content, and category are required' 
       });
-    }
-
-    // Generate excerpt (first 150 characters)
+    }
     const excerpt = content.length > 150 
       ? content.substring(0, 150) + '...' 
-      : content;
-
-    // Get image URL if uploaded
+      : content;
     const imageUrl = req.file 
       ? `/uploads/blogs/${req.file.filename}` 
-      : null;
-
-    // Insert blog
+      : null;
     const insertId = await insert(
       `INSERT INTO blogs (title, content, image_url, category, author_ngo_id, excerpt)
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -88,9 +71,7 @@ export const createBlog = async (req: AuthRequest, res: Response) => {
         success: false, 
         message: 'Failed to create blog' 
       });
-    }
-
-    // Get created blog with author info
+    }
     const blog = await queryOne<any>(
       `SELECT 
         b.*,
@@ -108,11 +89,6 @@ export const createBlog = async (req: AuthRequest, res: Response) => {
     return sendError(res, error.message || 'Failed to create blog', 500);
   }
 };
-
-/**
- * Get all blogs (Public)
- * GET /api/blogs?category=&search=
- */
 export const getAllBlogs = async (req: AuthRequest, res: Response) => {
   try {
     const { category, search } = req.query;
@@ -125,15 +101,11 @@ export const getAllBlogs = async (req: AuthRequest, res: Response) => {
       JOIN users u ON b.author_ngo_id = u.id
       WHERE 1=1
     `;
-    const params: any[] = [];
-
-    // Filter by category
+    const params: any[] = [];
     if (category) {
       sql += ' AND b.category = ?';
       params.push(category);
-    }
-
-    // Search in title, content, excerpt
+    }
     if (search) {
       sql += ' AND (b.title LIKE ? OR b.content LIKE ? OR b.excerpt LIKE ?)';
       const searchTerm = `%${search}%`;
@@ -142,9 +114,7 @@ export const getAllBlogs = async (req: AuthRequest, res: Response) => {
 
     sql += ' ORDER BY b.created_at DESC';
 
-    const blogs = await query<any>(sql, params);
-
-    // Get category counts
+    const blogs = await query<any>(sql, params);
     const categoryCounts = await query<any>(
       `SELECT category, COUNT(*) as count 
        FROM blogs 
@@ -161,11 +131,6 @@ export const getAllBlogs = async (req: AuthRequest, res: Response) => {
     return sendError(res, error.message || 'Failed to fetch blogs', 500);
   }
 };
-
-/**
- * Get blog by ID (Public)
- * GET /api/blogs/:id
- */
 export const getBlogById = async (req: AuthRequest, res: Response) => {
   try {
     const blogId = parseInt(req.params.id);
@@ -186,9 +151,7 @@ export const getBlogById = async (req: AuthRequest, res: Response) => {
         success: false, 
         message: 'Blog not found' 
       });
-    }
-
-    // Get related blogs (same category, exclude current)
+    }
     const relatedBlogs = await query<any>(
       `SELECT 
         b.id,
@@ -213,11 +176,6 @@ export const getBlogById = async (req: AuthRequest, res: Response) => {
     return sendError(res, error.message || 'Failed to fetch blog', 500);
   }
 };
-
-/**
- * Get my blogs (NGO only)
- * GET /api/blogs/my-blogs
- */
 export const getMyBlogs = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = parseInt(req.user!.id);
@@ -235,17 +193,10 @@ export const getMyBlogs = async (req: AuthRequest, res: Response) => {
     return sendError(res, error.message || 'Failed to fetch blogs', 500);
   }
 };
-
-/**
- * Update blog (NGO only - can only edit own blogs)
- * PUT /api/blogs/:id
- */
 export const updateBlog = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = parseInt(req.user!.id);
-    const blogId = parseInt(req.params.id);
-
-    // Check if blog exists and belongs to this NGO
+    const blogId = parseInt(req.params.id);
     const existingBlog = await queryOne<any>(
       'SELECT * FROM blogs WHERE id = ? AND author_ngo_id = ?',
       [blogId, ngoId]
@@ -258,35 +209,25 @@ export const updateBlog = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const { title, content, category } = req.body;
-
-    // Validation
+    const { title, content, category } = req.body;
     if (!title || !content || !category) {
       return res.status(400).json({ 
         success: false, 
         message: 'Title, content, and category are required' 
       });
-    }
-
-    // Generate excerpt (first 150 characters)
+    }
     const excerpt = content.length > 150 
       ? content.substring(0, 150) + '...' 
-      : content;
-
-    // Get image URL if uploaded (keep existing if no new image)
+      : content;
     const imageUrl = req.file 
       ? `/uploads/blogs/${req.file.filename}` 
-      : existingBlog.image_url;
-
-    // Update blog
+      : existingBlog.image_url;
     await update(
       `UPDATE blogs 
        SET title = ?, content = ?, image_url = ?, category = ?, excerpt = ?, updated_at = NOW()
        WHERE id = ? AND author_ngo_id = ?`,
       [title, content, imageUrl || null, category, excerpt, blogId, ngoId]
-    );
-
-    // Get updated blog with author info
+    );
     const blog = await queryOne<any>(
       `SELECT 
         b.*,
@@ -304,17 +245,10 @@ export const updateBlog = async (req: AuthRequest, res: Response) => {
     return sendError(res, error.message || 'Failed to update blog', 500);
   }
 };
-
-/**
- * Delete blog (NGO only - can only delete own blogs)
- * DELETE /api/blogs/:id
- */
 export const deleteBlog = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = parseInt(req.user!.id);
-    const blogId = parseInt(req.params.id);
-
-    // Check if blog exists and belongs to this NGO
+    const blogId = parseInt(req.params.id);
     const existingBlog = await queryOne<any>(
       'SELECT * FROM blogs WHERE id = ? AND author_ngo_id = ?',
       [blogId, ngoId]
@@ -325,9 +259,7 @@ export const deleteBlog = async (req: AuthRequest, res: Response) => {
         success: false, 
         message: 'Blog not found or you do not have permission to delete it' 
       });
-    }
-
-    // Delete blog
+    }
     await update(
       'DELETE FROM blogs WHERE id = ? AND author_ngo_id = ?',
       [blogId, ngoId]

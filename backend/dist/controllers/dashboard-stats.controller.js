@@ -3,24 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDonorDashboardStats = exports.getNgoDashboardStats = void 0;
 const response_1 = require("../utils/response");
 const mysql_1 = require("../config/mysql");
-/**
- * Get NGO dashboard statistics (Real-Time)
- * GET /api/ngo/dashboard-stats
- *
- * Returns:
- * - totalDonationRequests: Count of donation requests created by this NGO
- * - totalDonors: Count of distinct donors who contributed to this NGO's requests
- */
 const getNgoDashboardStats = async (req, res) => {
     try {
         const ngoId = parseInt(req.user.id);
-        // Count total donation requests created by this NGO
         const totalRequestsResult = await (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM donation_requests WHERE ngo_id = ?', [ngoId]);
-        // Count distinct donors who contributed to this NGO's donation requests
-        const totalDonorsResult = await (0, mysql_1.queryOne)(`SELECT COUNT(DISTINCT drc.donor_id) as count
-       FROM donation_request_contributions drc
-       INNER JOIN donation_requests dr ON drc.request_id = dr.id
-       WHERE dr.ngo_id = ?`, [ngoId]);
+        const totalDonorsResult = await (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM donors');
         const stats = {
             totalDonationRequests: (totalRequestsResult === null || totalRequestsResult === void 0 ? void 0 : totalRequestsResult.count) || 0,
             totalDonors: (totalDonorsResult === null || totalDonorsResult === void 0 ? void 0 : totalDonorsResult.count) || 0,
@@ -36,17 +23,9 @@ const getNgoDashboardStats = async (req, res) => {
     }
 };
 exports.getNgoDashboardStats = getNgoDashboardStats;
-/**
- * Get Donor dashboard statistics (Real-Time)
- * GET /api/donor/dashboard-stats
- *
- * Returns:
- * - totalDonations: Count of times this donor has contributed
- */
 const getDonorDashboardStats = async (req, res) => {
     try {
         const donorId = parseInt(req.user.id);
-        // Count total contributions by this donor
         const totalDonationsResult = await (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM donation_request_contributions WHERE donor_id = ?', [donorId]);
         const stats = {
             totalDonations: (totalDonationsResult === null || totalDonationsResult === void 0 ? void 0 : totalDonationsResult.count) || 0,

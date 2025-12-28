@@ -8,40 +8,24 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
 
 const isFutureDate = (value: string | Date) => new Date(value).getTime() > Date.now();
-
-/**
- * Generate unique transaction reference ID
- */
 const generateTransactionReferenceId = (): string => {
   const timestamp = Date.now();
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
   return `PAY-${timestamp}-${random}`;
 };
-
-/**
- * Donor contributes to a donation request
- * Handles FOOD/CLOTHES (pickup) and MONEY (payment) donations
- * POST /api/donations/:id/contribute
- */
 export const contributeToDonation = async (req: AuthRequest, res: Response) => {
   const { id: donationId } = req.params;
-  const {
-    // For FOOD/CLOTHES donations
+  const {
     pickupScheduledDateTime,
     donorAddress,
     donorContactNumber,
-    notes,
-    // For MONEY donations
+    notes,
     amount,
     donorProvidedReference,
-  } = req.body;
-
-  // Validation
+  } = req.body;
   if (!Types.ObjectId.isValid(donationId)) {
     return res.status(400).json({ success: false, message: 'Invalid donation id' });
-  }
-
-  // Check if donation exists and is active
+  }
   const donation = await DonationModel.findById(donationId);
   if (!donation) {
     return res.status(404).json({ success: false, message: 'Donation not found' });
@@ -54,16 +38,11 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
     });
   }
 
-  const donationCategory = donation.donationCategory || donation.donationType;
-
-  // Handle MONEY donations
-  if (donationCategory === 'MONEY' || donationCategory === 'FUNDS') {
-    // Validate MONEY donation requirements
+  const donationCategory = donation.donationCategory || donation.donationType;
+  if (donationCategory === 'MONEY' || donationCategory === 'FUNDS') {
     if (!amount || Number(amount) <= 0) {
       return res.status(400).json({ success: false, message: 'Amount is required and must be greater than 0' });
-    }
-
-    // Validate payment details exist
+    }
     if (!donation.paymentDetails) {
       return res.status(400).json({
         success: false,
@@ -83,9 +62,7 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
         success: false,
         message: 'Payment details incomplete. QR code and bank details are required.',
       });
-    }
-
-    // Check if donor already made a payment for this donation
+    }
     const existingPayment = await PaymentModel.findOne({
       donationId,
       donorId: req.user!.id,
@@ -95,9 +72,7 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
         success: false,
         message: 'You have already submitted a payment for this donation',
       });
-    }
-
-    // Generate unique transaction reference ID
+    }
     let transactionReferenceId = generateTransactionReferenceId();
     let isUnique = false;
     while (!isUnique) {
@@ -107,9 +82,7 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
       } else {
         transactionReferenceId = generateTransactionReferenceId();
       }
-    }
-
-    // Create payment record
+    }
     const payment = await PaymentModel.create({
       donationId,
       donorId: req.user!.id,
@@ -139,49 +112,37 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
       'Payment submitted successfully. Please complete payment externally and confirm.',
       201
     );
-  }
-
-  // Handle FOOD/CLOTHES donations (physical pickup)
+  }
   if (!pickupScheduledDateTime || !donorAddress || !donorContactNumber) {
     return res.status(400).json({
       success: false,
       message: 'Missing required fields: pickupScheduledDateTime, donorAddress, donorContactNumber',
     });
-  }
-
-  // Validate pickup date
+  }
   const pickupDate = new Date(pickupScheduledDateTime);
   if (isNaN(pickupDate.getTime())) {
     return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
   }
   if (!isFutureDate(pickupDate)) {
     return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
-  }
-
-  // Validate address and contact
+  }
   if (typeof donorAddress !== 'string' || donorAddress.trim().length === 0) {
     return res.status(400).json({ success: false, message: 'Donor address cannot be empty' });
   }
   if (typeof donorContactNumber !== 'string' || donorContactNumber.trim().length === 0) {
     return res.status(400).json({ success: false, message: 'Donor contact number cannot be empty' });
-  }
-
-  // Check if donor already contributed to this donation
+  }
   const existingContribution = await ContributionModel.findOne({
     donationId,
     donorId: req.user!.id,
   });
   if (existingContribution) {
     return res.status(409).json({ success: false, message: 'You have already contributed to this donation' });
-  }
-
-  // Get donor details
+  }
   const donor = await DonorModel.findById(req.user!.id);
   if (!donor) {
     return res.status(404).json({ success: false, message: 'Donor not found' });
-  }
-
-  // Update donor profile with address and phone if not set
+  }
   const donorUpdates: Record<string, unknown> = {};
   if (!donor.fullAddress) {
     donorUpdates.fullAddress = donorAddress.trim();
@@ -191,9 +152,7 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
   }
   if (Object.keys(donorUpdates).length > 0) {
     await DonorModel.findByIdAndUpdate(req.user!.id, donorUpdates);
-  }
-
-  // Create contribution
+  }
   const contribution = await ContributionModel.create({
     donationId,
     donorId: req.user!.id,
@@ -212,24 +171,15 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
 
   return sendSuccess(res, populated, 'Contribution submitted successfully', 201);
 };
-
-/**
- * Get all pickup requests for NGO's donations
- * GET /api/ngo/pickups
- */
 export const getNgoPickups = async (req: AuthRequest, res: Response) => {
   const ngoId = req.user!.id;
-  const { pickupStatus, donationId } = req.query;
-
-  // Get all donations by this NGO
+  const { pickupStatus, donationId } = req.query;
   const donations = await DonationModel.find({ ngoId }).select('_id');
   const donationIds = donations.map((d) => d._id);
 
   if (donationIds.length === 0) {
     return sendSuccess(res, { count: 0, pickups: [] }, 'No pickups found');
-  }
-
-  // Build filter
+  }
   const filter: Record<string, unknown> = {
     donationId: { $in: donationIds },
   };
@@ -240,8 +190,7 @@ export const getNgoPickups = async (req: AuthRequest, res: Response) => {
   if (donationId) {
     if (!Types.ObjectId.isValid(donationId as string)) {
       return res.status(400).json({ success: false, message: 'Invalid donation id' });
-    }
-    // Verify this donation belongs to the NGO
+    }
     const donation = await DonationModel.findOne({ _id: donationId, ngoId });
     if (!donation) {
       return res.status(403).json({ success: false, message: 'You do not have access to this donation' });
@@ -256,9 +205,7 @@ export const getNgoPickups = async (req: AuthRequest, res: Response) => {
       select: 'donationCategory donationType purpose quantityOrAmount location pickupDateTime',
     })
     .sort({ pickupScheduledDateTime: 1 }) // Sort by pickup date
-    .lean();
-
-  // Format response with all required donor details
+    .lean();
   const formattedPickups = pickups.map((pickup: any) => {
     const donor = pickup.donorId || {};
     return {
@@ -289,11 +236,6 @@ export const getNgoPickups = async (req: AuthRequest, res: Response) => {
 
   return sendSuccess(res, { count: formattedPickups.length, pickups: formattedPickups }, 'Pickups fetched successfully');
 };
-
-/**
- * Update pickup status
- * PATCH /api/ngo/pickups/:id/status
- */
 export const updatePickupStatus = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { pickupStatus } = req.body as { pickupStatus: PickupStatus };
@@ -308,9 +250,7 @@ export const updatePickupStatus = async (req: AuthRequest, res: Response) => {
       success: false,
       message: 'Invalid pickup status. Must be SCHEDULED, PICKED_UP, or CANCELLED',
     });
-  }
-
-  // Find contribution and verify it belongs to NGO's donation
+  }
   const contribution = await ContributionModel.findById(id).populate('donationId');
   if (!contribution) {
     return res.status(404).json({ success: false, message: 'Pickup not found' });
@@ -322,19 +262,13 @@ export const updatePickupStatus = async (req: AuthRequest, res: Response) => {
       success: false,
       message: 'Forbidden: You can only manage pickups for your own donations',
     });
-  }
-
-  // Update pickup status
-  contribution.pickupStatus = pickupStatus;
-  
-  // If picked up, also update contribution status to COMPLETED
+  }
+  contribution.pickupStatus = pickupStatus;
   if (pickupStatus === 'PICKED_UP') {
     contribution.status = 'COMPLETED';
   }
   
-  await contribution.save();
-
-  // Get updated contribution with all details
+  await contribution.save();
   const updated = await ContributionModel.findById(id)
     .populate('donorId', 'name email')
     .populate({

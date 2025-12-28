@@ -27,18 +27,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-const router = Router();
-
-// NGO routes (must be before /:id to avoid route conflicts)
+const router = Router();
 router.post('/', authenticate, requireRole(['NGO']), upload.array('images', 5), createDonation);
-router.get('/my', authenticate, requireRole(['NGO']), getMyDonations);
-
-// Public routes
+router.get('/my', authenticate, requireRole(['NGO']), getMyDonations);
 router.get('/', getDonations);
 router.get('/nearby', getNearbyDonations); // Must be before /:id
-router.get('/:id', getDonationById);
-
-// NGO management routes
+router.get('/:id', getDonationById);
 router.put('/:id', authenticate, requireRole(['NGO', 'ADMIN']), upload.array('images', 5), updateDonation);
 router.put('/:id/cancel', authenticate, requireRole(['NGO', 'ADMIN']), cancelDonation);
 router.delete('/:id', authenticate, requireRole(['NGO', 'ADMIN']), deleteDonation);

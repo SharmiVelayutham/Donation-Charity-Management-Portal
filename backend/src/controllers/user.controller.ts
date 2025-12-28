@@ -2,11 +2,6 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
 import { queryOne } from '../config/mysql';
-
-/**
- * Get user profile (works for both DONOR and NGO)
- * GET /api/users/profile
- */
 export const getUserProfile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = parseInt(req.user!.id);

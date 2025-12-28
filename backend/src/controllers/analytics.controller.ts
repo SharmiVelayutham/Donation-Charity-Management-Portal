@@ -4,10 +4,6 @@ import { DonationModel } from '../models/Donation.model';
 import { UserModel } from '../models/User.model';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
-
-/**
- * Get platform-wide analytics (Admin only or public stats)
- */
 export const getPlatformStats = async (req: Request, res: Response) => {
   const [
     totalDonors,
@@ -52,10 +48,6 @@ export const getPlatformStats = async (req: Request, res: Response) => {
 
   return sendSuccess(res, stats, 'Platform stats fetched');
 };
-
-/**
- * Get donor's personal analytics
- */
 export const getDonorStats = async (req: AuthRequest, res: Response) => {
   const donorId = req.user!.id;
 
@@ -103,10 +95,6 @@ export const getDonorStats = async (req: AuthRequest, res: Response) => {
 
   return sendSuccess(res, stats, 'Donor stats fetched');
 };
-
-/**
- * Get NGO's analytics
- */
 export const getNgoStats = async (req: AuthRequest, res: Response) => {
   const ngoId = req.user!.id;
 

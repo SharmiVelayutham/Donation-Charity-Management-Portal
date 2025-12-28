@@ -12,35 +12,16 @@ import {
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 
-const router = Router();
-
-// All routes require DONOR authentication
+const router = Router();
 router.use(authenticate);
 router.use(requireRole(['DONOR']));
-
-/**
- * Donor Dashboard Routes
- * All routes are prefixed with /api/donor/dashboard
- */
-
-// Dashboard overview
-router.get('/', getDonorDashboard);
-
-// Dashboard statistics (new design)
-router.get('/stats', getDonorDashboardStats);
-
-// Profile management
+router.get('/', getDonorDashboard);
+router.get('/stats', getDonorDashboardStats);
 router.get('/profile', getDonorProfile);
-router.put('/profile', updateDonorProfile);
-
-// Contributions (old system)
-router.get('/contributions', getDonorContributions);
-
-// Donation request contributions (new system)
+router.put('/profile', updateDonorProfile);
+router.get('/contributions', getDonorContributions);
 router.get('/donation-request-contributions', getDonorDonationRequestContributions);
-router.get('/donation-request-contributions/:id/receipt', downloadReceipt);
-
-// Browse available donations
+router.get('/donation-request-contributions/:id/receipt', downloadReceipt);
 router.get('/available-donations', getAvailableDonations);
 
 export default router;

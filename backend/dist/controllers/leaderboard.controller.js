@@ -2,13 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNgoLeaderboard = exports.getDonorLeaderboard = void 0;
 const response_1 = require("../utils/response");
-/**
- * Get donor leaderboard ranked by total contributions
- * Can filter by time period (all-time, monthly, weekly)
- */
 const getDonorLeaderboard = async (req, res) => {
     const { period = 'all' } = req.query; // all, monthly, weekly
-    // Calculate date filter based on period
     let dateFilter = null;
     const now = new Date();
     if (period === 'monthly') {
@@ -20,14 +15,12 @@ const getDonorLeaderboard = async (req, res) => {
         dateFilter = new Date(now.setDate(diff));
         dateFilter.setHours(0, 0, 0, 0);
     }
-    // Build match filter
     const matchFilter = {
         status: { $in: ['APPROVED', 'COMPLETED'] }, // Only count approved/completed contributions
     };
     if (dateFilter) {
         matchFilter.createdAt = { $gte: dateFilter };
     }
-    // Aggregate contributions by donor
     const leaderboard = await Contribution_model_1.ContributionModel.aggregate([
         { $match: matchFilter },
         {
@@ -74,7 +67,6 @@ const getDonorLeaderboard = async (req, res) => {
         { $sort: { totalContributions: -1, totalAmount: -1 } },
         { $limit: 100 }, // Top 100 donors
     ]);
-    // Add rank
     const rankedLeaderboard = leaderboard.map((donor, index) => ({
         rank: index + 1,
         ...donor,
@@ -82,9 +74,6 @@ const getDonorLeaderboard = async (req, res) => {
     return (0, response_1.sendSuccess)(res, { period, leaderboard: rankedLeaderboard }, 'Leaderboard fetched');
 };
 exports.getDonorLeaderboard = getDonorLeaderboard;
-/**
- * Get top NGOs by donations posted
- */
 const getNgoLeaderboard = async (req, res) => {
     const { period = 'all' } = req.query;
     let dateFilter = null;

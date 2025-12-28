@@ -2,16 +2,11 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
 import { query, queryOne, insert } from '../config/mysql';
-
-/**
- * MySQL-based Contributions Controller
- * Handles contributions to donations (using MySQL, not MongoDB)
- */
-
-/**
- * Donor contributes to a donation
- * POST /api/donations/:id/contribute
- */
+import { 
+  notifyNgoOnDonation, 
+  notifyAdminOnDonation, 
+  sendDonorDonationEmail 
+} from '../services/notification.service';
 export const contributeToDonation = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -28,9 +23,7 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
       donorAddress,
       donorContactNumber,
       notes,
-    } = req.body;
-
-    // Check if donation exists and is active
+    } = req.body;
     const donation = await queryOne<any>(
       `SELECT d.*, u.name as ngo_name 
        FROM donations d
@@ -52,9 +45,7 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
 
     const donationCategory = donation.donation_category || donation.donation_type;
     const isFunds = donationCategory === 'FUNDS' || donationCategory === 'MONEY';
-    const requiresPickup = !isFunds;
-
-    // Validate quantity/amount
+    const requiresPickup = !isFunds;
     if (!quantityOrAmount) {
       return res.status(400).json({
         success: false,
@@ -68,36 +59,28 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
         success: false,
         message: 'Quantity/Amount must be greater than 0',
       });
-    }
-
-    // For FOOD/CLOTHES donations, validate pickup details
+    }
     if (requiresPickup) {
       if (!pickupScheduledDateTime || !donorAddress || !donorContactNumber) {
         return res.status(400).json({
           success: false,
           message: 'Missing required fields for FOOD/CLOTHES donations: pickupScheduledDateTime, donorAddress, donorContactNumber',
         });
-      }
-
-      // Validate pickup date is in the future
+      }
       const pickupDate = new Date(pickupScheduledDateTime);
       if (isNaN(pickupDate.getTime())) {
         return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
       }
       if (pickupDate.getTime() <= Date.now()) {
         return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
-      }
-
-      // Validate address and contact
+      }
       if (typeof donorAddress !== 'string' || donorAddress.trim().length === 0) {
         return res.status(400).json({ success: false, message: 'Donor address cannot be empty' });
       }
       if (typeof donorContactNumber !== 'string' || donorContactNumber.trim().length === 0) {
         return res.status(400).json({ success: false, message: 'Donor contact number cannot be empty' });
       }
-    }
-
-    // Check if donor already contributed
+    }
     const existingContribution = await queryOne<any>(
       'SELECT id FROM contributions WHERE donation_id = ? AND donor_id = ?',
       [donationId, donorId]
@@ -108,13 +91,7 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
         success: false,
         message: 'You have already contributed to this donation',
       });
-    }
-
-    // Note: contributions table doesn't store quantity_or_amount
-    // We track contributions by count, not by quantity
-    // If you need quantity tracking, consider using donation_request_contributions table instead
-
-    // Get donor details
+    }
     const donor = await queryOne<any>(
       'SELECT id, name, email, contact_info, phone_number, full_address FROM donors WHERE id = ?',
       [donorId]
@@ -122,9 +99,7 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
 
     if (!donor) {
       return res.status(404).json({ success: false, message: 'Donor not found' });
-    }
-
-    // Update donor profile with address and phone if not set
+    }
     if (requiresPickup) {
       const donorUpdates: string[] = [];
       const donorParams: any[] = [];
@@ -145,11 +120,7 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
           donorParams
         );
       }
-    }
-
-    // Insert contribution
-    // Note: Schema requires donor_address and donor_contact_number to be NOT NULL
-    // For FUNDS, we'll use placeholder values since pickup isn't needed
+    }
     const contributionId = await insert(
       `INSERT INTO contributions (
         donation_id, donor_id, notes,
@@ -168,20 +139,49 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
         requiresPickup ? 'SCHEDULED' : null,
         'PENDING',
       ]
-    );
-
-    // Fetch created contribution with details
+    );
     const contribution = await queryOne<any>(
       `SELECT c.*, d.name as donor_name, d.email as donor_email,
               dr.donation_category, dr.donation_type, dr.purpose, dr.quantity_or_amount as donation_quantity,
-              u.name as ngo_name
+              u.name as ngo_name, u.id as ngo_id
        FROM contributions c
        INNER JOIN donors d ON c.donor_id = d.id
        INNER JOIN donations dr ON c.donation_id = dr.id
        INNER JOIN users u ON dr.ngo_id = u.id
        WHERE c.id = ?`,
       [contributionId]
-    );
+    );
+    try {
+      const ngoId = contribution.ngo_id;
+      const donationType = contribution.donation_type || contribution.donation_category || 'OTHER';
+      const amount = parseFloat(contribution.donation_quantity || quantityOrAmount || '0');
+      await notifyNgoOnDonation(
+        ngoId,
+        donorId,
+        contribution.donor_name,
+        contribution.donor_email,
+        donationType,
+        amount,
+        contributionId
+      );
+      await notifyAdminOnDonation(
+        donorId,
+        contribution.donor_name,
+        contribution.ngo_name,
+        donationType,
+        amount,
+        contributionId
+      );
+      await sendDonorDonationEmail(
+        contribution.donor_email,
+        contribution.donor_name,
+        contribution.ngo_name,
+        donationType,
+        amount
+      );
+    } catch (notificationError) {
+      console.error('Error sending notifications:', notificationError);
+    }
 
     return sendSuccess(res, {
       id: contribution.id,
@@ -219,11 +219,6 @@ export const contributeToDonation = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Get my contributions (donor)
- * GET /api/contributions/my
- */
 export const getMyContributions = async (req: AuthRequest, res: Response) => {
   try {
     const donorId = parseInt(req.user!.id);
@@ -274,11 +269,6 @@ export const getMyContributions = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Get contributions for a specific NGO
- * GET /api/contributions/ngo/:ngoId
- */
 export const getNgoContributions = async (req: AuthRequest, res: Response) => {
   try {
     const { ngoId: paramNgoId } = req.params;
@@ -287,17 +277,13 @@ export const getNgoContributions = async (req: AuthRequest, res: Response) => {
 
     if (isNaN(requestedNgoId)) {
       return res.status(400).json({ success: false, message: 'Invalid NGO id' });
-    }
-
-    // Only allow NGO to view their own contributions, or ADMIN to view any
+    }
     if (req.user!.role !== 'ADMIN' && authenticatedNgoId !== requestedNgoId) {
       return res.status(403).json({
         success: false,
         message: 'Forbidden: You can only view contributions for your own donations',
       });
-    }
-
-    // Verify NGO exists
+    }
     const ngo = await queryOne<any>('SELECT id, name FROM users WHERE id = ? AND role = "NGO"', [requestedNgoId]);
     if (!ngo) {
       return res.status(404).json({ success: false, message: 'NGO not found' });

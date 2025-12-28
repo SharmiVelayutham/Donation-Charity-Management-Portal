@@ -1,7 +1,3 @@
-/**
- * MySQL-based authentication helper
- * Replaces MongoDB auth-helper for MySQL database
- */
 
 import { queryOne } from '../config/mysql';
 
@@ -21,26 +17,16 @@ export interface UserWithPassword {
   name: string;
   isBlocked?: boolean;
 }
-
-/**
- * Find user by ID across all tables (donors, users/NGOs, admins)
- * @param userId - User ID to lookup
- * @param tokenRole - Role from JWT token (optional, used to prioritize table lookup)
- */
 export const findUserById = async (userId: number | string, tokenRole?: string): Promise<AuthUser | null> => {
   const id = typeof userId === 'string' ? parseInt(userId) : userId;
-  const normalizedTokenRole = tokenRole ? tokenRole.toUpperCase() : '';
-  
-  // If token role is provided, check that table first
-  if (normalizedTokenRole === 'NGO') {
-    // Try User/NGO table first
+  const normalizedTokenRole = tokenRole ? tokenRole.toUpperCase() : '';
+  if (normalizedTokenRole === 'NGO') {
     const user = await queryOne<any>('SELECT id, name, email, role, is_blocked FROM users WHERE id = ?', [id]);
     if (user) {
       if (user.is_blocked) {
         console.log(`[findUserById] User ID ${id} is blocked.`);
         return null; // Blocked users cannot authenticate
-      }
-      // All users in users table are NGOs - ensure role is always 'NGO'
+      }
       const dbRole = user.role || 'NGO';
       const normalizedRole = (dbRole.toString().toUpperCase() === 'NGO') ? 'NGO' : 'NGO';
       console.log(`[findUserById] Found user ID ${id} in 'users' table (token role: NGO) - DB Role: "${dbRole}" (type: ${typeof dbRole}), Normalized Role: "${normalizedRole}"`);
@@ -52,8 +38,7 @@ export const findUserById = async (userId: number | string, tokenRole?: string):
         isBlocked: user.is_blocked || false,
       };
     }
-  } else if (normalizedTokenRole === 'ADMIN') {
-    // Try Admin table first
+  } else if (normalizedTokenRole === 'ADMIN') {
     const admin = await queryOne<any>('SELECT id, name, email FROM admins WHERE id = ?', [id]);
     if (admin) {
       console.log(`[findUserById] Found admin ID ${id} in 'admins' table (token role: ADMIN)`);
@@ -65,8 +50,7 @@ export const findUserById = async (userId: number | string, tokenRole?: string):
         isBlocked: false,
       };
     }
-  } else if (normalizedTokenRole === 'DONOR') {
-    // Try Donor table first
+  } else if (normalizedTokenRole === 'DONOR') {
     const donor = await queryOne<any>('SELECT id, name, email, role, is_blocked FROM donors WHERE id = ?', [id]);
     if (donor) {
       if (donor.is_blocked) return null; // Blocked users cannot authenticate
@@ -79,10 +63,7 @@ export const findUserById = async (userId: number | string, tokenRole?: string):
         isBlocked: donor.is_blocked || false,
       };
     }
-  }
-  
-  // If token role not provided or not found in prioritized table, check all tables
-  // Try Donor table
+  }
   const donor = await queryOne<any>('SELECT id, name, email, role, is_blocked FROM donors WHERE id = ?', [id]);
   if (donor) {
     if (donor.is_blocked) return null; // Blocked users cannot authenticate
@@ -93,9 +74,7 @@ export const findUserById = async (userId: number | string, tokenRole?: string):
       name: donor.name,
       isBlocked: donor.is_blocked || false,
     };
-  }
-
-  // Try Admin table
+  }
   const admin = await queryOne<any>('SELECT id, name, email FROM admins WHERE id = ?', [id]);
   if (admin) {
     return {
@@ -105,16 +84,13 @@ export const findUserById = async (userId: number | string, tokenRole?: string):
       name: admin.name,
       isBlocked: false,
     };
-  }
-
-  // Try User/NGO table
+  }
   const user = await queryOne<any>('SELECT id, name, email, role, is_blocked FROM users WHERE id = ?', [id]);
   if (user) {
     if (user.is_blocked) {
       console.log(`[findUserById] User ID ${id} is blocked.`);
       return null; // Blocked users cannot authenticate
-    }
-    // All users in users table are NGOs - ensure role is always 'NGO'
+    }
     const dbRole = user.role || 'NGO';
     const normalizedRole = (dbRole.toString().toUpperCase() === 'NGO') ? 'NGO' : 'NGO';
     console.log(`[findUserById] Found user ID ${id} in 'users' table - DB Role: "${dbRole}" (type: ${typeof dbRole}), Normalized Role: "${normalizedRole}"`);
@@ -129,14 +105,8 @@ export const findUserById = async (userId: number | string, tokenRole?: string):
 
   return null;
 };
-
-/**
- * Find user by email across all tables
- */
 export const findUserByEmail = async (email: string): Promise<AuthUser | null> => {
-  const normalizedEmail = email.toLowerCase();
-
-  // Try Donor table
+  const normalizedEmail = email.toLowerCase();
   const donor = await queryOne<any>('SELECT id, name, email, role, is_blocked FROM donors WHERE email = ?', [normalizedEmail]);
   if (donor) {
     if (donor.is_blocked) return null;
@@ -147,9 +117,7 @@ export const findUserByEmail = async (email: string): Promise<AuthUser | null> =
       name: donor.name,
       isBlocked: donor.is_blocked || false,
     };
-  }
-
-  // Try Admin table
+  }
   const admin = await queryOne<any>('SELECT id, name, email, role FROM admins WHERE email = ?', [normalizedEmail]);
   if (admin) {
     return {
@@ -159,9 +127,7 @@ export const findUserByEmail = async (email: string): Promise<AuthUser | null> =
       name: admin.name,
       isBlocked: false,
     };
-  }
-
-  // Try User/NGO table
+  }
   const user = await queryOne<any>('SELECT id, name, email, role, is_blocked FROM users WHERE email = ?', [normalizedEmail]);
   if (user) {
     if (user.is_blocked) return null;
@@ -176,14 +142,8 @@ export const findUserByEmail = async (email: string): Promise<AuthUser | null> =
 
   return null;
 };
-
-/**
- * Find user with password for authentication
- */
 export const findUserWithPasswordByEmail = async (email: string): Promise<UserWithPassword | null> => {
-  const normalizedEmail = email.toLowerCase();
-
-  // Try Donor table
+  const normalizedEmail = email.toLowerCase();
   const donor = await queryOne<any>('SELECT id, name, email, password, role, is_blocked FROM donors WHERE email = ?', [normalizedEmail]);
   if (donor) {
     if (donor.is_blocked) return null;
@@ -195,9 +155,7 @@ export const findUserWithPasswordByEmail = async (email: string): Promise<UserWi
       name: donor.name,
       isBlocked: donor.is_blocked || false,
     };
-  }
-
-  // Try Admin table
+  }
   const admin = await queryOne<any>('SELECT id, name, email, password, role FROM admins WHERE email = ?', [normalizedEmail]);
   if (admin) {
     return {
@@ -208,9 +166,7 @@ export const findUserWithPasswordByEmail = async (email: string): Promise<UserWi
       name: admin.name,
       isBlocked: false,
     };
-  }
-
-  // Try User/NGO table
+  }
   const user = await queryOne<any>('SELECT id, name, email, password, role, is_blocked FROM users WHERE email = ?', [normalizedEmail]);
   if (user) {
     if (user.is_blocked) return null;
@@ -226,10 +182,6 @@ export const findUserWithPasswordByEmail = async (email: string): Promise<UserWi
 
   return null;
 };
-
-/**
- * Check if email exists in any table
- */
 export const emailExists = async (email: string): Promise<boolean> => {
   const normalizedEmail = email.toLowerCase();
 

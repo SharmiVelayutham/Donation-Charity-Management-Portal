@@ -1,7 +1,3 @@
-/**
- * Type definitions for Donation & Charity Management Portal
- * Replaces Mongoose model imports with TypeScript interfaces
- */
 
 export type UserRole = 'DONOR' | 'NGO' | 'ADMIN';
 
@@ -13,9 +9,7 @@ export type PickupStatus = 'SCHEDULED' | 'PICKED_UP' | 'CANCELLED';
 
 export type PaymentStatus = 'PENDING' | 'SUCCESS' | 'FAILED';
 
-export type Priority = 'NORMAL' | 'URGENT';
-
-// User/NGO Interface
+export type Priority = 'NORMAL' | 'URGENT';
 export interface IUser {
   id: number;
   name: string;
@@ -25,9 +19,7 @@ export interface IUser {
   contact_info: string;
   is_blocked: boolean;
   created_at: Date;
-}
-
-// Donor Interface
+}
 export interface IDonor {
   id: number;
   name: string;
@@ -39,9 +31,7 @@ export interface IDonor {
   full_address?: string;
   is_blocked: boolean;
   created_at: Date;
-}
-
-// Admin Interface
+}
 export interface IAdmin {
   id: number;
   name: string;
@@ -50,9 +40,7 @@ export interface IAdmin {
   role: 'ADMIN';
   contact_info: string;
   created_at: Date;
-}
-
-// Donation Interface
+}
 export interface IDonation {
   id: number;
   ngo_id: number;
@@ -69,9 +57,7 @@ export interface IDonation {
   status: DonationStatus;
   created_at: Date;
   updated_at: Date;
-}
-
-// Contribution Interface
+}
 export interface IContribution {
   id: number;
   donation_id: number;
@@ -86,9 +72,7 @@ export interface IContribution {
   notes?: string;
   created_at: Date;
   updated_at: Date;
-}
-
-// Payment Interface
+}
 export interface IPayment {
   id: number;
   donation_id: number;

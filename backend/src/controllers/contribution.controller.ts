@@ -44,8 +44,7 @@ export const getMyContributions = async (req: AuthRequest, res: Response) => {
   return sendSuccess(res, contributions, 'My contributions');
 };
 
-export const getNgoContributions = async (req: AuthRequest, res: Response) => {
-  // Fetch contributions for donations owned by this NGO
+export const getNgoContributions = async (req: AuthRequest, res: Response) => {
   const donations = await DonationModel.find({ ngoId: req.user!.id }).select('_id');
   const donationIds = donations.map((d) => d._id);
   const contributions = await ContributionModel.find({ donationId: { $in: donationIds } })
@@ -53,9 +52,7 @@ export const getNgoContributions = async (req: AuthRequest, res: Response) => {
     .populate('donationId')
     .sort({ createdAt: -1 });
   return sendSuccess(res, contributions, 'NGO contributions');
-};
-
-// NGO: Approve or reject a contribution
+};
 export const approveContribution = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { status } = req.body as { status: ContributionStatus };
@@ -79,9 +76,7 @@ export const approveContribution = async (req: AuthRequest, res: Response) => {
   }
 
   contribution.status = status;
-  await contribution.save();
-
-  // If approved, update donation status to CONFIRMED
+  await contribution.save();
   if (status === 'APPROVED') {
     await DonationModel.findByIdAndUpdate(donation._id, { status: 'CONFIRMED' });
   }
@@ -91,9 +86,7 @@ export const approveContribution = async (req: AuthRequest, res: Response) => {
     .populate('donationId');
 
   return sendSuccess(res, updated, `Contribution ${status.toLowerCase()}`);
-};
-
-// NGO: Update pickup schedule for a contribution
+};
 export const updatePickupSchedule = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { scheduledPickupTime } = req.body as { scheduledPickupTime: string | Date };

@@ -5,10 +5,6 @@ const response_1 = require("../utils/response");
 const mysql_1 = require("../config/mysql");
 const email_service_1 = require("../utils/email.service");
 const email_template_service_1 = require("../utils/email-template.service");
-/**
- * Get all NGOs with detailed information
- * GET /api/admin/dashboard/ngos
- */
 const getAllNgos = async (req, res) => {
     try {
         const { isBlocked, search } = req.query;
@@ -28,7 +24,6 @@ const getAllNgos = async (req, res) => {
         }
         sql += ' ORDER BY created_at DESC';
         const ngos = await (0, mysql_1.query)(sql, params);
-        // Add donation statistics for each NGO
         const ngosWithStats = await Promise.all(ngos.map(async (ngo) => {
             const donationCountResult = await (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM donations WHERE ngo_id = ?', [ngo.id]);
             const donationCount = (donationCountResult === null || donationCountResult === void 0 ? void 0 : donationCountResult.count) || 0;
@@ -49,8 +44,17 @@ const getAllNgos = async (req, res) => {
                 rejectionReason: ngo.rejection_reason,
                 role: ngo.role,
                 isBlocked: ngo.is_blocked === 1,
-                hasPendingProfileUpdate: !!(ngo.pending_profile_updates && JSON.parse(ngo.pending_profile_updates) && Object.keys(JSON.parse(ngo.pending_profile_updates)).length > 0),
-                pendingProfileUpdate: ngo.pending_profile_updates ? JSON.parse(ngo.pending_profile_updates) : null,
+                hasPendingProfileUpdate: !!(ngo.pending_profile_updates && ngo.pending_profile_updates !== null && ngo.pending_profile_updates !== 'null' && String(ngo.pending_profile_updates).trim() !== ''),
+                pendingProfileUpdate: ngo.pending_profile_updates && ngo.pending_profile_updates !== null && ngo.pending_profile_updates !== 'null' && String(ngo.pending_profile_updates).trim() !== '' ? (() => {
+                    try {
+                        const parsed = JSON.parse(ngo.pending_profile_updates);
+                        return Object.keys(parsed).length > 0 ? parsed : null;
+                    }
+                    catch (e) {
+                        console.error('Error parsing pending_profile_updates:', e);
+                        return null;
+                    }
+                })() : null,
                 createdAt: ngo.created_at,
                 statistics: {
                     totalDonations: donationCount,
@@ -65,10 +69,6 @@ const getAllNgos = async (req, res) => {
     }
 };
 exports.getAllNgos = getAllNgos;
-/**
- * Get all Donors with detailed information
- * GET /api/admin/dashboard/donors
- */
 const getAllDonors = async (req, res) => {
     try {
         const { isBlocked, search } = req.query;
@@ -85,7 +85,6 @@ const getAllDonors = async (req, res) => {
         }
         sql += ' ORDER BY created_at DESC';
         const donors = await (0, mysql_1.query)(sql, params);
-        // Add contribution statistics for each donor
         const donorsWithStats = await Promise.all(donors.map(async (donor) => {
             const contributionCountResult = await (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM contributions WHERE donor_id = ?', [donor.id]);
             const contributionCount = (contributionCountResult === null || contributionCountResult === void 0 ? void 0 : contributionCountResult.count) || 0;
@@ -114,10 +113,6 @@ const getAllDonors = async (req, res) => {
     }
 };
 exports.getAllDonors = getAllDonors;
-/**
- * Get detailed information about a specific NGO
- * GET /api/admin/dashboard/ngos/:id
- */
 const getNgoDetails = async (req, res) => {
     try {
         const { id } = req.params;
@@ -125,13 +120,15 @@ const getNgoDetails = async (req, res) => {
         if (isNaN(ngoId)) {
             return res.status(400).json({ success: false, message: 'Invalid NGO id' });
         }
-        const ngo = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, role, is_blocked, created_at FROM users WHERE id = ?', [ngoId]);
+        const ngo = await (0, mysql_1.queryOne)(`SELECT id, ngo_id, name, email, contact_info, contact_person_name, phone_number,
+              registration_number, address, city, state, pincode, website_url, about_ngo,
+              verification_status, rejection_reason, pending_profile_updates,
+              role, is_blocked, created_at 
+       FROM users WHERE id = ?`, [ngoId]);
         if (!ngo) {
             return res.status(404).json({ success: false, message: 'NGO not found' });
         }
-        // Get all donations by this NGO
         const donations = await (0, mysql_1.query)('SELECT * FROM donations WHERE ngo_id = ? ORDER BY created_at DESC', [ngoId]);
-        // Get contribution statistics
         const totalContributionsResult = await (0, mysql_1.queryOne)(`SELECT COUNT(*) as count 
        FROM contributions c
        INNER JOIN donations d ON c.donation_id = d.id
@@ -139,9 +136,31 @@ const getNgoDetails = async (req, res) => {
         const totalContributions = (totalContributionsResult === null || totalContributionsResult === void 0 ? void 0 : totalContributionsResult.count) || 0;
         const ngoDetails = {
             id: ngo.id,
+            ngo_id: ngo.ngo_id,
             name: ngo.name,
             email: ngo.email,
             contactInfo: ngo.contact_info,
+            contactPersonName: ngo.contact_person_name,
+            phoneNumber: ngo.phone_number,
+            registrationNumber: ngo.registration_number,
+            address: ngo.address,
+            city: ngo.city,
+            state: ngo.state,
+            pincode: ngo.pincode,
+            websiteUrl: ngo.website_url,
+            aboutNgo: ngo.about_ngo,
+            verificationStatus: ngo.verification_status || 'PENDING',
+            rejectionReason: ngo.rejection_reason,
+            hasPendingProfileUpdate: !!(ngo.pending_profile_updates && ngo.pending_profile_updates !== null && ngo.pending_profile_updates !== 'null' && ngo.pending_profile_updates.trim() !== ''),
+            pendingProfileUpdate: ngo.pending_profile_updates && ngo.pending_profile_updates !== null && ngo.pending_profile_updates !== 'null' && ngo.pending_profile_updates.trim() !== '' ? (() => {
+                try {
+                    const parsed = JSON.parse(ngo.pending_profile_updates);
+                    return Object.keys(parsed).length > 0 ? parsed : null;
+                }
+                catch (e) {
+                    return null;
+                }
+            })() : null,
             role: ngo.role,
             isBlocked: ngo.is_blocked === 1,
             createdAt: ngo.created_at,
@@ -161,10 +180,6 @@ const getNgoDetails = async (req, res) => {
     }
 };
 exports.getNgoDetails = getNgoDetails;
-/**
- * Get detailed information about a specific Donor
- * GET /api/admin/dashboard/donors/:id
- */
 const getDonorDetails = async (req, res) => {
     try {
         const { id } = req.params;
@@ -176,7 +191,6 @@ const getDonorDetails = async (req, res) => {
         if (!donor) {
             return res.status(404).json({ success: false, message: 'Donor not found' });
         }
-        // Get all contributions by this donor with donation details
         const contributions = await (0, mysql_1.query)(`SELECT c.*, 
         d.donation_category, d.purpose, d.quantity_or_amount, d.status as donation_status,
         u.name as ngo_name, u.email as ngo_email
@@ -211,10 +225,6 @@ const getDonorDetails = async (req, res) => {
     }
 };
 exports.getDonorDetails = getDonorDetails;
-/**
- * Block an NGO
- * PATCH /api/admin/dashboard/ngos/:id/block
- */
 const blockNgo = async (req, res) => {
     try {
         const { id } = req.params;
@@ -230,7 +240,6 @@ const blockNgo = async (req, res) => {
                 message: 'Block reason is required for admin records',
             });
         }
-        // Get NGO details before updating
         const ngo = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, role, is_blocked FROM users WHERE id = ? AND role = ?', [ngoId, 'NGO']);
         if (!ngo) {
             return res.status(404).json({ success: false, message: 'NGO not found' });
@@ -238,22 +247,18 @@ const blockNgo = async (req, res) => {
         if (ngo.is_blocked === 1) {
             return res.status(400).json({ success: false, message: 'NGO is already blocked' });
         }
-        // Block the NGO
         const affectedRows = await (0, mysql_1.update)('UPDATE users SET is_blocked = 1 WHERE id = ?', [ngoId]);
         if (affectedRows === 0) {
             return res.status(500).json({ success: false, message: 'Failed to block NGO' });
         }
-        // Store block history (admin-only reason)
         const blockDate = new Date();
         try {
             await (0, mysql_1.update)(`INSERT INTO ngo_block_history (ngo_id, block_reason, blocked_by, blocked_at, email_template_version) 
          VALUES (?, ?, ?, ?, 'current')`, [ngoId, blockReason.trim(), adminId, blockDate]);
         }
         catch (historyError) {
-            // Log but don't fail if history table doesn't exist yet
             console.warn('Could not save block history:', historyError.message);
         }
-        // Get email template and send email
         try {
             console.log(`[Block NGO] Fetching email template for NGO: ${ngo.name} (${ngo.email})`);
             const template = await (0, email_template_service_1.getEmailTemplate)('NGO_BLOCK');
@@ -289,9 +294,7 @@ const blockNgo = async (req, res) => {
                 ngoEmail: ngo.email,
                 ngoName: ngo.name,
             });
-            // Don't fail the block if email fails, but log it
         }
-        // Fetch updated NGO
         const updatedNgo = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, role, is_blocked, created_at FROM users WHERE id = ?', [ngoId]);
         return (0, response_1.sendSuccess)(res, {
             id: updatedNgo.id,
@@ -309,10 +312,6 @@ const blockNgo = async (req, res) => {
     }
 };
 exports.blockNgo = blockNgo;
-/**
- * Unblock an NGO
- * PATCH /api/admin/dashboard/ngos/:id/unblock
- */
 const unblockNgo = async (req, res) => {
     try {
         const { id } = req.params;
@@ -328,7 +327,6 @@ const unblockNgo = async (req, res) => {
                 message: 'Unblock reason is required for admin records',
             });
         }
-        // Get NGO details before updating
         const ngo = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, role, is_blocked FROM users WHERE id = ? AND role = ?', [ngoId, 'NGO']);
         if (!ngo) {
             return res.status(404).json({ success: false, message: 'NGO not found' });
@@ -336,22 +334,18 @@ const unblockNgo = async (req, res) => {
         if (ngo.is_blocked === 0) {
             return res.status(400).json({ success: false, message: 'NGO is already unblocked' });
         }
-        // Unblock the NGO
         const affectedRows = await (0, mysql_1.update)('UPDATE users SET is_blocked = 0 WHERE id = ?', [ngoId]);
         if (affectedRows === 0) {
             return res.status(500).json({ success: false, message: 'Failed to unblock NGO' });
         }
-        // Store unblock history (admin-only reason)
         const unblockDate = new Date();
         try {
             await (0, mysql_1.update)(`INSERT INTO ngo_unblock_history (ngo_id, unblock_reason, unblocked_by, unblocked_at, email_template_version) 
          VALUES (?, ?, ?, ?, 'current')`, [ngoId, unblockReason.trim(), adminId, unblockDate]);
         }
         catch (historyError) {
-            // Log but don't fail if history table doesn't exist yet
             console.warn('Could not save unblock history:', historyError.message);
         }
-        // Get email template and send email
         try {
             console.log(`[Unblock NGO] Fetching email template for NGO: ${ngo.name} (${ngo.email})`);
             const template = await (0, email_template_service_1.getEmailTemplate)('NGO_UNBLOCK');
@@ -387,9 +381,7 @@ const unblockNgo = async (req, res) => {
                 ngoEmail: ngo.email,
                 ngoName: ngo.name,
             });
-            // Don't fail the unblock if email fails, but log it
         }
-        // Fetch updated NGO
         const updatedNgo = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, role, is_blocked, created_at FROM users WHERE id = ?', [ngoId]);
         return (0, response_1.sendSuccess)(res, {
             id: updatedNgo.id,
@@ -407,10 +399,6 @@ const unblockNgo = async (req, res) => {
     }
 };
 exports.unblockNgo = unblockNgo;
-/**
- * Block a Donor
- * PUT /api/admin/dashboard/donors/:id/block
- */
 const blockDonor = async (req, res) => {
     try {
         const { id } = req.params;
@@ -440,10 +428,6 @@ const blockDonor = async (req, res) => {
     }
 };
 exports.blockDonor = blockDonor;
-/**
- * Unblock a Donor
- * PUT /api/admin/dashboard/donors/:id/unblock
- */
 const unblockDonor = async (req, res) => {
     try {
         const { id } = req.params;
@@ -473,10 +457,6 @@ const unblockDonor = async (req, res) => {
     }
 };
 exports.unblockDonor = unblockDonor;
-/**
- * Approve NGO verification
- * PUT /api/admin/dashboard/ngos/:id/approve
- */
 const approveNgo = async (req, res) => {
     try {
         const { id } = req.params;
@@ -484,7 +464,6 @@ const approveNgo = async (req, res) => {
         if (isNaN(ngoId)) {
             return res.status(400).json({ success: false, message: 'Invalid NGO id' });
         }
-        // Get NGO details before updating
         const ngo = await (0, mysql_1.queryOne)(`SELECT id, ngo_id, name, email, verification_status 
        FROM users 
        WHERE id = ? AND role = 'NGO'`, [ngoId]);
@@ -494,23 +473,19 @@ const approveNgo = async (req, res) => {
         if (ngo.verification_status === 'VERIFIED') {
             return res.status(400).json({ success: false, message: 'NGO is already verified' });
         }
-        // Update verification status to VERIFIED
         const affectedRows = await (0, mysql_1.update)(`UPDATE users 
        SET verification_status = 'VERIFIED', verified = TRUE, rejection_reason = NULL 
        WHERE id = ? AND role = 'NGO'`, [ngoId]);
         if (affectedRows === 0) {
             return res.status(500).json({ success: false, message: 'Failed to approve NGO' });
         }
-        // Send approval email
         try {
             await (0, email_service_1.sendNgoVerificationApprovalEmail)(ngo.email, ngo.name, ngo.ngo_id || `NGO-${ngo.id}`);
             console.log(`✅ Verification approval email sent to ${ngo.email}`);
         }
         catch (emailError) {
             console.error('Failed to send approval email:', emailError);
-            // Don't fail the approval if email fails, but log it
         }
-        // Fetch updated NGO
         const updatedNgo = await (0, mysql_1.queryOne)(`SELECT id, ngo_id, name, email, contact_info, contact_person_name, 
               registration_number, verification_status, created_at 
        FROM users 
@@ -533,10 +508,6 @@ const approveNgo = async (req, res) => {
     }
 };
 exports.approveNgo = approveNgo;
-/**
- * Reject NGO verification
- * PUT /api/admin/dashboard/ngos/:id/reject
- */
 const rejectNgo = async (req, res) => {
     try {
         const { id } = req.params;
@@ -551,7 +522,6 @@ const rejectNgo = async (req, res) => {
                 message: 'Rejection reason is required'
             });
         }
-        // Get NGO details before updating
         const ngo = await (0, mysql_1.queryOne)(`SELECT id, ngo_id, name, email, verification_status 
        FROM users 
        WHERE id = ? AND role = 'NGO'`, [ngoId]);
@@ -561,23 +531,19 @@ const rejectNgo = async (req, res) => {
         if (ngo.verification_status === 'REJECTED') {
             return res.status(400).json({ success: false, message: 'NGO is already rejected' });
         }
-        // Update verification status to REJECTED
         const affectedRows = await (0, mysql_1.update)(`UPDATE users 
        SET verification_status = 'REJECTED', verified = FALSE, rejection_reason = ? 
        WHERE id = ? AND role = 'NGO'`, [rejectionReason.trim(), ngoId]);
         if (affectedRows === 0) {
             return res.status(500).json({ success: false, message: 'Failed to reject NGO' });
         }
-        // Send rejection email
         try {
             await (0, email_service_1.sendNgoVerificationRejectionEmail)(ngo.email, ngo.name, rejectionReason.trim());
             console.log(`✅ Verification rejection email sent to ${ngo.email}`);
         }
         catch (emailError) {
             console.error('Failed to send rejection email:', emailError);
-            // Don't fail the rejection if email fails, but log it
         }
-        // Fetch updated NGO
         const updatedNgo = await (0, mysql_1.queryOne)(`SELECT id, ngo_id, name, email, contact_info, contact_person_name, 
               registration_number, verification_status, rejection_reason, created_at 
        FROM users 
@@ -601,10 +567,6 @@ const rejectNgo = async (req, res) => {
     }
 };
 exports.rejectNgo = rejectNgo;
-/**
- * Approve NGO profile update
- * PUT /api/admin/dashboard/ngos/:id/approve-profile-update
- */
 const approveNgoProfileUpdate = async (req, res) => {
     try {
         const { id } = req.params;
@@ -612,7 +574,6 @@ const approveNgoProfileUpdate = async (req, res) => {
         if (isNaN(ngoId)) {
             return res.status(400).json({ success: false, message: 'Invalid NGO id' });
         }
-        // Get NGO with pending updates
         const ngo = await (0, mysql_1.queryOne)('SELECT id, ngo_id, name, email, pending_profile_updates FROM users WHERE id = ?', [ngoId]);
         if (!ngo) {
             return res.status(404).json({ success: false, message: 'NGO not found' });
@@ -621,7 +582,6 @@ const approveNgoProfileUpdate = async (req, res) => {
             return res.status(400).json({ success: false, message: 'No pending profile updates found' });
         }
         const pendingUpdates = JSON.parse(ngo.pending_profile_updates);
-        // Build update query
         const updates = [];
         const params = [];
         if (pendingUpdates.name) {
@@ -660,12 +620,10 @@ const approveNgoProfileUpdate = async (req, res) => {
             updates.push('about_ngo = ?');
             params.push(pendingUpdates.aboutNgo);
         }
-        // Clear pending updates
         updates.push('pending_profile_updates = NULL');
         params.push(ngoId);
         const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
         await (0, mysql_1.update)(sql, params);
-        // Get updated NGO
         const updatedNgo = await (0, mysql_1.queryOne)('SELECT id, ngo_id, name, email, contact_person_name, phone_number, address, city, state, pincode, website_url, about_ngo FROM users WHERE id = ?', [ngoId]);
         return (0, response_1.sendSuccess)(res, {
             id: updatedNgo.id,
@@ -688,10 +646,6 @@ const approveNgoProfileUpdate = async (req, res) => {
     }
 };
 exports.approveNgoProfileUpdate = approveNgoProfileUpdate;
-/**
- * Reject NGO profile update
- * PUT /api/admin/dashboard/ngos/:id/reject-profile-update
- */
 const rejectNgoProfileUpdate = async (req, res) => {
     try {
         const { id } = req.params;
@@ -699,7 +653,6 @@ const rejectNgoProfileUpdate = async (req, res) => {
         if (isNaN(ngoId)) {
             return res.status(400).json({ success: false, message: 'Invalid NGO id' });
         }
-        // Clear pending updates
         await (0, mysql_1.update)('UPDATE users SET pending_profile_updates = NULL WHERE id = ?', [ngoId]);
         return (0, response_1.sendSuccess)(res, { id: ngoId }, 'Profile update rejected successfully');
     }

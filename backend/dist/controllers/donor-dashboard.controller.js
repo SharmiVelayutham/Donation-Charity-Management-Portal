@@ -8,19 +8,13 @@ const response_1 = require("../utils/response");
 const mysql_1 = require("../config/mysql");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const SALT_ROUNDS = 10;
-/**
- * Get donor dashboard overview
- * GET /api/donor/dashboard
- */
 const getDonorDashboard = async (req, res) => {
     try {
         const donorId = typeof req.user.id === 'string' ? parseInt(req.user.id) : req.user.id;
-        // Get donor profile
         const donor = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, phone_number, full_address, role, created_at FROM donors WHERE id = ?', [donorId]);
         if (!donor) {
             return res.status(404).json({ success: false, message: 'Donor not found' });
         }
-        // Get statistics using SQL queries
         const [totalContributions, pendingContributions, approvedContributions, completedContributions, totalAmountResult,] = await Promise.all([
             (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM contributions WHERE donor_id = ?', [donorId]),
             (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM contributions WHERE donor_id = ? AND status = ?', [donorId, 'PENDING']),
@@ -33,7 +27,6 @@ const getDonorDashboard = async (req, res) => {
         WHERE c.donor_id = ? AND c.status IN ('APPROVED', 'COMPLETED')
       `, [donorId]),
         ]);
-        // Get recent contributions
         const recentContributions = await (0, mysql_1.query)(`
       SELECT c.*,
         d.donation_category, d.purpose, d.quantity_or_amount, d.status as donation_status,
@@ -45,7 +38,6 @@ const getDonorDashboard = async (req, res) => {
       ORDER BY c.created_at DESC
       LIMIT 5
     `, [donorId]);
-        // Get upcoming pickups
         const upcomingPickups = await (0, mysql_1.query)(`
       SELECT c.*,
         d.donation_category, d.purpose, d.quantity_or_amount,
@@ -81,7 +73,6 @@ const getDonorDashboard = async (req, res) => {
             },
             recentContributions: recentContributions || [],
             upcomingPickups: upcomingPickups || [],
-            // Frontend expects these fields
             contributions: recentContributions || [],
             totalContributions: (totalContributions === null || totalContributions === void 0 ? void 0 : totalContributions.count) || 0,
         };
@@ -93,10 +84,6 @@ const getDonorDashboard = async (req, res) => {
     }
 };
 exports.getDonorDashboard = getDonorDashboard;
-/**
- * Get donor profile
- * GET /api/donor/dashboard/profile
- */
 const getDonorProfile = async (req, res) => {
     try {
         const donorId = typeof req.user.id === 'string' ? parseInt(req.user.id) : req.user.id;
@@ -120,10 +107,6 @@ const getDonorProfile = async (req, res) => {
     }
 };
 exports.getDonorProfile = getDonorProfile;
-/**
- * Update donor profile
- * PUT /api/donor/dashboard/profile
- */
 const updateDonorProfile = async (req, res) => {
     try {
         const donorId = typeof req.user.id === 'string' ? parseInt(req.user.id) : req.user.id;
@@ -177,10 +160,6 @@ const updateDonorProfile = async (req, res) => {
     }
 };
 exports.updateDonorProfile = updateDonorProfile;
-/**
- * Get all contributions with filters
- * GET /api/donor/dashboard/contributions
- */
 const getDonorContributions = async (req, res) => {
     try {
         const donorId = typeof req.user.id === 'string' ? parseInt(req.user.id) : req.user.id;
@@ -204,7 +183,6 @@ const getDonorContributions = async (req, res) => {
         sql += ' LIMIT ? OFFSET ?';
         params.push(Number(limit), offset);
         const contributions = await (0, mysql_1.query)(sql, params);
-        // Get total count
         let countSql = 'SELECT COUNT(*) as total FROM contributions WHERE donor_id = ?';
         const countParams = [donorId];
         if (status) {
@@ -228,14 +206,9 @@ const getDonorContributions = async (req, res) => {
     }
 };
 exports.getDonorContributions = getDonorContributions;
-/**
- * Get donor's donation request contributions (new system)
- * GET /api/donor/dashboard/donation-request-contributions
- */
 const getDonorDonationRequestContributions = async (req, res) => {
     try {
         const donorId = typeof req.user.id === 'string' ? parseInt(req.user.id) : req.user.id;
-        // Get all contributions to donation requests
         const contributions = await (0, mysql_1.query)(`
       SELECT 
         drc.id as contribution_id,
@@ -259,7 +232,6 @@ const getDonorDonationRequestContributions = async (req, res) => {
       WHERE drc.donor_id = ?
       ORDER BY drc.created_at DESC
     `, [donorId]);
-        // Format the response
         const formattedContributions = contributions.map((cont) => ({
             contributionId: cont.contribution_id,
             requestId: cont.request_id,
@@ -281,7 +253,6 @@ const getDonorDonationRequestContributions = async (req, res) => {
                 contact: cont.ngo_contact
             }
         }));
-        // Set cache-control headers to prevent caching
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');
@@ -296,20 +267,12 @@ const getDonorDonationRequestContributions = async (req, res) => {
     }
 };
 exports.getDonorDonationRequestContributions = getDonorDonationRequestContributions;
-/**
- * Get donor dashboard statistics for new design
- * GET /api/donor/dashboard/stats
- */
 const getDonorDashboardStats = async (req, res) => {
     try {
         const donorId = typeof req.user.id === 'string' ? parseInt(req.user.id) : req.user.id;
-        // Get donor profile for last donation date and donor since date
         const donor = await (0, mysql_1.queryOne)('SELECT created_at FROM donors WHERE id = ?', [donorId]);
-        // Get statistics from donation_request_contributions (new system)
         const [totalDonationsResult, totalFundsResult, donationTypesResult, lastDonationResult] = await Promise.all([
-            // Total number of donations
             (0, mysql_1.queryOne)('SELECT COUNT(*) as count FROM donation_request_contributions WHERE donor_id = ?', [donorId]),
-            // Total funds (sum of MONEY/FUNDS donations - all statuses)
             (0, mysql_1.queryOne)(`
         SELECT COALESCE(SUM(drc.quantity_or_amount), 0) as total
         FROM donation_request_contributions drc
@@ -317,7 +280,6 @@ const getDonorDashboardStats = async (req, res) => {
         WHERE drc.donor_id = ? 
           AND dr.donation_type IN ('FUNDS', 'MONEY')
       `, [donorId]),
-            // Donation types with counts
             (0, mysql_1.query)(`
         SELECT 
           dr.donation_type,
@@ -327,17 +289,14 @@ const getDonorDashboardStats = async (req, res) => {
         WHERE drc.donor_id = ?
         GROUP BY dr.donation_type
       `, [donorId]),
-            // Last donation date
             (0, mysql_1.queryOne)(`
         SELECT MAX(drc.created_at) as last_donation
         FROM donation_request_contributions drc
         WHERE drc.donor_id = ?
       `, [donorId])
         ]);
-        // Calculate donor for X months
         const donorSince = (donor === null || donor === void 0 ? void 0 : donor.created_at) ? new Date(donor.created_at) : new Date();
         const monthsDiff = Math.floor((new Date().getTime() - donorSince.getTime()) / (1000 * 60 * 60 * 24 * 30));
-        // Calculate last donated X mins/hours/days ago
         let lastDonatedText = 'Never';
         if (lastDonationResult === null || lastDonationResult === void 0 ? void 0 : lastDonationResult.last_donation) {
             const lastDonation = new Date(lastDonationResult.last_donation);
@@ -356,7 +315,6 @@ const getDonorDashboardStats = async (req, res) => {
                 lastDonatedText = `${diffDays} days ago`;
             }
         }
-        // Format donation types
         const donationTypes = (donationTypesResult || []).map((item) => ({
             type: item.donation_type,
             count: item.count
@@ -379,10 +337,6 @@ const getDonorDashboardStats = async (req, res) => {
     }
 };
 exports.getDonorDashboardStats = getDonorDashboardStats;
-/**
- * Get available donations to contribute
- * GET /api/donor/dashboard/available-donations
- */
 const getAvailableDonations = async (req, res) => {
     try {
         const { status, priority, donationCategory, search, limit = 20, page = 1 } = req.query;
@@ -418,7 +372,6 @@ const getAvailableDonations = async (req, res) => {
         sql += ' LIMIT ? OFFSET ?';
         params.push(Number(limit), offset);
         const donations = await (0, mysql_1.query)(sql, params);
-        // Get total count
         let countSql = 'SELECT COUNT(*) as total FROM donations WHERE status != ?';
         const countParams = ['CANCELLED'];
         if (status) {
@@ -455,10 +408,6 @@ const getAvailableDonations = async (req, res) => {
     }
 };
 exports.getAvailableDonations = getAvailableDonations;
-/**
- * Generate and download receipt for donation request contribution
- * GET /api/donor/dashboard/donation-request-contributions/:id/receipt
- */
 const downloadReceipt = async (req, res) => {
     try {
         const { id } = req.params;
@@ -467,7 +416,6 @@ const downloadReceipt = async (req, res) => {
         if (isNaN(contributionId)) {
             return res.status(400).json({ success: false, message: 'Invalid contribution id' });
         }
-        // Get contribution details
         const contribution = await (0, mysql_1.queryOne)(`
       SELECT 
         drc.id as contribution_id,
@@ -491,14 +439,12 @@ const downloadReceipt = async (req, res) => {
         if (!contribution) {
             return res.status(404).json({ success: false, message: 'Contribution not found' });
         }
-        // Only generate receipt if status is ACCEPTED, APPROVED, or COMPLETED
         if (!['ACCEPTED', 'APPROVED', 'COMPLETED'].includes(contribution.status)) {
             return res.status(400).json({
                 success: false,
                 message: 'Receipt can only be generated for received donations'
             });
         }
-        // Generate simple HTML receipt
         const receiptDate = new Date(contribution.contribution_date).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -541,8 +487,8 @@ const downloadReceipt = async (req, res) => {
         <span><strong>${contribution.donation_type}</strong></span>
       </div>
       <div class="row">
-        <span>Amount/Quantity:</span>
-        <span class="amount">₹${parseFloat(contribution.quantity_or_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+        <span>${contribution.donation_type === 'FUNDS' ? 'Amount' : 'Quantity'}:</span>
+        <span class="amount">${contribution.donation_type === 'FUNDS' ? `₹${parseFloat(contribution.quantity_or_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : Math.round(parseFloat(contribution.quantity_or_amount)).toLocaleString('en-IN')}</span>
       </div>
       <div class="row">
         <span>Status:</span>
@@ -586,12 +532,8 @@ const downloadReceipt = async (req, res) => {
 </body>
 </html>
     `;
-        // Set response headers for PDF download
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="receipt-${contributionId}.pdf"`);
-        // For now, return HTML. In production, convert HTML to PDF using a library like puppeteer or pdfkit
-        // For simplicity, we'll return HTML and let the browser handle it
-        // You can install puppeteer or use a service to convert HTML to PDF
         res.setHeader('Content-Type', 'text/html');
         res.setHeader('Content-Disposition', `attachment; filename="receipt-${contributionId}.html"`);
         res.send(receiptHtml);

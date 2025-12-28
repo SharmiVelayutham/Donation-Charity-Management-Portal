@@ -2,9 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNgoStats = exports.getDonorStats = exports.getPlatformStats = void 0;
 const response_1 = require("../utils/response");
-/**
- * Get platform-wide analytics (Admin only or public stats)
- */
 const getPlatformStats = async (req, res) => {
     var _a;
     const [totalDonors, totalNgos, totalDonations, totalContributions, totalAmountDonated, pendingDonations, completedDonations, urgentDonations,] = await Promise.all([
@@ -40,9 +37,6 @@ const getPlatformStats = async (req, res) => {
     return (0, response_1.sendSuccess)(res, stats, 'Platform stats fetched');
 };
 exports.getPlatformStats = getPlatformStats;
-/**
- * Get donor's personal analytics
- */
 const getDonorStats = async (req, res) => {
     var _a;
     const donorId = req.user.id;
@@ -82,9 +76,6 @@ const getDonorStats = async (req, res) => {
     return (0, response_1.sendSuccess)(res, stats, 'Donor stats fetched');
 };
 exports.getDonorStats = getDonorStats;
-/**
- * Get NGO's analytics
- */
 const getNgoStats = async (req, res) => {
     var _a;
     const ngoId = req.user.id;

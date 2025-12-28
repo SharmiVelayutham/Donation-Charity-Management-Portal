@@ -3,9 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNgoUpcomingPickups = exports.getUpcomingPickups = exports.trackMyContributions = exports.trackDonation = void 0;
 const mongoose_1 = require("mongoose");
 const response_1 = require("../utils/response");
-/**
- * Track donation status and get detailed tracking info
- */
 const trackDonation = async (req, res) => {
     const { id } = req.params;
     if (!mongoose_1.Types.ObjectId.isValid(id)) {
@@ -17,7 +14,6 @@ const trackDonation = async (req, res) => {
     if (!donation) {
         return res.status(404).json({ success: false, message: 'Donation not found' });
     }
-    // Get all contributions for this donation
     const contributions = await Contribution_model_1.ContributionModel.find({ donationId: id })
         .populate('donorId', 'name email contactInfo')
         .sort({ createdAt: -1 })
@@ -52,9 +48,6 @@ const trackDonation = async (req, res) => {
     return (0, response_1.sendSuccess)(res, tracking, 'Donation tracking info');
 };
 exports.trackDonation = trackDonation;
-/**
- * Get donor's contribution tracking
- */
 const trackMyContributions = async (req, res) => {
     const donorId = req.user.id;
     const { status } = req.query;
@@ -81,9 +74,6 @@ const trackMyContributions = async (req, res) => {
     return (0, response_1.sendSuccess)(res, { contributions: tracking }, 'Contribution tracking');
 };
 exports.trackMyContributions = trackMyContributions;
-/**
- * Get upcoming pickups for donor
- */
 const getUpcomingPickups = async (req, res) => {
     const donorId = req.user.id;
     const now = new Date();
@@ -102,13 +92,9 @@ const getUpcomingPickups = async (req, res) => {
     return (0, response_1.sendSuccess)(res, { pickups }, 'Upcoming pickups');
 };
 exports.getUpcomingPickups = getUpcomingPickups;
-/**
- * Get upcoming pickups for NGO
- */
 const getNgoUpcomingPickups = async (req, res) => {
     const ngoId = req.user.id;
     const now = new Date();
-    // Get all donations by this NGO
     const donations = await Donation_model_1.DonationModel.find({ ngoId }).select('_id');
     const donationIds = donations.map((d) => d._id);
     const pickups = await Contribution_model_1.ContributionModel.find({

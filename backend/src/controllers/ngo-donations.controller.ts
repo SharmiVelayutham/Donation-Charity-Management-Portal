@@ -1,20 +1,13 @@
 import { Response } from 'express';
+import { createAndEmitNotification } from '../services/notification.service';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
 import { query, queryOne, update } from '../config/mysql';
 import { sendEmail } from '../utils/email.service';
-
-/**
- * Get detailed donor contributions for an NGO
- * GET /api/ngo/donations/details
- */
 export const getNgoDonationDetails = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = parseInt(req.user!.id);
-    console.log(`[NGO Donations] Fetching donation details for NGO ID: ${ngoId}`);
-
-    // Get all contributions to this NGO's donation requests
-    // Use COALESCE to ensure status is never NULL - default to PENDING if NULL
+    console.log(`[NGO Donations] Fetching donation details for NGO ID: ${ngoId}`);
     const contributions = await query<any>(`
       SELECT 
         drc.id as contribution_id,
@@ -40,14 +33,10 @@ export const getNgoDonationDetails = async (req: AuthRequest, res: Response) => 
       ORDER BY drc.created_at DESC
     `, [ngoId]);
 
-    console.log(`[NGO Donations] Found ${contributions.length} contributions`);
-    
-    // Log status values from database for debugging
+    console.log(`[NGO Donations] Found ${contributions.length} contributions`);
     contributions.forEach((cont: any) => {
       console.log(`[NGO Donations] 🔍 Contribution ${cont.contribution_id} status from DB: "${cont.contribution_status}" (type: ${typeof cont.contribution_status})`);
-    });
-
-    // Format the response
+    });
     const formattedContributions = contributions.map((cont: any) => ({
       contributionId: cont.contribution_id,
       donor: {
@@ -69,14 +58,10 @@ export const getNgoDonationDetails = async (req: AuthRequest, res: Response) => 
         id: cont.request_id,
         description: cont.request_description
       }
-    }));
-    
-    // Log formatted contributions to verify status mapping
+    }));
     formattedContributions.forEach((fc: any) => {
       console.log(`[NGO Donations] 📋 Formatted contribution ${fc.contributionId} - Final status: "${fc.status}"`);
-    });
-
-    // Set cache-control headers to prevent caching
+    });
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -90,33 +75,19 @@ export const getNgoDonationDetails = async (req: AuthRequest, res: Response) => 
     });
   }
 };
-
-/**
- * Get aggregated donation summary for an NGO
- * GET /api/ngo/donations/summary
- */
 export const getNgoDonationSummary = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = parseInt(req.user!.id);
-    console.log(`[NGO Donations] Fetching donation summary for NGO ID: ${ngoId}`);
-
-    // Get total distinct donors
-    const totalDonorsResult = await queryOne<{ count: number }>(`
-      SELECT COUNT(DISTINCT drc.donor_id) as count
-      FROM donation_request_contributions drc
-      INNER JOIN donation_requests dr ON drc.request_id = dr.id
-      WHERE dr.ngo_id = ?
-    `, [ngoId]);
-
-    // Get total donations count
+    console.log(`[NGO Donations] Fetching donation summary for NGO ID: ${ngoId}`);
+    const totalDonorsResult = await queryOne<{ count: number }>(
+      'SELECT COUNT(*) as count FROM donors'
+    );
     const totalDonationsResult = await queryOne<{ count: number }>(`
       SELECT COUNT(*) as count
       FROM donation_request_contributions drc
       INNER JOIN donation_requests dr ON drc.request_id = dr.id
       WHERE dr.ngo_id = ?
-    `, [ngoId]);
-
-    // Get total funds received (ACCEPTED status - MONEY/FUNDS donations)
+    `, [ngoId]);
     const fundsReceivedResult = await queryOne<{ total: number }>(`
       SELECT COALESCE(SUM(drc.quantity_or_amount), 0) as total
       FROM donation_request_contributions drc
@@ -124,9 +95,7 @@ export const getNgoDonationSummary = async (req: AuthRequest, res: Response) => 
       WHERE dr.ngo_id = ? 
         AND dr.donation_type IN ('FUNDS', 'MONEY')
         AND drc.status = 'ACCEPTED'
-    `, [ngoId]);
-
-    // Get total funds pending (PENDING status - MONEY/FUNDS donations)
+    `, [ngoId]);
     const fundsPendingResult = await queryOne<{ total: number }>(`
       SELECT COALESCE(SUM(drc.quantity_or_amount), 0) as total
       FROM donation_request_contributions drc
@@ -134,9 +103,7 @@ export const getNgoDonationSummary = async (req: AuthRequest, res: Response) => 
       WHERE dr.ngo_id = ? 
         AND dr.donation_type IN ('FUNDS', 'MONEY')
         AND drc.status = 'PENDING'
-    `, [ngoId]);
-
-    // Get breakdown by donation type
+    `, [ngoId]);
     const breakdownByType = await query<any>(`
       SELECT 
         dr.donation_type,
@@ -147,18 +114,14 @@ export const getNgoDonationSummary = async (req: AuthRequest, res: Response) => 
       WHERE dr.ngo_id = ?
       GROUP BY dr.donation_type
       ORDER BY dr.donation_type
-    `, [ngoId]);
-
-    // Format breakdown
+    `, [ngoId]);
     const breakdown: Record<string, { count: number; total: number }> = {};
     breakdownByType.forEach((item: any) => {
       breakdown[item.donation_type] = {
         count: item.donation_count,
         total: parseFloat(item.total_quantity_or_amount)
       };
-    });
-
-    // Ensure all common types are present (even if 0)
+    });
     const commonTypes = ['FOOD', 'CLOTHES', 'MONEY', 'FUNDS', 'MEDICINE', 'BOOKS', 'TOYS', 'OTHER'];
     commonTypes.forEach(type => {
       if (!breakdown[type]) {
@@ -175,9 +138,7 @@ export const getNgoDonationSummary = async (req: AuthRequest, res: Response) => 
       breakdownByType: breakdown
     };
 
-    console.log(`[NGO Donations] Summary:`, summary);
-    
-    // Set cache-control headers to prevent caching
+    console.log(`[NGO Donations] Summary:`, summary);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -191,11 +152,6 @@ export const getNgoDonationSummary = async (req: AuthRequest, res: Response) => 
     });
   }
 };
-
-/**
- * Update contribution status (NGO can approve/reject/complete)
- * PUT /api/ngo/dashboard/donations/:contributionId/status
- */
 export const updateContributionStatus = async (req: AuthRequest, res: Response) => {
   try {
     console.log('[updateContributionStatus] Route hit!');
@@ -214,9 +170,7 @@ export const updateContributionStatus = async (req: AuthRequest, res: Response) 
         success: false,
         message: 'Invalid contribution ID'
       });
-    }
-
-    // Validate status - PENDING, ACCEPTED, and NOT_RECEIVED are allowed
+    }
     const validStatuses = ['PENDING', 'ACCEPTED', 'NOT_RECEIVED'];
     const statusUpper = typeof status === 'string' ? status.toUpperCase() : String(status).toUpperCase();
     
@@ -225,9 +179,7 @@ export const updateContributionStatus = async (req: AuthRequest, res: Response) 
         success: false,
         message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
       });
-    }
-
-    // Verify that this contribution belongs to an NGO's donation request
+    }
     const contribution = await queryOne<any>(`
       SELECT drc.id, drc.status, dr.ngo_id
       FROM donation_request_contributions drc
@@ -247,9 +199,7 @@ export const updateContributionStatus = async (req: AuthRequest, res: Response) 
         success: false,
         message: 'You do not have permission to update this contribution'
       });
-    }
-    
-    // Once status is set to ACCEPTED or NOT_RECEIVED, it cannot be changed back to PENDING
+    }
     if (contribution.status === 'ACCEPTED' || contribution.status === 'NOT_RECEIVED') {
       if (statusUpper === 'PENDING') {
         return res.status(400).json({
@@ -257,12 +207,8 @@ export const updateContributionStatus = async (req: AuthRequest, res: Response) 
           message: 'Cannot change status back to PENDING once it has been set to Received or Not Received'
         });
       }
-    }
-
-    // Update status - Use explicit column name and verify
-    console.log(`[NGO Donations] 🔄 Executing UPDATE: SET status='${statusUpper}' WHERE id=${contributionId}`);
-    
-    // First check current status before update
+    }
+    console.log(`[NGO Donations] 🔄 Executing UPDATE: SET status='${statusUpper}' WHERE id=${contributionId}`);
     const beforeUpdate = await queryOne<any>(`
       SELECT id, status FROM donation_request_contributions WHERE id = ?
     `, [contributionId]);
@@ -274,9 +220,7 @@ export const updateContributionStatus = async (req: AuthRequest, res: Response) 
         success: false,
         message: 'Contribution not found'
       });
-    }
-    
-    // Execute UPDATE
+    }
     const affectedRows = await update(
       'UPDATE donation_request_contributions SET status = ? WHERE id = ?',
       [statusUpper, contributionId]
@@ -299,9 +243,7 @@ export const updateContributionStatus = async (req: AuthRequest, res: Response) 
         success: false,
         message: 'Contribution not found or could not be updated'
       });
-    }
-    
-    // Immediately verify the update with a direct SELECT
+    }
     const verifyUpdate = await queryOne<any>(`
       SELECT id, status FROM donation_request_contributions WHERE id = ?
     `, [contributionId]);
@@ -322,9 +264,7 @@ export const updateContributionStatus = async (req: AuthRequest, res: Response) 
       console.error(`[NGO Donations] ⚠️ WARNING: Database ENUM may not include "${statusUpper}". Check table schema.`);
     } else {
       console.log(`[NGO Donations] ✅ Status verified successfully in database: ${statusUpper}`);
-    }
-
-    // Fetch updated contribution with donor and request details - EXPLICITLY SELECT STATUS
+    }
     const updatedContribution = await queryOne<any>(`
       SELECT 
         drc.id,
@@ -349,12 +289,9 @@ export const updateContributionStatus = async (req: AuthRequest, res: Response) 
     
     console.log(`[NGO Donations] 🔍 Updated contribution query result - status: "${updatedContribution?.status}"`);
 
-    console.log(`[NGO Donations] ✅ Updated contribution ${contributionId} status to ${statusUpper}`);
-
-    // Emit socket event to notify donor about status update
+    console.log(`[NGO Donations] ✅ Updated contribution ${contributionId} status to ${statusUpper}`);
     try {
-      const { emitToDonor } = require('../socket/socket.server');
-      // Get donor ID for the contribution
+      const { emitToDonor } = require('../socket/socket.server');
       const donorInfo = await queryOne<any>(`
         SELECT donor_id FROM donation_request_contributions WHERE id = ?
       `, [contributionId]);
@@ -368,11 +305,8 @@ export const updateContributionStatus = async (req: AuthRequest, res: Response) 
         console.log(`[NGO Donations] 📡 Socket event emitted to donor ${donorInfo.donor_id} for contribution ${contributionId}`);
       }
     } catch (socketError: any) {
-      console.error('[NGO Donations] Failed to emit socket event:', socketError);
-      // Don't fail the request if socket emission fails
-    }
-
-    // Send email to donor based on status
+      console.error('[NGO Donations] Failed to emit socket event:', socketError);
+    }
     console.log(`[NGO Donations] 📧 Email check: donor_email = ${updatedContribution.donor_email}, status = ${statusUpper}`);
     if (updatedContribution.donor_email) {
       try {
@@ -498,16 +432,47 @@ export const updateContributionStatus = async (req: AuthRequest, res: Response) 
           console.log(`[NGO Donations] Status update email sent to donor: ${updatedContribution.donor_email} (Status: ${statusUpper})`);
         }
       } catch (emailError: any) {
-        console.error('[NGO Donations] Failed to send status update email:', emailError);
-        // Don't fail the request if email fails
+        console.error('[NGO Donations] Failed to send status update email:', emailError);
       }
-    }
-
-    // Return the status we set, not from query (which might be empty due to timing)
+    }
     console.log(`[NGO Donations] ✅ Returning updated contribution:`, {
       contributionId: contributionId,
       status: statusUpper
-    });
+    });
+    try {
+      const donorIdRow = await query<any>('SELECT donor_id FROM donation_request_contributions WHERE id = ?', [contributionId]);
+      const donorId = donorIdRow?.[0]?.donor_id;
+      if (donorId) {
+        await createAndEmitNotification({
+          userId: donorId,
+          userType: 'DONOR',
+          title: statusUpper === 'ACCEPTED' ? 'Contribution Received' : 'Pickup Not Successful',
+          message: statusUpper === 'ACCEPTED'
+            ? 'Your contribution was received by the NGO. Thank you!'
+            : 'We could not complete your pickup. Please reach out to reschedule.',
+          type: statusUpper === 'ACCEPTED' ? 'SUCCESS' : 'WARNING',
+          relatedEntityType: 'contribution',
+          relatedEntityId: contributionId,
+          metadata: { status: statusUpper }
+        });
+      }
+
+      const admins = await query<any>('SELECT id FROM admins');
+      for (const admin of admins) {
+        await createAndEmitNotification({
+          userId: admin.id,
+          userType: 'ADMIN',
+          title: 'Contribution Status Updated',
+          message: `${updatedContribution?.donor_name || 'Donor'} contribution ${statusUpper === 'ACCEPTED' ? 'received' : 'not received'} by NGO`,
+          type: 'DONATION',
+          relatedEntityType: 'contribution',
+          relatedEntityId: contributionId,
+          metadata: { status: statusUpper }
+        });
+      }
+    } catch (notifError: any) {
+      console.error('[NGO Donations] Failed to create notifications on status update:', notifError);
+    }
 
     return sendSuccess(res, {
       contributionId: contributionId,

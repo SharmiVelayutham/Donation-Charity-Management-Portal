@@ -4,10 +4,6 @@ import { ContributionModel } from '../models/Contribution.model';
 import { DonationModel } from '../models/Donation.model';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
-
-/**
- * Track donation status and get detailed tracking info
- */
 export const trackDonation = async (req: Request, res: Response) => {
   const { id } = req.params;
 
@@ -21,9 +17,7 @@ export const trackDonation = async (req: Request, res: Response) => {
 
   if (!donation) {
     return res.status(404).json({ success: false, message: 'Donation not found' });
-  }
-
-  // Get all contributions for this donation
+  }
   const contributions = await ContributionModel.find({ donationId: id })
     .populate('donorId', 'name email contactInfo')
     .sort({ createdAt: -1 })
@@ -59,10 +53,6 @@ export const trackDonation = async (req: Request, res: Response) => {
 
   return sendSuccess(res, tracking, 'Donation tracking info');
 };
-
-/**
- * Get donor's contribution tracking
- */
 export const trackMyContributions = async (req: AuthRequest, res: Response) => {
   const donorId = req.user!.id;
   const { status } = req.query;
@@ -91,10 +81,6 @@ export const trackMyContributions = async (req: AuthRequest, res: Response) => {
 
   return sendSuccess(res, { contributions: tracking }, 'Contribution tracking');
 };
-
-/**
- * Get upcoming pickups for donor
- */
 export const getUpcomingPickups = async (req: AuthRequest, res: Response) => {
   const donorId = req.user!.id;
   const now = new Date();
@@ -114,15 +100,9 @@ export const getUpcomingPickups = async (req: AuthRequest, res: Response) => {
 
   return sendSuccess(res, { pickups }, 'Upcoming pickups');
 };
-
-/**
- * Get upcoming pickups for NGO
- */
 export const getNgoUpcomingPickups = async (req: AuthRequest, res: Response) => {
   const ngoId = req.user!.id;
-  const now = new Date();
-
-  // Get all donations by this NGO
+  const now = new Date();
   const donations = await DonationModel.find({ ngoId }).select('_id');
   const donationIds = donations.map((d) => d._id);
 

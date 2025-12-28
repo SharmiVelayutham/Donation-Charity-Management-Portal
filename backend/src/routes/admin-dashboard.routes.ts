@@ -16,18 +16,9 @@ import {
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 
-const router = Router();
-
-// All routes require ADMIN authentication
+const router = Router();
 router.use(authenticate);
 router.use(requireRole(['ADMIN']));
-
-/**
- * Admin Dashboard Routes
- * All routes are prefixed with /api/admin/dashboard
- */
-
-// NGO Management
 router.get('/ngos', getAllNgos);
 router.get('/ngos/:id', getNgoDetails);
 router.patch('/ngos/:id/block', blockNgo);
@@ -35,9 +26,7 @@ router.patch('/ngos/:id/unblock', unblockNgo);
 router.put('/ngos/:id/approve', approveNgo);
 router.put('/ngos/:id/reject', rejectNgo);
 router.put('/ngos/:id/approve-profile-update', approveNgoProfileUpdate);
-router.put('/ngos/:id/reject-profile-update', rejectNgoProfileUpdate);
-
-// Donor Management
+router.put('/ngos/:id/reject-profile-update', rejectNgoProfileUpdate);
 router.get('/donors', getAllDonors);
 router.get('/donors/:id', getDonorDetails);
 router.put('/donors/:id/block', blockDonor);

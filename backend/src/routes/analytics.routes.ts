@@ -3,12 +3,8 @@ import { getPlatformStats, getDonorStats, getNgoStats } from '../controllers/ana
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 
-const router = Router();
-
-// Public platform stats
-router.get('/platform', getPlatformStats);
-
-// Authenticated user stats
+const router = Router();
+router.get('/platform', getPlatformStats);
 router.get('/donor', authenticate, requireRole(['DONOR']), getDonorStats);
 router.get('/ngo', authenticate, requireRole(['NGO']), getNgoStats);
 

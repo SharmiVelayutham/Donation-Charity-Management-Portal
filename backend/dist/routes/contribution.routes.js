@@ -5,10 +5,8 @@ const contribution_controller_1 = require("../controllers/contribution.controlle
 const auth_middleware_1 = require("../middleware/auth.middleware");
 const role_middleware_1 = require("../middleware/role.middleware");
 const router = (0, express_1.Router)();
-// Donor routes
 router.post('/', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['DONOR']), contribution_controller_1.createContribution);
 router.get('/my', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['DONOR']), contribution_controller_1.getMyContributions);
-// NGO routes
 router.get('/ngo', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['NGO']), contribution_controller_1.getNgoContributions);
 router.put('/:id/approve', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['NGO', 'ADMIN']), contribution_controller_1.approveContribution);
 router.put('/:id/schedule', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['NGO', 'ADMIN']), contribution_controller_1.updatePickupSchedule);

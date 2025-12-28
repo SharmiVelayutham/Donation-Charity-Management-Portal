@@ -1,65 +1,25 @@
-/**
- * MySQL Query Service
- * Use SQL queries to fetch data from MySQL database
- * 
- * IMPORTANT: Use SQL queries, NOT MongoDB queries!
- */
 
 import { query, queryOne, insert, update } from '../config/mysql';
-
-// =====================================================
-// FETCH DATA EXAMPLES - Use SQL queries only!
-// =====================================================
-
-/**
- * Example 1: Fetch all NGOs (users)
- * SQL Query: SELECT * FROM users
- */
 export async function getAllNgos() {
   const sql = `SELECT * FROM users ORDER BY created_at DESC`;
   return await query(sql);
 }
-
-/**
- * Example 2: Fetch NGO by ID
- * SQL Query: SELECT * FROM users WHERE id = ?
- */
 export async function getNgoById(ngoId: number) {
   const sql = `SELECT * FROM users WHERE id = ?`;
   return await queryOne(sql, [ngoId]);
 }
-
-/**
- * Example 3: Fetch NGO by email
- * SQL Query: SELECT * FROM users WHERE email = ?
- */
 export async function getNgoByEmail(email: string) {
   const sql = `SELECT * FROM users WHERE email = ?`;
   return await queryOne(sql, [email.toLowerCase()]);
 }
-
-/**
- * Example 4: Fetch all donors
- * SQL Query: SELECT * FROM donors
- */
 export async function getAllDonors() {
   const sql = `SELECT * FROM donors ORDER BY created_at DESC`;
   return await query(sql);
 }
-
-/**
- * Example 5: Fetch donor by ID
- * SQL Query: SELECT * FROM donors WHERE id = ?
- */
 export async function getDonorById(donorId: number) {
   const sql = `SELECT * FROM donors WHERE id = ?`;
   return await queryOne(sql, [donorId]);
 }
-
-/**
- * Example 6: Fetch all donations
- * SQL Query: SELECT * FROM donations
- */
 export async function getAllDonations() {
   const sql = `
     SELECT 
@@ -72,11 +32,6 @@ export async function getAllDonations() {
   `;
   return await query(sql);
 }
-
-/**
- * Example 7: Fetch donations by NGO ID
- * SQL Query: SELECT * FROM donations WHERE ngo_id = ?
- */
 export async function getDonationsByNgoId(ngoId: number) {
   const sql = `
     SELECT 
@@ -89,13 +44,7 @@ export async function getDonationsByNgoId(ngoId: number) {
   `;
   return await query(sql, [ngoId]);
 }
-
-/**
- * Example 8: Fetch donation by ID with all details
- * SQL Query: SELECT with JOINs and subqueries
- */
-export async function getDonationById(donationId: number) {
-  // Get donation with NGO info
+export async function getDonationById(donationId: number) {
   const sql = `
     SELECT 
       d.*,
@@ -108,16 +57,12 @@ export async function getDonationById(donationId: number) {
   `;
   const donation = await queryOne(sql, [donationId]);
   
-  if (!donation) return null;
-  
-  // Get images
+  if (!donation) return null;
   const images = await query<{ image_path: string }>(
     `SELECT image_path FROM donation_images WHERE donation_id = ? ORDER BY image_order`,
     [donationId]
   );
-  (donation as any).images = images.map(img => img.image_path);
-  
-  // Get payment details if exists
+  (donation as any).images = images.map(img => img.image_path);
   const paymentDetails = await queryOne(
     `SELECT * FROM donation_payment_details WHERE donation_id = ?`,
     [donationId]
@@ -128,11 +73,6 @@ export async function getDonationById(donationId: number) {
   
   return donation;
 }
-
-/**
- * Example 9: Fetch donations by status
- * SQL Query: SELECT * FROM donations WHERE status = ?
- */
 export async function getDonationsByStatus(status: string) {
   const sql = `
     SELECT 
@@ -146,11 +86,6 @@ export async function getDonationsByStatus(status: string) {
   `;
   return await query(sql, [status]);
 }
-
-/**
- * Example 10: Fetch contributions with donor and donation info
- * SQL Query: SELECT with JOINs
- */
 export async function getAllContributions() {
   const sql = `
     SELECT 
@@ -168,11 +103,6 @@ export async function getAllContributions() {
   `;
   return await query(sql);
 }
-
-/**
- * Example 11: Fetch contributions by donation ID
- * SQL Query: SELECT * FROM contributions WHERE donation_id = ?
- */
 export async function getContributionsByDonationId(donationId: number) {
   const sql = `
     SELECT 
@@ -187,11 +117,6 @@ export async function getContributionsByDonationId(donationId: number) {
   `;
   return await query(sql, [donationId]);
 }
-
-/**
- * Example 12: Fetch payments
- * SQL Query: SELECT * FROM payments
- */
 export async function getAllPayments() {
   const sql = `
     SELECT 
@@ -209,11 +134,6 @@ export async function getAllPayments() {
   `;
   return await query(sql);
 }
-
-/**
- * Example 13: Fetch payments by NGO ID
- * SQL Query: SELECT * FROM payments WHERE ngo_id = ?
- */
 export async function getPaymentsByNgoId(ngoId: number) {
   const sql = `
     SELECT 
@@ -230,11 +150,6 @@ export async function getPaymentsByNgoId(ngoId: number) {
   `;
   return await query(sql, [ngoId]);
 }
-
-/**
- * Example 14: Fetch nearby donations (using coordinates)
- * SQL Query: SELECT with distance calculation
- */
 export async function getNearbyDonations(latitude: number, longitude: number, radiusKm: number = 10) {
   const sql = `
     SELECT 
@@ -258,11 +173,6 @@ export async function getNearbyDonations(latitude: number, longitude: number, ra
   `;
   return await query(sql, [latitude, longitude, latitude, radiusKm]);
 }
-
-/**
- * Example 15: Search donations by category
- * SQL Query: SELECT * FROM donations WHERE donation_category = ?
- */
 export async function getDonationsByCategory(category: string) {
   const sql = `
     SELECT 
@@ -276,21 +186,11 @@ export async function getDonationsByCategory(category: string) {
   `;
   return await query(sql, [category]);
 }
-
-/**
- * Example 16: Count records
- * SQL Query: SELECT COUNT(*) FROM table
- */
 export async function getDonationCount() {
   const sql = `SELECT COUNT(*) as count FROM donations`;
   const result = await queryOne<{ count: number }>(sql);
   return result?.count || 0;
 }
-
-/**
- * Example 17: Fetch with pagination
- * SQL Query: SELECT ... LIMIT ? OFFSET ?
- */
 export async function getDonationsPaginated(page: number = 1, limit: number = 10) {
   const offset = (page - 1) * limit;
   const sql = `
@@ -304,22 +204,4 @@ export async function getDonationsPaginated(page: number = 1, limit: number = 10
     LIMIT ? OFFSET ?
   `;
   return await query(sql, [limit, offset]);
-}
-
-// =====================================================
-// HOW TO USE IN CONTROLLERS:
-// =====================================================
-/*
-import { getAllDonations, getDonationById } from '../services/mysql-queries.service';
-
-// In your controller:
-export const getDonations = async (req: Request, res: Response) => {
-  try {
-    const donations = await getAllDonations(); // SQL query, not MongoDB!
-    return res.json({ success: true, data: donations });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-*/
-
+}

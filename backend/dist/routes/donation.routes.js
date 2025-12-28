@@ -20,14 +20,11 @@ const storage = multer_1.default.diskStorage({
 });
 const upload = (0, multer_1.default)({ storage });
 const router = (0, express_1.Router)();
-// NGO routes (must be before /:id to avoid route conflicts)
 router.post('/', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['NGO']), upload.array('images', 5), donation_controller_1.createDonation);
 router.get('/my', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['NGO']), donation_controller_1.getMyDonations);
-// Public routes
 router.get('/', donation_controller_1.getDonations);
 router.get('/nearby', donation_controller_1.getNearbyDonations); // Must be before /:id
 router.get('/:id', donation_controller_1.getDonationById);
-// NGO management routes
 router.put('/:id', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['NGO', 'ADMIN']), upload.array('images', 5), donation_controller_1.updateDonation);
 router.put('/:id/cancel', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['NGO', 'ADMIN']), donation_controller_1.cancelDonation);
 router.delete('/:id', auth_middleware_1.authenticate, (0, role_middleware_1.requireRole)(['NGO', 'ADMIN']), donation_controller_1.deleteDonation);

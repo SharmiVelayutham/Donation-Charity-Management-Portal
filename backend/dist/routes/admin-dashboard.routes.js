@@ -5,14 +5,8 @@ const admin_dashboard_controller_1 = require("../controllers/admin-dashboard.con
 const auth_middleware_1 = require("../middleware/auth.middleware");
 const role_middleware_1 = require("../middleware/role.middleware");
 const router = (0, express_1.Router)();
-// All routes require ADMIN authentication
 router.use(auth_middleware_1.authenticate);
 router.use((0, role_middleware_1.requireRole)(['ADMIN']));
-/**
- * Admin Dashboard Routes
- * All routes are prefixed with /api/admin/dashboard
- */
-// NGO Management
 router.get('/ngos', admin_dashboard_controller_1.getAllNgos);
 router.get('/ngos/:id', admin_dashboard_controller_1.getNgoDetails);
 router.patch('/ngos/:id/block', admin_dashboard_controller_1.blockNgo);
@@ -21,7 +15,6 @@ router.put('/ngos/:id/approve', admin_dashboard_controller_1.approveNgo);
 router.put('/ngos/:id/reject', admin_dashboard_controller_1.rejectNgo);
 router.put('/ngos/:id/approve-profile-update', admin_dashboard_controller_1.approveNgoProfileUpdate);
 router.put('/ngos/:id/reject-profile-update', admin_dashboard_controller_1.rejectNgoProfileUpdate);
-// Donor Management
 router.get('/donors', admin_dashboard_controller_1.getAllDonors);
 router.get('/donors/:id', admin_dashboard_controller_1.getDonorDetails);
 router.put('/donors/:id/block', admin_dashboard_controller_1.blockDonor);

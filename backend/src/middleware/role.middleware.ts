@@ -9,9 +9,7 @@ export const requireRole = (roles: string[]) => {
     if (!req.user) {
       console.error('[Role Middleware] ❌ No user found in request - Authentication may have failed');
       return res.status(403).json({ success: false, message: 'Forbidden: No user found' });
-    }
-
-    // Normalize roles to uppercase for comparison
+    }
     const rawUserRole = req.user.role || '';
     const normalizedUserRole = rawUserRole.toString().toUpperCase();
     const normalizedRequiredRoles = roles.map(r => r.toString().toUpperCase());

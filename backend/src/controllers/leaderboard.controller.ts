@@ -3,15 +3,8 @@ import { ContributionModel } from '../models/Contribution.model';
 import { DonationModel } from '../models/Donation.model';
 import { UserModel } from '../models/User.model';
 import { sendSuccess } from '../utils/response';
-
-/**
- * Get donor leaderboard ranked by total contributions
- * Can filter by time period (all-time, monthly, weekly)
- */
 export const getDonorLeaderboard = async (req: Request, res: Response) => {
-  const { period = 'all' } = req.query; // all, monthly, weekly
-
-  // Calculate date filter based on period
+  const { period = 'all' } = req.query; // all, monthly, weekly
   let dateFilter: Date | null = null;
   const now = new Date();
   
@@ -22,18 +15,14 @@ export const getDonorLeaderboard = async (req: Request, res: Response) => {
     const diff = now.getDate() - dayOfWeek; // Sunday
     dateFilter = new Date(now.setDate(diff));
     dateFilter.setHours(0, 0, 0, 0);
-  }
-
-  // Build match filter
+  }
   const matchFilter: Record<string, unknown> = {
     status: { $in: ['APPROVED', 'COMPLETED'] }, // Only count approved/completed contributions
   };
   
   if (dateFilter) {
     matchFilter.createdAt = { $gte: dateFilter };
-  }
-
-  // Aggregate contributions by donor
+  }
   const leaderboard = await ContributionModel.aggregate([
     { $match: matchFilter },
     {
@@ -79,9 +68,7 @@ export const getDonorLeaderboard = async (req: Request, res: Response) => {
     },
     { $sort: { totalContributions: -1, totalAmount: -1 } },
     { $limit: 100 }, // Top 100 donors
-  ]);
-
-  // Add rank
+  ]);
   const rankedLeaderboard = leaderboard.map((donor, index) => ({
     rank: index + 1,
     ...donor,
@@ -89,10 +76,6 @@ export const getDonorLeaderboard = async (req: Request, res: Response) => {
 
   return sendSuccess(res, { period, leaderboard: rankedLeaderboard }, 'Leaderboard fetched');
 };
-
-/**
- * Get top NGOs by donations posted
- */
 export const getNgoLeaderboard = async (req: Request, res: Response) => {
   const { period = 'all' } = req.query;
 

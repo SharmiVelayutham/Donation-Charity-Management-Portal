@@ -1,29 +1,9 @@
 import { Request, Response } from 'express';
 import { sendSuccess } from '../utils/response';
 import { query } from '../config/mysql';
-
-/**
- * MySQL-based Leaderboard Controller
- * Ranks donors and NGOs based on received funds only (ACCEPTED status)
- * 
- * Features:
- * - Only counts contributions with ACCEPTED status (received funds)
- * - Supports both old (contributions) and new (donation_request_contributions) systems
- * - Returns top 100 ranked entries
- * - Supports filtering by period (all, monthly, weekly)
- * - Supports sorting by count or amount
- */
-
-/**
- * Get leaderboard (ranked by total donations or amount)
- * GET /api/leaderboard
- * Query params: type=donors|ngos, sortBy=count|amount, period=all|monthly|weekly
- */
 export const getLeaderboard = async (req: Request, res: Response) => {
   try {
-    const { type = 'donors', sortBy = 'count', period = 'all' } = req.query;
-
-    // Calculate date filter based on period
+    const { type = 'donors', sortBy = 'count', period = 'all' } = req.query;
     let dateFilter: Date | null = null;
     const now = new Date();
     if (period === 'monthly') {
@@ -35,9 +15,7 @@ export const getLeaderboard = async (req: Request, res: Response) => {
       dateFilter.setHours(0, 0, 0, 0);
     }
 
-    if (type === 'donors') {
-      // Rank donors by received funds only (ACCEPTED status contributions)
-      // Combine old system (contributions) and new system (donation_request_contributions)
+    if (type === 'donors') {
       let sql = `
         SELECT 
           d.id as donor_id,
@@ -101,9 +79,7 @@ export const getLeaderboard = async (req: Request, res: Response) => {
         period,
         leaderboard: rankedLeaderboard,
       }, 'Leaderboard fetched successfully');
-    } else if (type === 'ngos') {
-      // Rank NGOs by received funds only (ACCEPTED status contributions)
-      // Combine old system (donations) and new system (donation_request_contributions)
+    } else if (type === 'ngos') {
       let sql = `
         SELECT 
           u.id as ngo_id,

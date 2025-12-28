@@ -1,9 +1,5 @@
 import { queryOne } from '../config/mysql';
 import { env } from '../config/env';
-
-/**
- * Default NGO unblock email template
- */
 function getDefaultNgoUnblockTemplate() {
   return {
     subject: 'NGO Account Unblocked - Donation & Charity Portal',
@@ -77,10 +73,6 @@ function getDefaultNgoUnblockTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get email template from database or return default
- */
 export async function getEmailTemplate(templateType: string): Promise<{ subject: string; bodyHtml: string }> {
   try {
     console.log(`[Email Template] Fetching template from database: ${templateType}`);
@@ -101,9 +93,7 @@ export async function getEmailTemplate(templateType: string): Promise<{ subject:
   } catch (error: any) {
     console.error('[Email Template] Error fetching email template from database:', error.message);
     console.error('[Email Template] Stack:', error.stack);
-  }
-
-  // Fallback to default templates
+  }
   const defaultTemplates: { [key: string]: () => { subject: string; bodyHtml: string } } = {
     'NGO_UNBLOCK': getDefaultNgoUnblockTemplate,
     'NGO_BLOCK': getDefaultNgoBlockTemplate,
@@ -122,10 +112,6 @@ export async function getEmailTemplate(templateType: string): Promise<{ subject:
 
   throw new Error(`No template found for type: ${templateType}`);
 }
-
-/**
- * Get default OTP Registration template
- */
 function getDefaultOTPRegistrationTemplate() {
   return {
     subject: 'Registration - OTP Verification Code',
@@ -173,10 +159,6 @@ function getDefaultOTPRegistrationTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get default OTP Password Reset template
- */
 function getDefaultOTPPasswordResetTemplate() {
   return {
     subject: 'Password Reset - OTP Verification Code',
@@ -224,10 +206,6 @@ function getDefaultOTPPasswordResetTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get default OTP Email Change template
- */
 function getDefaultOTPEmailChangeTemplate() {
   return {
     subject: 'Email Change - OTP Verification Code',
@@ -275,10 +253,6 @@ function getDefaultOTPEmailChangeTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get default OTP Admin Registration template
- */
 function getDefaultOTPAdminRegistrationTemplate() {
   return {
     subject: 'Admin Registration - OTP Verification Code',
@@ -326,10 +300,6 @@ function getDefaultOTPAdminRegistrationTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get default NGO Donation Received template
- */
 function getDefaultNgoDonationReceivedTemplate() {
   return {
     subject: 'New Donation Received from {{DONOR_NAME}}',
@@ -378,10 +348,6 @@ function getDefaultNgoDonationReceivedTemplate() {
 </html>`,
   };
 }
-
-/**
- * Get default Donor Donation Confirmation template
- */
 function getDefaultDonorDonationConfirmationTemplate() {
   return {
     subject: 'Thank You for Your Donation to {{NGO_NAME}}',
@@ -435,10 +401,6 @@ function getDefaultDonorDonationConfirmationTemplate() {
 </html>`,
   };
 }
-
-/**
- * Default NGO block email template
- */
 function getDefaultNgoBlockTemplate() {
   return {
     subject: 'NGO Account Blocked - Donation & Charity Portal',
@@ -510,17 +472,12 @@ function getDefaultNgoBlockTemplate() {
 </html>`,
   };
 }
-
-/**
- * Replace placeholders in email template
- */
 export function replaceTemplatePlaceholders(
   template: string,
   placeholders: { [key: string]: string }
 ): string {
   let result = template;
-  for (const [key, value] of Object.entries(placeholders)) {
-    // Escape special regex characters and match {{KEY}} pattern
+  for (const [key, value] of Object.entries(placeholders)) {
     const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g');
     result = result.replace(regex, value);
@@ -528,10 +485,6 @@ export function replaceTemplatePlaceholders(
   }
   return result;
 }
-
-/**
- * Get support email from environment or use SMTP from address
- */
 export function getSupportEmail(): string {
   return env.smtpFrom || env.smtpUser || 'support@donationcharityportal.com';
 }

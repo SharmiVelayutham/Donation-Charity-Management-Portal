@@ -5,22 +5,13 @@ import { query, queryOne, update } from '../config/mysql';
 import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 10;
-
-/**
- * Get donor dashboard overview
- * GET /api/donor/dashboard
- */
 export const getDonorDashboard = async (req: AuthRequest, res: Response) => {
   try {
-    const donorId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
-
-    // Get donor profile
+    const donorId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
     const donor = await queryOne<any>('SELECT id, name, email, contact_info, phone_number, full_address, role, created_at FROM donors WHERE id = ?', [donorId]);
     if (!donor) {
       return res.status(404).json({ success: false, message: 'Donor not found' });
-    }
-
-    // Get statistics using SQL queries
+    }
     const [
       totalContributions,
       pendingContributions,
@@ -38,9 +29,7 @@ export const getDonorDashboard = async (req: AuthRequest, res: Response) => {
         INNER JOIN donations d ON c.donation_id = d.id
         WHERE c.donor_id = ? AND c.status IN ('APPROVED', 'COMPLETED')
       `, [donorId]),
-    ]);
-
-    // Get recent contributions
+    ]);
     const recentContributions = await query<any>(`
       SELECT c.*,
         d.donation_category, d.purpose, d.quantity_or_amount, d.status as donation_status,
@@ -51,9 +40,7 @@ export const getDonorDashboard = async (req: AuthRequest, res: Response) => {
       WHERE c.donor_id = ?
       ORDER BY c.created_at DESC
       LIMIT 5
-    `, [donorId]);
-
-    // Get upcoming pickups
+    `, [donorId]);
     const upcomingPickups = await query<any>(`
       SELECT c.*,
         d.donation_category, d.purpose, d.quantity_or_amount,
@@ -89,8 +76,7 @@ export const getDonorDashboard = async (req: AuthRequest, res: Response) => {
         totalAmountContributed: totalAmountResult?.total || 0,
       },
       recentContributions: recentContributions || [],
-      upcomingPickups: upcomingPickups || [],
-      // Frontend expects these fields
+      upcomingPickups: upcomingPickups || [],
       contributions: recentContributions || [],
       totalContributions: totalContributions?.count || 0,
     };
@@ -101,11 +87,6 @@ export const getDonorDashboard = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: error.message || 'Failed to fetch dashboard' });
   }
 };
-
-/**
- * Get donor profile
- * GET /api/donor/dashboard/profile
- */
 export const getDonorProfile = async (req: AuthRequest, res: Response) => {
   try {
     const donorId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
@@ -129,11 +110,6 @@ export const getDonorProfile = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: error.message || 'Failed to fetch profile' });
   }
 };
-
-/**
- * Update donor profile
- * PUT /api/donor/dashboard/profile
- */
 export const updateDonorProfile = async (req: AuthRequest, res: Response) => {
   try {
     const donorId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
@@ -195,11 +171,6 @@ export const updateDonorProfile = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: error.message || 'Failed to update profile' });
   }
 };
-
-/**
- * Get all contributions with filters
- * GET /api/donor/dashboard/contributions
- */
 export const getDonorContributions = async (req: AuthRequest, res: Response) => {
   try {
     const donorId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
@@ -227,9 +198,7 @@ export const getDonorContributions = async (req: AuthRequest, res: Response) => 
     sql += ' LIMIT ? OFFSET ?';
     params.push(Number(limit), offset);
 
-    const contributions = await query<any>(sql, params);
-
-    // Get total count
+    const contributions = await query<any>(sql, params);
     let countSql = 'SELECT COUNT(*) as total FROM contributions WHERE donor_id = ?';
     const countParams: any[] = [donorId];
     if (status) {
@@ -257,16 +226,9 @@ export const getDonorContributions = async (req: AuthRequest, res: Response) => 
     return res.status(500).json({ success: false, message: error.message || 'Failed to fetch contributions' });
   }
 };
-
-/**
- * Get donor's donation request contributions (new system)
- * GET /api/donor/dashboard/donation-request-contributions
- */
 export const getDonorDonationRequestContributions = async (req: AuthRequest, res: Response) => {
   try {
-    const donorId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
-
-    // Get all contributions to donation requests
+    const donorId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
     const contributions = await query<any>(`
       SELECT 
         drc.id as contribution_id,
@@ -289,9 +251,7 @@ export const getDonorDonationRequestContributions = async (req: AuthRequest, res
       INNER JOIN users u ON dr.ngo_id = u.id
       WHERE drc.donor_id = ?
       ORDER BY drc.created_at DESC
-    `, [donorId]);
-
-    // Format the response
+    `, [donorId]);
     const formattedContributions = contributions.map((cont: any) => ({
       contributionId: cont.contribution_id,
       requestId: cont.request_id,
@@ -312,9 +272,7 @@ export const getDonorDonationRequestContributions = async (req: AuthRequest, res
         email: cont.ngo_email,
         contact: cont.ngo_contact
       }
-    }));
-
-    // Set cache-control headers to prevent caching
+    }));
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -328,38 +286,24 @@ export const getDonorDonationRequestContributions = async (req: AuthRequest, res
     });
   }
 };
-
-/**
- * Get donor dashboard statistics for new design
- * GET /api/donor/dashboard/stats
- */
 export const getDonorDashboardStats = async (req: AuthRequest, res: Response) => {
   try {
-    const donorId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
-
-    // Get donor profile for last donation date and donor since date
-    const donor = await queryOne<any>('SELECT created_at FROM donors WHERE id = ?', [donorId]);
-    
-    // Get statistics from donation_request_contributions (new system)
+    const donorId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
+    const donor = await queryOne<any>('SELECT created_at FROM donors WHERE id = ?', [donorId]);
     const [
       totalDonationsResult,
       totalFundsResult,
       donationTypesResult,
       lastDonationResult
-    ] = await Promise.all([
-      // Total number of donations
-      queryOne<{ count: number }>('SELECT COUNT(*) as count FROM donation_request_contributions WHERE donor_id = ?', [donorId]),
-      
-      // Total funds (sum of MONEY/FUNDS donations - all statuses)
+    ] = await Promise.all([
+      queryOne<{ count: number }>('SELECT COUNT(*) as count FROM donation_request_contributions WHERE donor_id = ?', [donorId]),
       queryOne<{ total: number }>(`
         SELECT COALESCE(SUM(drc.quantity_or_amount), 0) as total
         FROM donation_request_contributions drc
         INNER JOIN donation_requests dr ON drc.request_id = dr.id
         WHERE drc.donor_id = ? 
           AND dr.donation_type IN ('FUNDS', 'MONEY')
-      `, [donorId]),
-      
-      // Donation types with counts
+      `, [donorId]),
       query<any>(`
         SELECT 
           dr.donation_type,
@@ -368,21 +312,15 @@ export const getDonorDashboardStats = async (req: AuthRequest, res: Response) =>
         INNER JOIN donation_requests dr ON drc.request_id = dr.id
         WHERE drc.donor_id = ?
         GROUP BY dr.donation_type
-      `, [donorId]),
-      
-      // Last donation date
+      `, [donorId]),
       queryOne<{ last_donation: Date }>(`
         SELECT MAX(drc.created_at) as last_donation
         FROM donation_request_contributions drc
         WHERE drc.donor_id = ?
       `, [donorId])
-    ]);
-
-    // Calculate donor for X months
+    ]);
     const donorSince = donor?.created_at ? new Date(donor.created_at) : new Date();
-    const monthsDiff = Math.floor((new Date().getTime() - donorSince.getTime()) / (1000 * 60 * 60 * 24 * 30));
-
-    // Calculate last donated X mins/hours/days ago
+    const monthsDiff = Math.floor((new Date().getTime() - donorSince.getTime()) / (1000 * 60 * 60 * 24 * 30));
     let lastDonatedText = 'Never';
     if (lastDonationResult?.last_donation) {
       const lastDonation = new Date(lastDonationResult.last_donation);
@@ -399,9 +337,7 @@ export const getDonorDashboardStats = async (req: AuthRequest, res: Response) =>
       } else {
         lastDonatedText = `${diffDays} days ago`;
       }
-    }
-
-    // Format donation types
+    }
     const donationTypes = (donationTypesResult || []).map((item: any) => ({
       type: item.donation_type,
       count: item.count
@@ -424,11 +360,6 @@ export const getDonorDashboardStats = async (req: AuthRequest, res: Response) =>
     });
   }
 };
-
-/**
- * Get available donations to contribute
- * GET /api/donor/dashboard/available-donations
- */
 export const getAvailableDonations = async (req: AuthRequest, res: Response) => {
   try {
     const { status, priority, donationCategory, search, limit = 20, page = 1 } = req.query;
@@ -468,9 +399,7 @@ export const getAvailableDonations = async (req: AuthRequest, res: Response) => 
     sql += ' LIMIT ? OFFSET ?';
     params.push(Number(limit), offset);
 
-    const donations = await query<any>(sql, params);
-
-    // Get total count
+    const donations = await query<any>(sql, params);
     let countSql = 'SELECT COUNT(*) as total FROM donations WHERE status != ?';
     const countParams: any[] = ['CANCELLED'];
     if (status) {
@@ -511,11 +440,6 @@ export const getAvailableDonations = async (req: AuthRequest, res: Response) => 
     return res.status(500).json({ success: false, message: error.message || 'Failed to fetch donations' });
   }
 };
-
-/**
- * Generate and download receipt for donation request contribution
- * GET /api/donor/dashboard/donation-request-contributions/:id/receipt
- */
 export const downloadReceipt = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -524,9 +448,7 @@ export const downloadReceipt = async (req: AuthRequest, res: Response) => {
 
     if (isNaN(contributionId)) {
       return res.status(400).json({ success: false, message: 'Invalid contribution id' });
-    }
-
-    // Get contribution details
+    }
     const contribution = await queryOne<any>(`
       SELECT 
         drc.id as contribution_id,
@@ -550,17 +472,13 @@ export const downloadReceipt = async (req: AuthRequest, res: Response) => {
 
     if (!contribution) {
       return res.status(404).json({ success: false, message: 'Contribution not found' });
-    }
-
-    // Only generate receipt if status is ACCEPTED, APPROVED, or COMPLETED
+    }
     if (!['ACCEPTED', 'APPROVED', 'COMPLETED'].includes(contribution.status)) {
       return res.status(400).json({ 
         success: false, 
         message: 'Receipt can only be generated for received donations' 
       });
-    }
-
-    // Generate simple HTML receipt
+    }
     const receiptDate = new Date(contribution.contribution_date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -648,15 +566,9 @@ export const downloadReceipt = async (req: AuthRequest, res: Response) => {
   </div>
 </body>
 </html>
-    `;
-
-    // Set response headers for PDF download
+    `;
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="receipt-${contributionId}.pdf"`);
-
-    // For now, return HTML. In production, convert HTML to PDF using a library like puppeteer or pdfkit
-    // For simplicity, we'll return HTML and let the browser handle it
-    // You can install puppeteer or use a service to convert HTML to PDF
+    res.setHeader('Content-Disposition', `attachment; filename="receipt-${contributionId}.pdf"`);
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Content-Disposition', `attachment; filename="receipt-${contributionId}.html"`);
     res.send(receiptHtml);

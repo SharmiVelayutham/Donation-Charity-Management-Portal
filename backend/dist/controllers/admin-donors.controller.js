@@ -3,10 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDonorContributions = exports.getAllContributions = exports.getAllDonors = void 0;
 const response_1 = require("../utils/response");
 const mysql_1 = require("../config/mysql");
-/**
- * Get all donors with summary statistics
- * GET /api/admin/donors
- */
 const getAllDonors = async (req, res) => {
     try {
         const { page = 1, limit = 100, search } = req.query;
@@ -40,7 +36,6 @@ const getAllDonors = async (req, res) => {
     `;
         params.push(Number(limit), offset);
         const donors = await (0, mysql_1.query)(sql, params);
-        // Get total count
         let countSql = 'SELECT COUNT(DISTINCT d.id) as total FROM donors d';
         const countParams = [];
         if (search) {
@@ -77,15 +72,10 @@ const getAllDonors = async (req, res) => {
     }
 };
 exports.getAllDonors = getAllDonors;
-/**
- * Get all contributions with donor, NGO, and donation details
- * GET /api/admin/contributions
- */
 const getAllContributions = async (req, res) => {
     try {
         const { donorId, ngoId, donationType, fromDate, toDate, page = 1, limit = 100 } = req.query;
         const offset = (Number(page) - 1) * Number(limit);
-        // Query for contributions from donations table (old system)
         let contributionsSql = `
       SELECT 
         c.id as contribution_id,
@@ -109,7 +99,6 @@ const getAllContributions = async (req, res) => {
       WHERE 1=1
     `;
         const params = [];
-        // Query for contributions from donation_requests table (new system)
         let requestContributionsSql = `
       SELECT 
         drc.id as contribution_id,
@@ -133,7 +122,6 @@ const getAllContributions = async (req, res) => {
       WHERE 1=1
     `;
         const requestParams = [];
-        // Apply filters
         if (donorId) {
             contributionsSql += ' AND c.donor_id = ?';
             params.push(donorId);
@@ -166,10 +154,8 @@ const getAllContributions = async (req, res) => {
         }
         contributionsSql += ' ORDER BY c.created_at DESC';
         requestContributionsSql += ' ORDER BY drc.created_at DESC';
-        // Fetch both types of contributions
         const contributions = await (0, mysql_1.query)(contributionsSql, params);
         const requestContributions = await (0, mysql_1.query)(requestContributionsSql, requestParams);
-        // Combine and format results
         const allContributions = [
             ...contributions.map((c) => ({
                 contributionId: c.contribution_id,
@@ -204,9 +190,7 @@ const getAllContributions = async (req, res) => {
                 contributionSource: c.contribution_source,
             })),
         ];
-        // Sort by date descending
         allContributions.sort((a, b) => new Date(b.contributedDate).getTime() - new Date(a.contributedDate).getTime());
-        // Apply pagination
         const total = allContributions.length;
         const paginatedContributions = allContributions.slice(offset, offset + Number(limit));
         return (0, response_1.sendSuccess)(res, {
@@ -225,14 +209,9 @@ const getAllContributions = async (req, res) => {
     }
 };
 exports.getAllContributions = getAllContributions;
-/**
- * Get detailed contribution history for a specific donor
- * GET /api/admin/contributions/:donorId
- */
 const getDonorContributions = async (req, res) => {
     try {
         const { donorId } = req.params;
-        // Get contributions from donations table
         const contributions = await (0, mysql_1.query)(`
       SELECT 
         c.id as contribution_id,
@@ -251,7 +230,6 @@ const getDonorContributions = async (req, res) => {
       WHERE c.donor_id = ?
       ORDER BY c.created_at DESC
     `, [donorId]);
-        // Get contributions from donation_requests table
         const requestContributions = await (0, mysql_1.query)(`
       SELECT 
         drc.id as contribution_id,
@@ -270,7 +248,6 @@ const getDonorContributions = async (req, res) => {
       WHERE drc.donor_id = ?
       ORDER BY drc.created_at DESC
     `, [donorId]);
-        // Get donor details
         const donor = await (0, mysql_1.queryOne)(`
       SELECT id, name, email, role, is_blocked, created_at
       FROM donors
@@ -279,7 +256,6 @@ const getDonorContributions = async (req, res) => {
         if (!donor) {
             return res.status(404).json({ success: false, message: 'Donor not found' });
         }
-        // Combine contributions
         const allContributions = [
             ...contributions.map((c) => ({
                 contributionId: c.contribution_id,

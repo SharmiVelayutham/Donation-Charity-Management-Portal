@@ -6,89 +6,71 @@ import { normalizeLocation, isValidTimezone, calculateDistance, isValidCoordinat
 import fs from 'fs';
 import path from 'path';
 
-const isFutureDate = (value: string | Date) => new Date(value).getTime() > Date.now();
-
-// Valid donation types
+const isFutureDate = (value: string | Date) => new Date(value).getTime() > Date.now();
 const VALID_DONATION_TYPES = ['FOOD', 'FUNDS', 'CLOTHES', 'MEDICINE', 'BOOKS', 'TOYS', 'OTHER'] as const;
 type DonationType = typeof VALID_DONATION_TYPES[number];
 
 export const createDonation = async (req: AuthRequest, res: Response) => {
-  const { donationType, quantityOrAmount, location, pickupDateTime, timezone, status, priority } = req.body;
+  try {
+    const { donationType, quantityOrAmount, location, pickupDateTime, timezone, status, priority } = req.body;
 
-  if (!donationType || !quantityOrAmount) {
-    return res.status(400).json({ success: false, message: 'Missing required fields: donationType, quantityOrAmount' });
-  }
-
-  // Validate donation type
-  const normalizedType = (donationType as string).toUpperCase() as DonationType;
-  if (!VALID_DONATION_TYPES.includes(normalizedType)) {
-    return res.status(400).json({
-      success: false,
-      message: `Invalid donation type. Valid types: ${VALID_DONATION_TYPES.join(', ')}`,
-    });
-  }
-
-  const quantity = Number(quantityOrAmount);
-  if (Number.isNaN(quantity) || quantity <= 0) {
-    return res.status(400).json({ success: false, message: 'Quantity/Amount must be greater than 0' });
-  }
-
-  const isFunds = normalizedType === 'FUNDS';
-  const requiresPickup = !isFunds;
-
-  // For FUNDS: location and pickupDateTime are not required
-  // For FOOD/CLOTHES: location and pickupDateTime are required
-  if (requiresPickup) {
-    if (!location || !pickupDateTime) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Missing required fields for FOOD/CLOTHES donations: location, pickupDateTime' 
+    if (!donationType || !quantityOrAmount) {
+      return res.status(400).json({ success: false, message: 'Missing required fields: donationType, quantityOrAmount' });
+    }
+    const normalizedType = (donationType as string).toUpperCase() as DonationType;
+    if (!VALID_DONATION_TYPES.includes(normalizedType)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid donation type. Valid types: ${VALID_DONATION_TYPES.join(', ')}`,
       });
     }
-  }
 
-  // Validate and normalize location (only for non-FUNDS)
-  let normalizedLocation;
-  if (requiresPickup) {
-    try {
-      normalizedLocation = normalizeLocation(location);
-    } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message || 'Invalid location format' });
+    const quantity = Number(quantityOrAmount);
+    if (Number.isNaN(quantity) || quantity <= 0) {
+      return res.status(400).json({ success: false, message: 'Quantity/Amount must be greater than 0' });
     }
-  }
 
-  // Validate pickup date/time (only for non-FUNDS)
-  let pickupDate: Date | null = null;
-  if (requiresPickup) {
-    pickupDate = new Date(pickupDateTime);
-    if (isNaN(pickupDate.getTime())) {
-      return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
+    const isFunds = normalizedType === 'FUNDS';
+    const requiresPickup = !isFunds;
+    if (requiresPickup) {
+      if (!location || !pickupDateTime) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Missing required fields for FOOD/CLOTHES donations: location, pickupDateTime' 
+        });
+      }
+    }
+    let normalizedLocation;
+    if (requiresPickup) {
+      try {
+        normalizedLocation = normalizeLocation(location);
+      } catch (error: any) {
+        return res.status(400).json({ success: false, message: error.message || 'Invalid location format' });
+      }
+    }
+    let pickupDate: Date | null = null;
+    if (requiresPickup) {
+      pickupDate = new Date(pickupDateTime);
+      if (isNaN(pickupDate.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
+      }
+      if (!isFutureDate(pickupDate)) {
+        return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
+      }
+    }
+    if (timezone && !isValidTimezone(timezone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid timezone format. Use IANA timezone (e.g., America/New_York, Europe/London)',
+      });
     }
-    if (!isFutureDate(pickupDate)) {
-      return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
-    }
-  }
 
-  // Validate timezone if provided
-  if (timezone && !isValidTimezone(timezone)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid timezone format. Use IANA timezone (e.g., America/New_York, Europe/London)',
-    });
-  }
-
-  const files = (req.files as Express.Multer.File[]) || [];
-  const imagePaths = files.map((file) => file.path);
-
-  try {
-    const ngoId = parseInt(req.user!.id);
-    
-    // Extract location details (only for non-FUNDS)
+    const files = (req.files as Express.Multer.File[]) || [];
+    const imagePaths = files.map((file) => file.path);
+    const ngoId = parseInt(req.user!.id);
     const locationAddress = requiresPickup ? (normalizedLocation.address || '') : null;
     const locationLat = requiresPickup ? (normalizedLocation.coordinates?.latitude || null) : null;
-    const locationLng = requiresPickup ? (normalizedLocation.coordinates?.longitude || null) : null;
-
-    // Insert donation
+    const locationLng = requiresPickup ? (normalizedLocation.coordinates?.longitude || null) : null;
     const donationId = await insert(
       `INSERT INTO donations (
         ngo_id, donation_type, donation_category, purpose, description,
@@ -110,9 +92,7 @@ export const createDonation = async (req: AuthRequest, res: Response) => {
         status || 'PENDING',
         priority || 'NORMAL',
       ]
-    );
-
-    // Insert images
+    );
     if (imagePaths.length > 0) {
       for (let i = 0; i < imagePaths.length; i++) {
         await insert(
@@ -120,9 +100,7 @@ export const createDonation = async (req: AuthRequest, res: Response) => {
           [donationId, imagePaths[i], i]
         );
       }
-    }
-
-    // Fetch created donation with NGO details
+    }
     const populated = await queryOne<any>(
       `SELECT d.*,
         u.name as ngo_name, u.email as ngo_email, u.contact_info as ngo_contact_info
@@ -130,9 +108,7 @@ export const createDonation = async (req: AuthRequest, res: Response) => {
        INNER JOIN users u ON d.ngo_id = u.id
        WHERE d.id = ?`,
       [donationId]
-    );
-
-    // Get images
+    );
     const images = await query<any>(
       'SELECT image_path FROM donation_images WHERE donation_id = ? ORDER BY image_order',
       [donationId]
@@ -145,6 +121,7 @@ export const createDonation = async (req: AuthRequest, res: Response) => {
 
     return sendSuccess(res, donationWithDetails, 'Donation created', 201);
   } catch (error: any) {
+    console.error('Error creating donation:', error);
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to create donation',
@@ -170,8 +147,7 @@ export const getDonations = async (req: Request, res: Response) => {
     if (status) {
       sql += ' AND d.status = ?';
       params.push(status);
-    } else {
-      // By default, show only ACTIVE donations (unless includeCancelled is true)
+    } else {
       if (includeCancelled !== 'true') {
         sql += ' AND d.status = ?';
         params.push('ACTIVE');
@@ -198,9 +174,7 @@ export const getDonations = async (req: Request, res: Response) => {
 
     sql += ' ORDER BY d.created_at DESC';
 
-    const donations = await query<any>(sql, params);
-
-    // Get images for each donation
+    const donations = await query<any>(sql, params);
     const donationsWithImages = await Promise.all(
       donations.map(async (donation: any) => {
         const images = await query<any>(
@@ -244,15 +218,11 @@ export const getDonationById = async (req: Request, res: Response) => {
     
     if (!donation) {
       return res.status(404).json({ success: false, message: 'Donation not found' });
-    }
-    
-    // Get images
+    }
     const images = await query<any>(
       'SELECT image_path FROM donation_images WHERE donation_id = ? ORDER BY image_order',
       [donationId]
-    );
-    
-    // Get contribution counts
+    );
     const contributionCount = await queryOne<{ count: number }>(
       'SELECT COUNT(*) as count FROM contributions WHERE donation_id = ?',
       [donationId]
@@ -286,9 +256,7 @@ export const updateDonation = async (req: AuthRequest, res: Response) => {
 
     if (isNaN(donationId)) {
       return res.status(400).json({ success: false, message: 'Invalid donation id' });
-    }
-
-    // Verify ownership and get donation
+    }
     const donation = await queryOne<any>(
       'SELECT * FROM donations WHERE id = ?',
       [donationId]
@@ -300,9 +268,7 @@ export const updateDonation = async (req: AuthRequest, res: Response) => {
 
     if (donation.ngo_id !== ngoId && req.user!.role !== 'ADMIN') {
       return res.status(403).json({ success: false, message: 'Forbidden' });
-    }
-
-    // Cannot update cancelled or completed donations
+    }
     if (donation.status === 'CANCELLED' || donation.status === 'COMPLETED') {
       return res.status(400).json({
         success: false,
@@ -335,9 +301,7 @@ export const updateDonation = async (req: AuthRequest, res: Response) => {
       }
       updates.push('donation_type = ?', 'donation_category = ?');
       params.push(normalizedType, normalizedType);
-    }
-
-    // Validate and normalize location if provided
+    }
     if (location) {
       try {
         const normalizedLocation = normalizeLocation(location);
@@ -378,9 +342,7 @@ export const updateDonation = async (req: AuthRequest, res: Response) => {
       }
       updates.push('pickup_date_time = ?');
       params.push(pickupDate);
-    }
-
-    // Validate timezone if provided
+    }
     if (timezone !== undefined) {
       if (timezone === null || timezone === '') {
         updates.push('timezone = ?');
@@ -394,11 +356,8 @@ export const updateDonation = async (req: AuthRequest, res: Response) => {
         updates.push('timezone = ?');
         params.push(timezone);
       }
-    }
-
-    // Handle image updates
-    if (removeImages && Array.isArray(removeImages)) {
-      // Delete old images from database and filesystem
+    }
+    if (removeImages && Array.isArray(removeImages)) {
       const existingImages = await query<any>(
         'SELECT image_path FROM donation_images WHERE donation_id = ?',
         [donationId]
@@ -415,15 +374,11 @@ export const updateDonation = async (req: AuthRequest, res: Response) => {
             }
           }
         }
-      });
-
-      // Delete from database
+      });
       for (const imagePath of removeImages) {
         await query('DELETE FROM donation_images WHERE donation_id = ? AND image_path = ?', [donationId, imagePath]);
       }
-    }
-
-    // Add new images
+    }
     const files = (req.files as Express.Multer.File[]) || [];
     if (files.length > 0) {
       const existingCount = await queryOne<{ count: number }>(
@@ -438,11 +393,8 @@ export const updateDonation = async (req: AuthRequest, res: Response) => {
           [donationId, file.path, orderIndex++]
         );
       }
-    }
-
-    // Replace images if new array provided
-    if (images && Array.isArray(images)) {
-      // Delete all existing images
+    }
+    if (images && Array.isArray(images)) {
       const existingImages = await query<any>(
         'SELECT image_path FROM donation_images WHERE donation_id = ?',
         [donationId]
@@ -457,27 +409,21 @@ export const updateDonation = async (req: AuthRequest, res: Response) => {
           }
         }
       });
-      await query('DELETE FROM donation_images WHERE donation_id = ?', [donationId]);
-
-      // Insert new images
+      await query('DELETE FROM donation_images WHERE donation_id = ?', [donationId]);
       for (let i = 0; i < images.length; i++) {
         await insert(
           'INSERT INTO donation_images (donation_id, image_path, image_order) VALUES (?, ?, ?)',
           [donationId, images[i], i]
         );
       }
-    }
-
-    // Update donation if there are updates
+    }
     if (updates.length > 0) {
       params.push(donationId);
       await update(
         `UPDATE donations SET ${updates.join(', ')} WHERE id = ?`,
         params
       );
-    }
-
-    // Fetch updated donation
+    }
     const updated = await queryOne<any>(
       `SELECT d.*,
         u.name as ngo_name, u.email as ngo_email, u.contact_info as ngo_contact_info
@@ -485,9 +431,7 @@ export const updateDonation = async (req: AuthRequest, res: Response) => {
        INNER JOIN users u ON d.ngo_id = u.id
        WHERE d.id = ?`,
       [donationId]
-    );
-
-    // Get images
+    );
     const donationImages = await query<any>(
       'SELECT image_path FROM donation_images WHERE donation_id = ? ORDER BY image_order',
       [donationId]
@@ -506,11 +450,6 @@ export const updateDonation = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Cancel a donation request (sets status to CANCELLED instead of deleting)
- * This preserves history and allows tracking
- */
 export const cancelDonation = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -532,9 +471,7 @@ export const cancelDonation = async (req: AuthRequest, res: Response) => {
 
     if (donation.ngo_id !== ngoId && req.user!.role !== 'ADMIN') {
       return res.status(403).json({ success: false, message: 'Forbidden' });
-    }
-
-    // Cannot cancel already completed donations
+    }
     if (donation.status === 'COMPLETED') {
       return res.status(400).json({ success: false, message: 'Cannot cancel completed donation' });
     }
@@ -558,10 +495,6 @@ export const cancelDonation = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Delete donation permanently (only if no contributions exist)
- */
 export const deleteDonation = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -583,9 +516,7 @@ export const deleteDonation = async (req: AuthRequest, res: Response) => {
 
     if (donation.ngo_id !== ngoId && req.user!.role !== 'ADMIN') {
       return res.status(403).json({ success: false, message: 'Forbidden' });
-    }
-
-    // Check if there are any contributions
+    }
     const contributionCount = await queryOne<{ count: number }>(
       'SELECT COUNT(*) as count FROM contributions WHERE donation_id = ?',
       [donationId]
@@ -596,9 +527,7 @@ export const deleteDonation = async (req: AuthRequest, res: Response) => {
         success: false,
         message: 'Cannot delete donation with existing contributions. Use cancel instead.',
       });
-    }
-
-    // Delete associated images
+    }
     const images = await query<any>(
       'SELECT image_path FROM donation_images WHERE donation_id = ?',
       [donationId]
@@ -613,12 +542,8 @@ export const deleteDonation = async (req: AuthRequest, res: Response) => {
           console.error(`Error deleting image: ${img.image_path}`, error);
         }
       }
-    });
-
-    // Delete images from database
-    await query('DELETE FROM donation_images WHERE donation_id = ?', [donationId]);
-
-    // Delete donation
+    });
+    await query('DELETE FROM donation_images WHERE donation_id = ?', [donationId]);
     await query('DELETE FROM donations WHERE id = ?', [donationId]);
 
     return sendSuccess(res, null, 'Donation deleted');
@@ -629,10 +554,6 @@ export const deleteDonation = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Get all donations posted by the logged-in NGO
- */
 export const getMyDonations = async (req: AuthRequest, res: Response) => {
   try {
     const { status, priority, donationType } = req.query;
@@ -662,9 +583,7 @@ export const getMyDonations = async (req: AuthRequest, res: Response) => {
 
     sql += ' ORDER BY d.created_at DESC';
 
-    const donations = await query<any>(sql, params);
-
-    // Get images and contribution counts for each donation
+    const donations = await query<any>(sql, params);
     const donationsWithDetails = await Promise.all(
       donations.map(async (donation: any) => {
         const images = await query<any>(
@@ -696,42 +615,33 @@ export const getMyDonations = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
-/**
- * Get donations near a location (within specified radius in km)
- * Requires latitude and longitude
- */
 export const getNearbyDonations = async (req: Request, res: Response) => {
-  const { latitude, longitude, radius = 10, status, priority, donationType } = req.query;
-
-  // Validate coordinates
-  const lat = Number(latitude);
-  const lng = Number(longitude);
-  const radiusKm = Number(radius) || 10;
-
-  if (!latitude || !longitude) {
-    return res.status(400).json({
-      success: false,
-      message: 'Latitude and longitude are required for nearby search',
-    });
-  }
-
-  if (!isValidCoordinates(lat, lng)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180',
-    });
-  }
-
-  if (radiusKm <= 0 || radiusKm > 1000) {
-    return res.status(400).json({
-      success: false,
-      message: 'Radius must be between 1 and 1000 kilometers',
-    });
-  }
-
   try {
-    // Build SQL query
+    const { latitude, longitude, radius = 10, status, priority, donationType } = req.query;
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    const radiusKm = Number(radius) || 10;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude and longitude are required for nearby search',
+      });
+    }
+
+    if (!isValidCoordinates(lat, lng)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180',
+      });
+    }
+
+    if (radiusKm <= 0 || radiusKm > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Radius must be between 1 and 1000 kilometers',
+      });
+    }
     let sql = `
       SELECT d.*,
         u.name as ngo_name, u.email as ngo_email, u.contact_info as ngo_contact_info
@@ -758,12 +668,8 @@ export const getNearbyDonations = async (req: Request, res: Response) => {
       params.push(`%${donationType}%`);
     }
 
-    sql += ' ORDER BY d.created_at DESC';
-
-    // Get all donations with coordinates
-    const donations = await query<any>(sql, params);
-
-    // Calculate distances and filter by radius
+    sql += ' ORDER BY d.created_at DESC';
+    const donations = await query<any>(sql, params);
     const nearbyDonations = donations
       .map((donation: any) => {
         if (!donation.location_latitude || !donation.location_longitude) {
@@ -786,9 +692,7 @@ export const getNearbyDonations = async (req: Request, res: Response) => {
         return null;
       })
       .filter((donation: any) => donation !== null)
-      .sort((a: any, b: any) => a.distance - b.distance); // Sort by distance
-
-    // Get images and contribution counts
+      .sort((a: any, b: any) => a.distance - b.distance); // Sort by distance
     const donationsWithCounts = await Promise.all(
       nearbyDonations.map(async (donation: any) => {
         const images = await query<any>(
@@ -823,6 +727,7 @@ export const getNearbyDonations = async (req: Request, res: Response) => {
       'Nearby donations fetched'
     );
   } catch (error: any) {
+    console.error('Error fetching nearby donations:', error);
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to fetch nearby donations',

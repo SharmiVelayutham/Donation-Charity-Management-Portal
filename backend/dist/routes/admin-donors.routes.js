@@ -6,19 +6,12 @@ const admin_analytics_controller_1 = require("../controllers/admin-analytics.con
 const auth_middleware_1 = require("../middleware/auth.middleware");
 const role_middleware_1 = require("../middleware/role.middleware");
 const router = (0, express_1.Router)();
-// All routes require ADMIN authentication
 router.use(auth_middleware_1.authenticate);
 router.use((0, role_middleware_1.requireRole)(['ADMIN']));
-/**
- * Admin Donors Routes
- * All routes are prefixed with /api/admin
- */
-// Analytics
 router.get('/analytics', (req, res, next) => {
     console.log('📊 [Admin Analytics] Route hit: /api/admin/analytics');
     (0, admin_analytics_controller_1.getAdminAnalytics)(req, res).catch(next);
 });
-// Donor Management
 router.get('/donors', (req, res, next) => {
     console.log('👥 [Admin Donors] Route hit: /api/admin/donors');
     (0, admin_donors_controller_1.getAllDonors)(req, res).catch(next);

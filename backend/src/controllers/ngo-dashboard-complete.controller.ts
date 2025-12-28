@@ -2,19 +2,14 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { sendSuccess } from '../utils/response';
 import { query, queryOne, update } from '../config/mysql';
+import { createAndEmitNotification } from '../services/notification.service';
 import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 10;
-
-/**
- * Get NGO dashboard overview
- * GET /api/ngo/dashboard
- */
 export const getNgoDashboard = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
 
-    // Get NGO profile (updated_at may not exist in older databases)
     const ngo = await queryOne<any>(`
       SELECT id, ngo_id, name, email, contact_info, contact_person_name, phone_number, 
              about_ngo, website_url, logo_url, registration_number, address, 
@@ -27,7 +22,6 @@ export const getNgoDashboard = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'NGO not found' });
     }
 
-    // Log all registration data for debugging
     console.log('[NGO Dashboard] Fetched NGO data from database:', {
       id: ngo.id,
       ngo_id: ngo.ngo_id,
@@ -46,7 +40,6 @@ export const getNgoDashboard = async (req: AuthRequest, res: Response) => {
       verified: ngo.verified
     });
 
-    // Get statistics using SQL queries
     const [
       totalDonations,
       pendingDonations,
@@ -74,7 +67,6 @@ export const getNgoDashboard = async (req: AuthRequest, res: Response) => {
       `, [ngoId, 'COMPLETED']),
     ]);
 
-    // Get recent donations
     const recentDonations = await query<any>(`
       SELECT d.*, 
         (SELECT COUNT(*) FROM donation_images di WHERE di.donation_id = d.id) as image_count
@@ -84,7 +76,6 @@ export const getNgoDashboard = async (req: AuthRequest, res: Response) => {
       LIMIT 5
     `, [ngoId]);
 
-    // Get upcoming pickups
     const upcomingPickups = await query<any>(`
       SELECT c.*, 
         d.donation_category, d.purpose, d.quantity_or_amount,
@@ -141,7 +132,7 @@ export const getNgoDashboard = async (req: AuthRequest, res: Response) => {
       },
       recentDonations: recentDonations || [],
       upcomingPickups: upcomingPickups || [],
-      // Frontend expects these fields
+
       totalDonations: totalDonations?.count || 0,
       pendingDonations: pendingDonations?.count || 0,
       confirmedDonations: confirmedDonations?.count || 0,
@@ -154,11 +145,6 @@ export const getNgoDashboard = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: error.message || 'Failed to fetch dashboard' });
   }
 };
-
-/**
- * Get NGO profile
- * GET /api/ngo/dashboard/profile
- */
 export const getNgoProfile = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
@@ -204,16 +190,10 @@ export const getNgoProfile = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: error.message || 'Failed to fetch profile' });
   }
 };
-
-/**
- * Update NGO profile
- * PUT /api/ngo/dashboard/profile
- */
 export const updateNgoProfile = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
-    
-    // Check if NGO is verified - only verified NGOs can update profile
+
     const ngoCheck = await queryOne<{ verified: boolean; verification_status: string }>(
       'SELECT verified, verification_status FROM users WHERE id = ?',
       [ngoId]
@@ -222,8 +202,7 @@ export const updateNgoProfile = async (req: AuthRequest, res: Response) => {
     if (!ngoCheck) {
       return res.status(404).json({ success: false, message: 'NGO not found' });
     }
-    
-    // Handle both boolean and number (0/1) from MySQL
+
     const verifiedValue: any = ngoCheck.verified;
     const isVerified = verifiedValue === true || verifiedValue === 1 || (verifiedValue !== null && verifiedValue !== false && verifiedValue !== 0);
     const isStatusVerified = ngoCheck.verification_status === 'VERIFIED';
@@ -253,7 +232,6 @@ export const updateNgoProfile = async (req: AuthRequest, res: Response) => {
 
     console.log(`[Update NGO Profile] NGO ID: ${ngoId}, Update payload:`, req.body);
 
-    // If saveAsPending is true, save updates to pending_profile_updates JSON field
     if (saveAsPending === true) {
       const pendingUpdates: any = {};
       
@@ -270,12 +248,31 @@ export const updateNgoProfile = async (req: AuthRequest, res: Response) => {
       if (Object.keys(pendingUpdates).length === 0) {
         return res.status(400).json({ success: false, message: 'No fields to update' });
       }
-      
-      // Save pending updates as JSON
+
       const pendingJson = JSON.stringify(pendingUpdates);
       await update('UPDATE users SET pending_profile_updates = ? WHERE id = ?', [pendingJson, ngoId]);
       
       console.log(`[Update NGO Profile] ✅ Saved pending updates for NGO ID: ${ngoId}`);
+      // Notify all admins about profile update awaiting approval
+      try {
+        const ngoInfo = await queryOne<any>('SELECT name, email FROM users WHERE id = ?', [ngoId]);
+        const admins = await query<any>('SELECT id FROM admins');
+        for (const admin of admins) {
+          await createAndEmitNotification({
+            userId: admin.id,
+            userType: 'ADMIN',
+            title: 'NGO Profile Update Pending Approval',
+            message: `${ngoInfo?.name || 'An NGO'} submitted profile updates for approval`,
+            type: 'INFO',
+            relatedEntityType: 'ngo',
+            relatedEntityId: ngoId,
+            metadata: { pendingUpdates }
+          });
+        }
+        console.log(`[Update NGO Profile] 📡 Admin notifications emitted for NGO ID: ${ngoId}`);
+      } catch (notifErr: any) {
+        console.error('[Update NGO Profile] Failed to notify admins of pending profile updates:', notifErr);
+      }
       
       return sendSuccess(res, {
         message: 'Profile update submitted successfully. Waiting for admin approval.',
@@ -283,11 +280,9 @@ export const updateNgoProfile = async (req: AuthRequest, res: Response) => {
       }, 'Profile update submitted for admin approval');
     }
 
-    // Otherwise, update directly (existing behavior)
     const updates: string[] = [];
     const params: any[] = [];
 
-    // Basic fields (if admin allows) - only if verified
     if (name !== undefined && name !== null) {
       updates.push('name = ?');
       params.push(name.trim());
@@ -298,7 +293,6 @@ export const updateNgoProfile = async (req: AuthRequest, res: Response) => {
       params.push(contactInfo.trim());
     }
 
-    // Profile fields (always editable by verified NGO)
     if (contactPersonName !== undefined) {
       updates.push('contact_person_name = ?');
       params.push(contactPersonName ? contactPersonName.trim() : null);
@@ -363,7 +357,6 @@ export const updateNgoProfile = async (req: AuthRequest, res: Response) => {
     const affectedRows = await update(sql, params);
     console.log(`[Update NGO Profile] ✅ Updated ${affectedRows} row(s)`);
 
-    // Return updated profile with all fields (same structure as getNgoDashboard)
     const updated = await queryOne<any>(`
       SELECT id, ngo_id, name, email, contact_info, contact_person_name, phone_number, 
              about_ngo, website_url, logo_url, registration_number, address, 
@@ -408,11 +401,6 @@ export const updateNgoProfile = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, message: error.message || 'Failed to update profile' });
   }
 };
-
-/**
- * Get all donations with filters
- * GET /api/ngo/dashboard/donations
- */
 export const getNgoDashboardDonations = async (req: AuthRequest, res: Response) => {
   try {
     const ngoId = typeof req.user!.id === 'string' ? parseInt(req.user!.id) : req.user!.id;
@@ -449,7 +437,6 @@ export const getNgoDashboardDonations = async (req: AuthRequest, res: Response) 
 
     const donations = await query<any>(sql, params);
 
-    // Get total count
     let countSql = 'SELECT COUNT(*) as total FROM donations WHERE ngo_id = ?';
     const countParams: any[] = [ngoId];
     if (status) {

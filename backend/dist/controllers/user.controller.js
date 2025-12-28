@@ -3,10 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUserProfile = void 0;
 const response_1 = require("../utils/response");
 const mysql_1 = require("../config/mysql");
-/**
- * Get user profile (works for both DONOR and NGO)
- * GET /api/users/profile
- */
 const getUserProfile = async (req, res) => {
     try {
         const userId = parseInt(req.user.id);

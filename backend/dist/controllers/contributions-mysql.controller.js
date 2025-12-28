@@ -3,14 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNgoContributions = exports.getMyContributions = exports.contributeToDonation = void 0;
 const response_1 = require("../utils/response");
 const mysql_1 = require("../config/mysql");
-/**
- * MySQL-based Contributions Controller
- * Handles contributions to donations (using MySQL, not MongoDB)
- */
-/**
- * Donor contributes to a donation
- * POST /api/donations/:id/contribute
- */
+const notification_service_1 = require("../services/notification.service");
 const contributeToDonation = async (req, res) => {
     try {
         const { id } = req.params;
@@ -20,7 +13,6 @@ const contributeToDonation = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid donation id' });
         }
         const { quantityOrAmount, pickupScheduledDateTime, donorAddress, donorContactNumber, notes, } = req.body;
-        // Check if donation exists and is active
         const donation = await (0, mysql_1.queryOne)(`SELECT d.*, u.name as ngo_name 
        FROM donations d
        INNER JOIN users u ON d.ngo_id = u.id
@@ -37,7 +29,6 @@ const contributeToDonation = async (req, res) => {
         const donationCategory = donation.donation_category || donation.donation_type;
         const isFunds = donationCategory === 'FUNDS' || donationCategory === 'MONEY';
         const requiresPickup = !isFunds;
-        // Validate quantity/amount
         if (!quantityOrAmount) {
             return res.status(400).json({
                 success: false,
@@ -51,7 +42,6 @@ const contributeToDonation = async (req, res) => {
                 message: 'Quantity/Amount must be greater than 0',
             });
         }
-        // For FOOD/CLOTHES donations, validate pickup details
         if (requiresPickup) {
             if (!pickupScheduledDateTime || !donorAddress || !donorContactNumber) {
                 return res.status(400).json({
@@ -59,7 +49,6 @@ const contributeToDonation = async (req, res) => {
                     message: 'Missing required fields for FOOD/CLOTHES donations: pickupScheduledDateTime, donorAddress, donorContactNumber',
                 });
             }
-            // Validate pickup date is in the future
             const pickupDate = new Date(pickupScheduledDateTime);
             if (isNaN(pickupDate.getTime())) {
                 return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
@@ -67,7 +56,6 @@ const contributeToDonation = async (req, res) => {
             if (pickupDate.getTime() <= Date.now()) {
                 return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
             }
-            // Validate address and contact
             if (typeof donorAddress !== 'string' || donorAddress.trim().length === 0) {
                 return res.status(400).json({ success: false, message: 'Donor address cannot be empty' });
             }
@@ -75,7 +63,6 @@ const contributeToDonation = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Donor contact number cannot be empty' });
             }
         }
-        // Check if donor already contributed
         const existingContribution = await (0, mysql_1.queryOne)('SELECT id FROM contributions WHERE donation_id = ? AND donor_id = ?', [donationId, donorId]);
         if (existingContribution) {
             return res.status(409).json({
@@ -83,15 +70,10 @@ const contributeToDonation = async (req, res) => {
                 message: 'You have already contributed to this donation',
             });
         }
-        // Note: contributions table doesn't store quantity_or_amount
-        // We track contributions by count, not by quantity
-        // If you need quantity tracking, consider using donation_request_contributions table instead
-        // Get donor details
         const donor = await (0, mysql_1.queryOne)('SELECT id, name, email, contact_info, phone_number, full_address FROM donors WHERE id = ?', [donorId]);
         if (!donor) {
             return res.status(404).json({ success: false, message: 'Donor not found' });
         }
-        // Update donor profile with address and phone if not set
         if (requiresPickup) {
             const donorUpdates = [];
             const donorParams = [];
@@ -108,9 +90,6 @@ const contributeToDonation = async (req, res) => {
                 await (0, mysql_1.query)(`UPDATE donors SET ${donorUpdates.join(', ')} WHERE id = ?`, donorParams);
             }
         }
-        // Insert contribution
-        // Note: Schema requires donor_address and donor_contact_number to be NOT NULL
-        // For FUNDS, we'll use placeholder values since pickup isn't needed
         const contributionId = await (0, mysql_1.insert)(`INSERT INTO contributions (
         donation_id, donor_id, notes,
         scheduled_pickup_time, pickup_scheduled_date_time,
@@ -127,15 +106,25 @@ const contributeToDonation = async (req, res) => {
             requiresPickup ? 'SCHEDULED' : null,
             'PENDING',
         ]);
-        // Fetch created contribution with details
         const contribution = await (0, mysql_1.queryOne)(`SELECT c.*, d.name as donor_name, d.email as donor_email,
               dr.donation_category, dr.donation_type, dr.purpose, dr.quantity_or_amount as donation_quantity,
-              u.name as ngo_name
+              u.name as ngo_name, u.id as ngo_id
        FROM contributions c
        INNER JOIN donors d ON c.donor_id = d.id
        INNER JOIN donations dr ON c.donation_id = dr.id
        INNER JOIN users u ON dr.ngo_id = u.id
        WHERE c.id = ?`, [contributionId]);
+        try {
+            const ngoId = contribution.ngo_id;
+            const donationType = contribution.donation_type || contribution.donation_category || 'OTHER';
+            const amount = parseFloat(contribution.donation_quantity || quantityOrAmount || '0');
+            await (0, notification_service_1.notifyNgoOnDonation)(ngoId, donorId, contribution.donor_name, contribution.donor_email, donationType, amount, contributionId);
+            await (0, notification_service_1.notifyAdminOnDonation)(donorId, contribution.donor_name, contribution.ngo_name, donationType, amount, contributionId);
+            await (0, notification_service_1.sendDonorDonationEmail)(contribution.donor_email, contribution.donor_name, contribution.ngo_name, donationType, amount);
+        }
+        catch (notificationError) {
+            console.error('Error sending notifications:', notificationError);
+        }
         return (0, response_1.sendSuccess)(res, {
             id: contribution.id,
             donationId: contribution.donation_id,
@@ -174,10 +163,6 @@ const contributeToDonation = async (req, res) => {
     }
 };
 exports.contributeToDonation = contributeToDonation;
-/**
- * Get my contributions (donor)
- * GET /api/contributions/my
- */
 const getMyContributions = async (req, res) => {
     try {
         const donorId = parseInt(req.user.id);
@@ -224,10 +209,6 @@ const getMyContributions = async (req, res) => {
     }
 };
 exports.getMyContributions = getMyContributions;
-/**
- * Get contributions for a specific NGO
- * GET /api/contributions/ngo/:ngoId
- */
 const getNgoContributions = async (req, res) => {
     try {
         const { ngoId: paramNgoId } = req.params;
@@ -236,14 +217,12 @@ const getNgoContributions = async (req, res) => {
         if (isNaN(requestedNgoId)) {
             return res.status(400).json({ success: false, message: 'Invalid NGO id' });
         }
-        // Only allow NGO to view their own contributions, or ADMIN to view any
         if (req.user.role !== 'ADMIN' && authenticatedNgoId !== requestedNgoId) {
             return res.status(403).json({
                 success: false,
                 message: 'Forbidden: You can only view contributions for your own donations',
             });
         }
-        // Verify NGO exists
         const ngo = await (0, mysql_1.queryOne)('SELECT id, name FROM users WHERE id = ? AND role = "NGO"', [requestedNgoId]);
         if (!ngo) {
             return res.status(404).json({ success: false, message: 'NGO not found' });

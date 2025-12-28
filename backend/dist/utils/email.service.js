@@ -11,11 +11,8 @@ exports.sendNgoVerificationRejectionEmail = sendNgoVerificationRejectionEmail;
 exports.verifyEmailConfig = verifyEmailConfig;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const env_1 = require("../config/env");
-/**
- * Create and configure nodemailer transporter
- */
+const email_template_service_1 = require("./email-template.service");
 function createTransporter() {
-    // Check if SMTP is configured
     if (!env_1.env.smtpHost || !env_1.env.smtpUser || !env_1.env.smtpPass) {
         throw new Error('SMTP configuration is missing. Please set SMTP_HOST, SMTP_USER, and SMTP_PASS in .env file');
     }
@@ -28,19 +25,14 @@ function createTransporter() {
             pass: env_1.env.smtpPass,
         },
     };
-    // For Gmail and most SMTP servers, TLS is required when secure=false
     if (!env_1.env.smtpSecure) {
         transporterConfig.tls = {
-            // Do not fail on invalid certs (useful for development)
             rejectUnauthorized: false,
             ciphers: 'SSLv3',
         };
     }
     return nodemailer_1.default.createTransport(transporterConfig);
 }
-/**
- * Send email using nodemailer
- */
 async function sendEmail(options) {
     let transporter;
     try {
@@ -58,18 +50,15 @@ async function sendEmail(options) {
             html: options.html,
             text: options.text || options.html.replace(/<[^>]*>/g, ''), // Plain text fallback
         };
-        // Verify SMTP connection before sending
         await transporter.verify();
         const info = await transporter.sendMail(mailOptions);
         console.log('✅ Email sent successfully');
         console.log('Message ID:', info.messageId);
         console.log('To:', options.to);
-        // Do NOT log OTP in production logs
     }
     catch (error) {
         console.error('❌ Failed to send email to:', options.to);
         console.error('Error:', error.message);
-        // Provide specific error messages for common issues
         if (error.code === 'EAUTH') {
             throw new Error('SMTP authentication failed. Please check SMTP_USER and SMTP_PASS in .env file. For Gmail, use App Password (not regular password).');
         }
@@ -88,11 +77,7 @@ async function sendEmail(options) {
             throw new Error(`Failed to send email: ${error.message}. Please check SMTP configuration. See EMAIL_SETUP.md for help.`);
         }
     }
-    // Note: transporter.close() is not needed - nodemailer manages connections automatically
 }
-/**
- * Send OTP email with professional template
- */
 async function sendOTPEmail(email, otp, purpose = 'REGISTRATION') {
     const purposeText = {
         REGISTRATION: 'NGO Registration',
@@ -145,15 +130,34 @@ async function sendOTPEmail(email, otp, purpose = 'REGISTRATION') {
     </body>
     </html>
   `;
-    await sendEmail({
-        to: email,
-        subject,
-        html,
-    });
+    const templateTypeMap = {
+        REGISTRATION: 'OTP_REGISTRATION',
+        PASSWORD_RESET: 'OTP_PASSWORD_RESET',
+        EMAIL_CHANGE: 'OTP_EMAIL_CHANGE',
+        ADMIN_REGISTRATION: 'OTP_ADMIN_REGISTRATION',
+    };
+    const templateType = templateTypeMap[purpose] || 'OTP_REGISTRATION';
+    try {
+        const template = await (0, email_template_service_1.getEmailTemplate)(templateType);
+        const finalSubject = template.subject; // OTP templates don't use placeholders in subject
+        const finalHtml = (0, email_template_service_1.replaceTemplatePlaceholders)(template.bodyHtml, {
+            OTP_CODE: otp
+        });
+        await sendEmail({
+            to: email,
+            subject: finalSubject,
+            html: finalHtml,
+        });
+    }
+    catch (error) {
+        console.error(`[Email Service] Error sending OTP email (template: ${templateType}):`, error);
+        await sendEmail({
+            to: email,
+            subject,
+            html,
+        });
+    }
 }
-/**
- * Send NGO profile under verification email (after registration)
- */
 async function sendNgoProfileUnderVerificationEmail(email, ngoName) {
     const subject = 'NGO Profile Under Verification';
     const html = `
@@ -207,9 +211,6 @@ async function sendNgoProfileUnderVerificationEmail(email, ngoName) {
         html,
     });
 }
-/**
- * Send NGO verification approval email
- */
 async function sendNgoVerificationApprovalEmail(email, ngoName, ngoId) {
     const subject = 'NGO Profile Verified Successfully';
     const html = `
@@ -270,9 +271,6 @@ async function sendNgoVerificationApprovalEmail(email, ngoName, ngoId) {
         html,
     });
 }
-/**
- * Send NGO verification rejection email
- */
 async function sendNgoVerificationRejectionEmail(email, ngoName, rejectionReason) {
     const subject = 'NGO Verification Status - Donation & Charity Portal';
     const html = `
@@ -326,9 +324,6 @@ async function sendNgoVerificationRejectionEmail(email, ngoName, rejectionReason
         html,
     });
 }
-/**
- * Verify email configuration
- */
 function verifyEmailConfig() {
     try {
         if (!env_1.env.smtpHost || !env_1.env.smtpUser || !env_1.env.smtpPass) {

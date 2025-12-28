@@ -3,13 +3,15 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
+import { initLogger } from './utils/logger';
+import { env } from './config/env';
 import authRoutes from './routes/auth.routes';
 import donationRoutes from './routes/donation.routes';
-// Temporarily disabled - missing model files
-// import contributionRoutes from './routes/contribution.routes';
-// import leaderboardRoutes from './routes/leaderboard.routes';
-// import analyticsRoutes from './routes/analytics.routes';
-// import trackingRoutes from './routes/tracking.routes';
+
+
+
+
+
 import ngoDashboardRoutes from './routes/ngo-dashboard.routes';
 import ngoDashboardCompleteRoutes from './routes/ngo-dashboard-complete.routes';
 import donorDashboardRoutes from './routes/donor-dashboard.routes';
@@ -23,24 +25,26 @@ import notificationRoutes from './routes/notification.routes';
 import blogRoutes from './routes/blog.routes';
 import sliderRoutes from './routes/slider.routes';
 import platformStatsRoutes from './routes/platform-stats.routes';
-// MySQL-based routes
+
 import userRoutes from './routes/user.routes';
 import contributionsMysqlRoutes, { contributionsRouter } from './routes/contributions-mysql.routes';
 import pickupsMysqlRoutes from './routes/pickups-mysql.routes';
 import { query } from './config/mysql';
 import { sendSuccess } from './utils/response';
-// Temporarily disabled - missing model files
-// import pickupManagementRoutes from './routes/pickup-management.routes';
-// import paymentManagementRoutes from './routes/payment-management.routes';
+
+
+
 import { errorHandler } from './middleware/error.middleware';
 
+initLogger();
 const app = express();
 
+const FRONTEND_URL = env.frontendUrl;
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "http://localhost:4000", "http://localhost:4200"],
+      imgSrc: ["'self'", "data:", FRONTEND_URL],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
     },
@@ -48,17 +52,19 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(cors({
-  origin: ['http://localhost:4200', 'http://localhost:4000'],
+  origin: [FRONTEND_URL],
   credentials: true
 }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+const enableHttpLogs = env.enableHttpLogs || env.nodeEnv === 'development';
+if (enableHttpLogs) {
+  app.use(morgan('dev'));
+}
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-// Test endpoint to verify route registration
 app.get('/api/test-routes', (_req, res) => {
   res.json({ 
     message: 'Routes test endpoint',
@@ -73,14 +79,9 @@ app.get('/api/test-routes', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/donations', donationRoutes);
-// MySQL-based routes
-// Leaderboard routes - Inline registration
-console.log('🔍 [DEBUG] Reached leaderboard registration section');
-console.log('📋 [LEADERBOARD] Registering leaderboard routes...');
-console.log('📋 [LEADERBOARD] express object:', typeof express);
-console.log('📋 [LEADERBOARD] express.Router:', typeof express.Router);
+
+
 const leaderboardRouter = express.Router();
-console.log('📋 [LEADERBOARD] Router created:', leaderboardRouter);
 leaderboardRouter.get('/test', (req, res) => {
   res.json({ message: 'Leaderboard test route works!', path: req.path });
 });
@@ -100,8 +101,8 @@ leaderboardRouter.get('/', async (req, res) => {
     }
 
     if (type === 'donors') {
-      // Rank donors by received funds only (ACCEPTED status contributions)
-      // Only count contributions with ACCEPTED/COMPLETED status (received funds)
+
+
       let sql = `
         SELECT 
           d.id as donor_id,
@@ -160,8 +161,8 @@ leaderboardRouter.get('/', async (req, res) => {
         leaderboard: rankedLeaderboard,
       }, 'Leaderboard fetched successfully');
     } else if (type === 'ngos') {
-      // Rank NGOs by received funds only (ACCEPTED status contributions)
-      // Only count contributions with ACCEPTED/COMPLETED status (received funds)
+
+
       let sql = `
         SELECT 
           u.id as ngo_id,
@@ -233,65 +234,38 @@ leaderboardRouter.get('/', async (req, res) => {
   }
 });
 app.use('/api/leaderboard', leaderboardRouter);
-console.log('✅ [LEADERBOARD] Leaderboard routes registered at /api/leaderboard');
 
 app.use('/api', contributionsMysqlRoutes); // POST /api/donations/:id/contribute
 app.use('/api/contributions', contributionsRouter); // GET /api/contributions/my, GET /api/contributions/ngo/:ngoId
 app.use('/api/pickups', pickupsMysqlRoutes);
-// Temporarily disabled - missing model files
-// app.use('/api/leaderboard', leaderboardRoutes); // Old MongoDB version
-// app.use('/api/analytics', analyticsRoutes);
-// app.use('/api/tracking', trackingRoutes);
+
+
+
+
 app.use('/api/ngo/donations', ngoDashboardRoutes); // NGO donation management
-console.log('📋 Registering NGO dashboard complete routes at /api/ngo/dashboard');
 app.use('/api/ngo/dashboard', ngoDashboardCompleteRoutes); // NGO complete dashboard
-console.log('✅ NGO dashboard complete routes registered at /api/ngo/dashboard');
 app.use('/api/donor/dashboard', donorDashboardRoutes); // Donor dashboard
-// Donation requests routes
-console.log('📋 Registering donation-requests routes...');
+
 app.use('/api/donation-requests', donationRequestRoutes); // Donation requests (NGO creates, Donors view)
-console.log('✅ Donation-requests routes registered at /api/donation-requests');
 
-// Dashboard statistics routes (real-time stats)
-console.log('📋 Registering dashboard-stats routes...');
 app.use('/api', dashboardStatsRoutes); // Dashboard stats for NGO and Donor
-console.log('✅ Dashboard-stats routes registered');
 
-// Notification routes
-console.log('📋 Registering notification routes...');
 app.use('/api/notifications', notificationRoutes);
-console.log('✅ Notification routes registered at /api/notifications');
 
-// Blog routes
-console.log('📋 Registering blog routes...');
 app.use('/api/blogs', blogRoutes);
-console.log('✅ Blog routes registered at /api/blogs');
 
-// Slider routes
-console.log('📋 Registering slider routes...');
 app.use('/api/sliders', sliderRoutes);
-console.log('✅ Slider routes registered at /api/sliders');
 app.use('/api/platform', platformStatsRoutes);
-console.log('✅ Platform stats routes registered at /api/platform');
 
-// Temporarily disabled - missing model files
-// Pickup management routes
-// app.use('/api', pickupManagementRoutes);
 
-// Payment management routes
-// app.use('/api', paymentManagementRoutes);
 
-// Admin-only routes (separate from regular auth)
-console.log('📋 [APP] Registering admin routes...');
+
+
+
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/dashboard', adminDashboardRoutes);
 app.use('/api/admin', adminDonorsRoutes);
 app.use('/api/admin/email-templates', emailTemplatesRoutes);
-console.log('✅ [APP] Admin routes registered:');
-console.log('   - /api/admin/auth');
-console.log('   - /api/admin/dashboard');
-console.log('   - /api/admin (analytics, donors, contributions)');
-console.log('   - /api/admin/email-templates');
 
 app.use(errorHandler);
 

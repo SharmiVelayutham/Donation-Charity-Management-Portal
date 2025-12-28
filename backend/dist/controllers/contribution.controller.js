@@ -39,7 +39,6 @@ const getMyContributions = async (req, res) => {
 };
 exports.getMyContributions = getMyContributions;
 const getNgoContributions = async (req, res) => {
-    // Fetch contributions for donations owned by this NGO
     const donations = await Donation_model_1.DonationModel.find({ ngoId: req.user.id }).select('_id');
     const donationIds = donations.map((d) => d._id);
     const contributions = await Contribution_model_1.ContributionModel.find({ donationId: { $in: donationIds } })
@@ -49,7 +48,6 @@ const getNgoContributions = async (req, res) => {
     return (0, response_1.sendSuccess)(res, contributions, 'NGO contributions');
 };
 exports.getNgoContributions = getNgoContributions;
-// NGO: Approve or reject a contribution
 const approveContribution = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
@@ -69,7 +67,6 @@ const approveContribution = async (req, res) => {
     }
     contribution.status = status;
     await contribution.save();
-    // If approved, update donation status to CONFIRMED
     if (status === 'APPROVED') {
         await Donation_model_1.DonationModel.findByIdAndUpdate(donation._id, { status: 'CONFIRMED' });
     }
@@ -79,7 +76,6 @@ const approveContribution = async (req, res) => {
     return (0, response_1.sendSuccess)(res, updated, `Contribution ${status.toLowerCase()}`);
 };
 exports.approveContribution = approveContribution;
-// NGO: Update pickup schedule for a contribution
 const updatePickupSchedule = async (req, res) => {
     const { id } = req.params;
     const { scheduledPickupTime } = req.body;

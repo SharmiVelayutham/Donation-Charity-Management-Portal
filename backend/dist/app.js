@@ -43,11 +43,6 @@ const morgan_1 = __importDefault(require("morgan"));
 const path_1 = __importDefault(require("path"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const donation_routes_1 = __importDefault(require("./routes/donation.routes"));
-// Temporarily disabled - missing model files
-// import contributionRoutes from './routes/contribution.routes';
-// import leaderboardRoutes from './routes/leaderboard.routes';
-// import analyticsRoutes from './routes/analytics.routes';
-// import trackingRoutes from './routes/tracking.routes';
 const ngo_dashboard_routes_1 = __importDefault(require("./routes/ngo-dashboard.routes"));
 const ngo_dashboard_complete_routes_1 = __importDefault(require("./routes/ngo-dashboard-complete.routes"));
 const donor_dashboard_routes_1 = __importDefault(require("./routes/donor-dashboard.routes"));
@@ -57,25 +52,37 @@ const admin_donors_routes_1 = __importDefault(require("./routes/admin-donors.rou
 const email_templates_routes_1 = __importDefault(require("./routes/email-templates.routes"));
 const donation_request_routes_1 = __importDefault(require("./routes/donation-request.routes"));
 const dashboard_stats_routes_1 = __importDefault(require("./routes/dashboard-stats.routes"));
-// MySQL-based routes
+const notification_routes_1 = __importDefault(require("./routes/notification.routes"));
+const blog_routes_1 = __importDefault(require("./routes/blog.routes"));
+const slider_routes_1 = __importDefault(require("./routes/slider.routes"));
+const platform_stats_routes_1 = __importDefault(require("./routes/platform-stats.routes"));
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const contributions_mysql_routes_1 = __importStar(require("./routes/contributions-mysql.routes"));
 const pickups_mysql_routes_1 = __importDefault(require("./routes/pickups-mysql.routes"));
 const mysql_1 = require("./config/mysql");
 const response_1 = require("./utils/response");
-// Temporarily disabled - missing model files
-// import pickupManagementRoutes from './routes/pickup-management.routes';
-// import paymentManagementRoutes from './routes/payment-management.routes';
 const error_middleware_1 = require("./middleware/error.middleware");
 const app = (0, express_1.default)();
-app.use((0, helmet_1.default)());
-app.use((0, cors_1.default)());
+app.use((0, helmet_1.default)({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "http://localhost:4000", "http://localhost:4200"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+        },
+    },
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+app.use((0, cors_1.default)({
+    origin: ['http://localhost:4200', 'http://localhost:4000'],
+    credentials: true
+}));
 app.use(express_1.default.json({ limit: '2mb' }));
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use((0, morgan_1.default)('dev'));
 app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
-// Test endpoint to verify route registration
 app.get('/api/test-routes', (_req, res) => {
     res.json({
         message: 'Routes test endpoint',
@@ -89,14 +96,7 @@ app.get('/api/test-routes', (_req, res) => {
 app.use('/api/auth', auth_routes_1.default);
 app.use('/api/users', user_routes_1.default);
 app.use('/api/donations', donation_routes_1.default);
-// MySQL-based routes
-// Leaderboard routes - Inline registration
-console.log('🔍 [DEBUG] Reached leaderboard registration section');
-console.log('📋 [LEADERBOARD] Registering leaderboard routes...');
-console.log('📋 [LEADERBOARD] express object:', typeof express_1.default);
-console.log('📋 [LEADERBOARD] express.Router:', typeof express_1.default.Router);
 const leaderboardRouter = express_1.default.Router();
-console.log('📋 [LEADERBOARD] Router created:', leaderboardRouter);
 leaderboardRouter.get('/test', (req, res) => {
     res.json({ message: 'Leaderboard test route works!', path: req.path });
 });
@@ -115,23 +115,34 @@ leaderboardRouter.get('/', async (req, res) => {
             dateFilter.setHours(0, 0, 0, 0);
         }
         if (type === 'donors') {
-            // Combine contributions from both contributions and donation_request_contributions tables
             let sql = `
         SELECT 
           d.id as donor_id,
           d.name as donor_name,
           d.email as donor_email,
-          (COUNT(DISTINCT c.id) + COUNT(DISTINCT drc.id)) as total_contributions,
-          (COALESCE(SUM(COALESCE(dr.quantity_or_amount, 0)), 0) + COALESCE(SUM(COALESCE(drc.quantity_or_amount, 0)), 0)) as total_amount,
-          (SUM(CASE WHEN c.status = 'COMPLETED' THEN 1 ELSE 0 END) + SUM(CASE WHEN drc.status = 'COMPLETED' THEN 1 ELSE 0 END)) as completed_contributions,
+          COUNT(DISTINCT c.id) + COUNT(DISTINCT CASE WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' THEN drc.id END) as total_contributions,
+          COALESCE(SUM(CASE 
+            WHEN c.status = 'COMPLETED' AND dr.donation_category = 'FUNDS' THEN dr.quantity_or_amount 
+            ELSE 0 
+          END), 0) +
+          COALESCE(SUM(CASE 
+            WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' AND dr_new.donation_type IN ('FUNDS', 'MONEY') 
+            THEN drc.quantity_or_amount 
+            ELSE 0 
+          END), 0) as total_amount,
+          SUM(CASE WHEN c.status = 'COMPLETED' THEN 1 ELSE 0 END) +
+          SUM(CASE WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' THEN 1 ELSE 0 END) as completed_contributions,
           GREATEST(COALESCE(MAX(c.created_at), '1970-01-01'), COALESCE(MAX(drc.created_at), '1970-01-01')) as last_contribution_date
         FROM donors d
-        LEFT JOIN contributions c ON d.id = c.donor_id
+        LEFT JOIN contributions c ON d.id = c.donor_id AND c.status = 'COMPLETED'
         LEFT JOIN donations dr ON c.donation_id = dr.id
         LEFT JOIN donation_request_contributions drc ON d.id = drc.donor_id
+        LEFT JOIN donation_requests dr_new ON drc.request_id = dr_new.id
       `;
             const params = [];
-            const whereConditions = ['(c.id IS NOT NULL OR drc.id IS NOT NULL)'];
+            const whereConditions = [
+                '(c.status = \'COMPLETED\' OR UPPER(TRIM(COALESCE(drc.status, \'\'))) = \'ACCEPTED\')'
+            ];
             if (dateFilter) {
                 whereConditions.push('(c.created_at >= ? OR drc.created_at >= ?)');
                 params.push(dateFilter);
@@ -140,7 +151,7 @@ leaderboardRouter.get('/', async (req, res) => {
             sql += ` WHERE ${whereConditions.join(' AND ')}`;
             sql += `
         GROUP BY d.id, d.name, d.email
-        HAVING (COUNT(DISTINCT c.id) + COUNT(DISTINCT drc.id)) > 0
+        HAVING total_amount > 0
         ORDER BY ${sortBy === 'amount' ? 'total_amount DESC, total_contributions DESC' : 'total_contributions DESC, total_amount DESC'}
         LIMIT 100
       `;
@@ -169,24 +180,37 @@ leaderboardRouter.get('/', async (req, res) => {
           u.name as ngo_name,
           u.email as ngo_email,
           u.contact_info as ngo_contact_info,
-          COUNT(d.id) as total_donations,
-          COALESCE(SUM(d.quantity_or_amount), 0) as total_amount,
-          SUM(CASE WHEN d.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed_donations,
+          COUNT(DISTINCT d.id) + COUNT(DISTINCT dr.id) as total_donations,
+          COALESCE(SUM(CASE 
+            WHEN d.status = 'COMPLETED' AND d.donation_category = 'FUNDS' THEN d.quantity_or_amount 
+            ELSE 0 
+          END), 0) +
+          COALESCE(SUM(CASE 
+            WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' AND dr.donation_type IN ('FUNDS', 'MONEY') 
+            THEN drc.quantity_or_amount 
+            ELSE 0 
+          END), 0) as total_amount,
+          SUM(CASE WHEN d.status = 'COMPLETED' THEN 1 ELSE 0 END) +
+          SUM(CASE WHEN UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED' THEN 1 ELSE 0 END) as completed_donations,
           SUM(CASE WHEN d.priority = 'URGENT' THEN 1 ELSE 0 END) as urgent_donations
         FROM users u
-        LEFT JOIN donations d ON u.id = d.ngo_id
+        LEFT JOIN donations d ON u.id = d.ngo_id AND d.status = 'COMPLETED'
+        LEFT JOIN donation_requests dr ON u.id = dr.ngo_id
+        LEFT JOIN donation_request_contributions drc ON dr.id = drc.request_id
         WHERE u.role = 'NGO'
+          AND (d.status = 'COMPLETED' OR UPPER(TRIM(COALESCE(drc.status, ''))) = 'ACCEPTED')
       `;
             const params = [];
             if (dateFilter) {
-                sql += ` AND d.created_at >= ?`;
+                sql += ` AND (d.created_at >= ? OR dr.created_at >= ?)`;
+                params.push(dateFilter);
                 params.push(dateFilter);
             }
             sql += `
         GROUP BY u.id, u.name, u.email, u.contact_info
-        HAVING total_donations > 0
+        HAVING total_amount > 0
         ORDER BY ${sortBy === 'amount' ? 'total_amount DESC, total_donations DESC' : 'total_donations DESC, total_amount DESC'}
-        LIMIT 50
+        LIMIT 100
       `;
             const leaderboard = await (0, mysql_1.query)(sql, params);
             const rankedLeaderboard = leaderboard.map((ngo, index) => ({
@@ -223,42 +247,21 @@ leaderboardRouter.get('/', async (req, res) => {
     }
 });
 app.use('/api/leaderboard', leaderboardRouter);
-console.log('✅ [LEADERBOARD] Leaderboard routes registered at /api/leaderboard');
 app.use('/api', contributions_mysql_routes_1.default); // POST /api/donations/:id/contribute
 app.use('/api/contributions', contributions_mysql_routes_1.contributionsRouter); // GET /api/contributions/my, GET /api/contributions/ngo/:ngoId
 app.use('/api/pickups', pickups_mysql_routes_1.default);
-// Temporarily disabled - missing model files
-// app.use('/api/leaderboard', leaderboardRoutes); // Old MongoDB version
-// app.use('/api/analytics', analyticsRoutes);
-// app.use('/api/tracking', trackingRoutes);
 app.use('/api/ngo/donations', ngo_dashboard_routes_1.default); // NGO donation management
-console.log('📋 Registering NGO dashboard complete routes at /api/ngo/dashboard');
 app.use('/api/ngo/dashboard', ngo_dashboard_complete_routes_1.default); // NGO complete dashboard
-console.log('✅ NGO dashboard complete routes registered at /api/ngo/dashboard');
 app.use('/api/donor/dashboard', donor_dashboard_routes_1.default); // Donor dashboard
-// Donation requests routes
-console.log('📋 Registering donation-requests routes...');
 app.use('/api/donation-requests', donation_request_routes_1.default); // Donation requests (NGO creates, Donors view)
-console.log('✅ Donation-requests routes registered at /api/donation-requests');
-// Dashboard statistics routes (real-time stats)
-console.log('📋 Registering dashboard-stats routes...');
 app.use('/api', dashboard_stats_routes_1.default); // Dashboard stats for NGO and Donor
-console.log('✅ Dashboard-stats routes registered');
-// Temporarily disabled - missing model files
-// Pickup management routes
-// app.use('/api', pickupManagementRoutes);
-// Payment management routes
-// app.use('/api', paymentManagementRoutes);
-// Admin-only routes (separate from regular auth)
-console.log('📋 [APP] Registering admin routes...');
+app.use('/api/notifications', notification_routes_1.default);
+app.use('/api/blogs', blog_routes_1.default);
+app.use('/api/sliders', slider_routes_1.default);
+app.use('/api/platform', platform_stats_routes_1.default);
 app.use('/api/admin/auth', admin_auth_routes_1.default);
 app.use('/api/admin/dashboard', admin_dashboard_routes_1.default);
 app.use('/api/admin', admin_donors_routes_1.default);
 app.use('/api/admin/email-templates', email_templates_routes_1.default);
-console.log('✅ [APP] Admin routes registered:');
-console.log('   - /api/admin/auth');
-console.log('   - /api/admin/dashboard');
-console.log('   - /api/admin (analytics, donors, contributions)');
-console.log('   - /api/admin/email-templates');
 app.use(error_middleware_1.errorHandler);
 exports.default = app;

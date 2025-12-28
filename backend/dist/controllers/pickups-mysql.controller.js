@@ -3,16 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.updatePickupStatus = exports.getDonorPickups = exports.getNgoPickups = exports.createPickup = void 0;
 const response_1 = require("../utils/response");
 const mysql_1 = require("../config/mysql");
-/**
- * MySQL-based Pickups Controller
- * Handles pickup scheduling and management
- */
-/**
- * Create a pickup (typically called when a contribution is made)
- * POST /api/pickups
- * Note: Pickups are usually created via contributions endpoint
- * This endpoint can be used for manual pickup creation if needed
- */
 const createPickup = async (req, res) => {
     try {
         const donorId = parseInt(req.user.id);
@@ -32,14 +22,12 @@ const createPickup = async (req, res) => {
         }
         const donationCategory = donation.donation_category || donation.donation_type;
         const isFunds = donationCategory === 'FUNDS' || donationCategory === 'MONEY';
-        // FUNDS donations don't require pickup
         if (isFunds) {
             return res.status(400).json({
                 success: false,
                 message: 'Pickup is not required for FUNDS donations. Please use the payment endpoint instead.',
             });
         }
-        // Validate pickup date is in the future
         const pickupDate = new Date(pickupScheduledDateTime);
         if (isNaN(pickupDate.getTime())) {
             return res.status(400).json({ success: false, message: 'Invalid pickup date/time format' });
@@ -47,7 +35,6 @@ const createPickup = async (req, res) => {
         if (pickupDate.getTime() <= Date.now()) {
             return res.status(400).json({ success: false, message: 'Pickup date must be in the future' });
         }
-        // Check for overlapping pickups for the same NGO
         const overlappingPickup = await (0, mysql_1.queryOne)(`SELECT c.id, c.pickup_scheduled_date_time, dr.ngo_id
        FROM contributions c
        INNER JOIN donations dr ON c.donation_id = dr.id
@@ -61,7 +48,6 @@ const createPickup = async (req, res) => {
                 message: 'This NGO already has a pickup scheduled within 1 hour of the requested time. Please choose a different time.',
             });
         }
-        // Check if donor already has a pickup at the same time
         const donorOverlappingPickup = await (0, mysql_1.queryOne)(`SELECT id, pickup_scheduled_date_time
        FROM contributions
        WHERE donor_id = ?
@@ -74,7 +60,6 @@ const createPickup = async (req, res) => {
                 message: 'You already have a pickup scheduled within 1 hour of this time. Please choose a different time.',
             });
         }
-        // Check if donor already contributed to this donation
         const existingContribution = await (0, mysql_1.queryOne)('SELECT id FROM contributions WHERE donation_id = ? AND donor_id = ?', [donationId, donorId]);
         if (existingContribution) {
             return res.status(409).json({
@@ -82,7 +67,6 @@ const createPickup = async (req, res) => {
                 message: 'You have already contributed to this donation',
             });
         }
-        // Create contribution (which includes pickup)
         const contributionId = await (0, mysql_1.insert)(`INSERT INTO contributions (
         donation_id, donor_id, notes,
         scheduled_pickup_time, pickup_scheduled_date_time,
@@ -140,10 +124,6 @@ const createPickup = async (req, res) => {
     }
 };
 exports.createPickup = createPickup;
-/**
- * Get pickups for NGO
- * GET /api/pickups/ngo
- */
 const getNgoPickups = async (req, res) => {
     try {
         const ngoId = parseInt(req.user.id);
@@ -168,7 +148,6 @@ const getNgoPickups = async (req, res) => {
             if (isNaN(donationIdNum)) {
                 return res.status(400).json({ success: false, message: 'Invalid donation id' });
             }
-            // Verify donation belongs to NGO
             const donation = await (0, mysql_1.queryOne)('SELECT id FROM donations WHERE id = ? AND ngo_id = ?', [donationIdNum, ngoId]);
             if (!donation) {
                 return res.status(403).json({ success: false, message: 'You do not have access to this donation' });
@@ -213,10 +192,6 @@ const getNgoPickups = async (req, res) => {
     }
 };
 exports.getNgoPickups = getNgoPickups;
-/**
- * Get pickups for donor
- * GET /api/pickups/donor
- */
 const getDonorPickups = async (req, res) => {
     try {
         const donorId = parseInt(req.user.id);
@@ -268,10 +243,6 @@ const getDonorPickups = async (req, res) => {
     }
 };
 exports.getDonorPickups = getDonorPickups;
-/**
- * Update pickup status
- * PATCH /api/pickups/:id/status
- */
 const updatePickupStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -286,7 +257,6 @@ const updatePickupStatus = async (req, res) => {
                 message: 'Invalid pickup status. Must be SCHEDULED, PICKED_UP, or CANCELLED',
             });
         }
-        // Verify pickup exists and belongs to NGO's donation
         const contribution = await (0, mysql_1.queryOne)(`SELECT c.*, dr.ngo_id
        FROM contributions c
        INNER JOIN donations dr ON c.donation_id = dr.id
@@ -301,13 +271,10 @@ const updatePickupStatus = async (req, res) => {
                 message: 'Forbidden: You can only manage pickups for your own donations',
             });
         }
-        // Update pickup status
         await (0, mysql_1.update)('UPDATE contributions SET pickup_status = ? WHERE id = ?', [pickupStatus, pickupId]);
-        // If picked up, also update contribution status to COMPLETED
         if (pickupStatus === 'PICKED_UP') {
             await (0, mysql_1.update)('UPDATE contributions SET status = ? WHERE id = ?', ['COMPLETED', pickupId]);
         }
-        // Fetch updated contribution
         const updated = await (0, mysql_1.queryOne)(`SELECT c.*, 
               d.name as donor_name, d.email as donor_email,
               dr.donation_category, dr.donation_type, dr.purpose,

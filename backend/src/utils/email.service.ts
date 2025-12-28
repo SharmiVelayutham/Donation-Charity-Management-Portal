@@ -1,24 +1,14 @@
 import nodemailer from 'nodemailer';
 import { env } from '../config/env';
 import { getEmailTemplate, replaceTemplatePlaceholders } from './email-template.service';
-
-/**
- * Email Service for sending OTP and other emails
- * Uses Nodemailer with SMTP configuration
- */
-
 interface EmailOptions {
   to: string;
   subject: string;
   html: string;
   text?: string;
 }
-
-/**
- * Create and configure nodemailer transporter
- */
 function createTransporter() {
-  // Check if SMTP is configured
+
   if (!env.smtpHost || !env.smtpUser || !env.smtpPass) {
     throw new Error('SMTP configuration is missing. Please set SMTP_HOST, SMTP_USER, and SMTP_PASS in .env file');
   }
@@ -33,10 +23,9 @@ function createTransporter() {
     },
   };
 
-  // For Gmail and most SMTP servers, TLS is required when secure=false
   if (!env.smtpSecure) {
     transporterConfig.tls = {
-      // Do not fail on invalid certs (useful for development)
+
       rejectUnauthorized: false,
       ciphers: 'SSLv3',
     };
@@ -44,10 +33,6 @@ function createTransporter() {
 
   return nodemailer.createTransport(transporterConfig);
 }
-
-/**
- * Send email using nodemailer
- */
 export async function sendEmail(options: EmailOptions): Promise<void> {
   let transporter;
   
@@ -67,7 +52,6 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       text: options.text || options.html.replace(/<[^>]*>/g, ''), // Plain text fallback
     };
 
-    // Verify SMTP connection before sending
     await transporter.verify();
     
     const info = await transporter.sendMail(mailOptions);
@@ -75,13 +59,12 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     console.log('✅ Email sent successfully');
     console.log('Message ID:', info.messageId);
     console.log('To:', options.to);
-    // Do NOT log OTP in production logs
+
     
   } catch (error: any) {
     console.error('❌ Failed to send email to:', options.to);
     console.error('Error:', error.message);
-    
-    // Provide specific error messages for common issues
+
     if (error.code === 'EAUTH') {
       throw new Error('SMTP authentication failed. Please check SMTP_USER and SMTP_PASS in .env file. For Gmail, use App Password (not regular password).');
     } else if (error.code === 'ECONNECTION') {
@@ -97,12 +80,8 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       throw new Error(`Failed to send email: ${error.message}. Please check SMTP configuration. See EMAIL_SETUP.md for help.`);
     }
   }
-  // Note: transporter.close() is not needed - nodemailer manages connections automatically
-}
 
-/**
- * Send OTP email with professional template
- */
+}
 export async function sendOTPEmail(
   email: string,
   otp: string,
@@ -162,7 +141,6 @@ export async function sendOTPEmail(
     </html>
   `;
 
-  // Map purpose to template type
   const templateTypeMap: { [key: string]: string } = {
     REGISTRATION: 'OTP_REGISTRATION',
     PASSWORD_RESET: 'OTP_PASSWORD_RESET',
@@ -173,10 +151,9 @@ export async function sendOTPEmail(
   const templateType = templateTypeMap[purpose] || 'OTP_REGISTRATION';
 
   try {
-    // Get template from database (or default)
+
     const template = await getEmailTemplate(templateType);
-    
-    // Replace placeholders
+
     const finalSubject = template.subject; // OTP templates don't use placeholders in subject
     const finalHtml = replaceTemplatePlaceholders(template.bodyHtml, {
       OTP_CODE: otp
@@ -189,7 +166,7 @@ export async function sendOTPEmail(
     });
   } catch (error: any) {
     console.error(`[Email Service] Error sending OTP email (template: ${templateType}):`, error);
-    // Fallback to original hardcoded email if template fails
+
     await sendEmail({
       to: email,
       subject,
@@ -197,10 +174,6 @@ export async function sendOTPEmail(
     });
   }
 }
-
-/**
- * Send NGO profile under verification email (after registration)
- */
 export async function sendNgoProfileUnderVerificationEmail(email: string, ngoName: string): Promise<void> {
   const subject = 'NGO Profile Under Verification';
 
@@ -256,10 +229,6 @@ export async function sendNgoProfileUnderVerificationEmail(email: string, ngoNam
     html,
   });
 }
-
-/**
- * Send NGO verification approval email
- */
 export async function sendNgoVerificationApprovalEmail(email: string, ngoName: string, ngoId: string): Promise<void> {
   const subject = 'NGO Profile Verified Successfully';
 
@@ -292,7 +261,7 @@ export async function sendNgoVerificationApprovalEmail(email: string, ngoName: s
         </p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.FRONTEND_URL || 'http://localhost:4200'}/login" 
+                <a href="${env.frontendUrl}/login" 
              style="display: inline-block; background-color: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: 600;">
             Login to Dashboard
           </a>
@@ -322,10 +291,6 @@ export async function sendNgoVerificationApprovalEmail(email: string, ngoName: s
     html,
   });
 }
-
-/**
- * Send NGO verification rejection email
- */
 export async function sendNgoVerificationRejectionEmail(
   email: string, 
   ngoName: string, 
@@ -385,10 +350,6 @@ export async function sendNgoVerificationRejectionEmail(
     html,
   });
 }
-
-/**
- * Verify email configuration
- */
 export function verifyEmailConfig(): boolean {
   try {
     if (!env.smtpHost || !env.smtpUser || !env.smtpPass) {

@@ -11,15 +11,9 @@ import {
   upload
 } from '../controllers/blog.controller';
 
-const router = Router();
-
-console.log('🔧 Setting up blog routes...');
-
-// Public routes
+const router = Router();
 router.get('/', getAllBlogs);
-router.get('/:id', getBlogById);
-
-// Protected routes: NGO only
+router.get('/:id', getBlogById);
 router.post(
   '/',
   authenticate,
@@ -49,8 +43,6 @@ router.delete(
   requireRole(['NGO']),
   deleteBlog
 );
-
-console.log('✅ Blog routes configured successfully');
 
 export default router;
 
