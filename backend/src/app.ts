@@ -1,3 +1,4 @@
+import helpRoutes from './routes/help.routes';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -61,6 +62,7 @@ const enableHttpLogs = env.enableHttpLogs || env.nodeEnv === 'development';
 if (enableHttpLogs) {
   app.use(morgan('dev'));
 }
+app.use('/api/help', helpRoutes);
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
