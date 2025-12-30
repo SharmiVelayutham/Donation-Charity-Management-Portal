@@ -142,7 +142,6 @@
 .team-section {
     padding: 60px 20px;
     background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(5px);
 }
 
 .team-section h2 {
@@ -156,7 +155,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 30px;
-    max-width: 1200px;
+    max-width: 900px;
     margin: 0 auto;
 }
 
@@ -169,18 +168,15 @@
 }
 
 .team-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-6px);
 }
 
 .team-avatar {
-    width: 100%;
-    height: 250px;
-    background: linear-gradient(135deg, rgba(220, 53, 69, 0.9) 0%, rgba(200, 35, 51, 0.9) 100%);
+    height: 220px;
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.9), rgba(200, 35, 51, 0.9));
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 80px;
-    color: white;
 }
 
 .team-info {
@@ -189,10 +185,11 @@
 }
 
 .team-info h3 {
-    font-size: 22px;
+    font-size: 20px;
     color: #333;
-    margin-bottom: 5px;
+    font-weight: 600;
 }
+
 
 .team-info p {
     color: #dc3545;

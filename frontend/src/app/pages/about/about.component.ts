@@ -53,36 +53,24 @@ export class AboutComponent implements OnInit {
 
   team = [
     {
-      name: 'Sarah Johnson',
-      role: 'Executive Director',
-      bio: 'Leading our mission with 15 years of nonprofit experience',
-      avatar: '👩‍💼'
+      name: 'Sharmi V'
     },
     {
-      name: 'Michael Chen',
-      role: 'Operations Manager',
-      bio: 'Ensuring efficient program delivery and impact measurement',
-      avatar: '👨‍💼'
+      name: 'Lakkireddy Indhu'
     },
     {
-      name: 'Emily Rodriguez',
-      role: 'Community Outreach',
-      bio: 'Building bridges between donors and communities',
-      avatar: '👩‍🎓'
+      name: 'Sachin Kumar'
+      
     },
-    {
-      name: 'David Kumar',
-      role: 'Technology Lead',
-      bio: 'Developing innovative solutions for better donor experience',
-      avatar: '👨‍💻'
-    }
+    
   ];
 
   constructor() {}
 
   ngOnInit() {}
 
-  donate() {
+  donate() {
+
     window.location.href = '/donations';
   }
 }
