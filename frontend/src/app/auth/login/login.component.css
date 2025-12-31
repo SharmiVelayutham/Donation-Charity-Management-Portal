@@ -1,7 +1,7 @@
 .auth-wrapper {
   display: flex;
   height: 100vh;
-  width: 100%;
+  width:100%;
 }
 .auth-image {
   flex: 1;
@@ -9,6 +9,7 @@
   background-size: cover;
   background-position: center;
   position: relative;
+  display: block;
 }
 
 .image-overlay {
@@ -16,6 +17,17 @@
   bottom: 40px;
   left: 40px;
   color: #fff;
+  display: block;
+}
+
+@media (max-width:600px) {
+  .image-overlay {
+  display: none;
+}
+.auth-image{
+  display: none;
+}
+  
 }
 
 .image-overlay h1 {
@@ -30,7 +42,7 @@
 }
 
 .login-bg {
-  background-color: #f1f8ff; /* calm charity blue */
+   background: #fff1ea;
 }
 
 .auth-card {
