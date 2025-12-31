@@ -90,22 +90,23 @@ To provide a secure and user-friendly system where:
 
 ▶️ How to Run the Project
 [1️] Clone the Repository
-git clone https://github.com/SharmiVelayutham/Donation-Charity-Management-Portal.git
-cd Donation-Charity-Management-Portal
+ - git clone https://github.com/SharmiVelayutham/Donation-Charity-Management-Portal.git
+
+ - cd Donation-Charity-Management-Portal
 
 [2️] Backend Setup
-cd backend
-npm install
-npm run dev
+ - cd backend
+ - npm install
+ - npm run dev
 
 Backend runs at:
 
 http://localhost:3000
 
 [3️] Frontend Setup
-cd frontend
-npm install
-ng serve
+ - cd frontend
+ - npm install
+ - ng serve
 
 
 Frontend runs at:
@@ -116,12 +117,12 @@ http://localhost:4200
 
 Create a .env file in the backend folder:
 
-PORT=3306
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=donation_portal
-JWT_SECRET=your_secret_key
+ - PORT=3306
+ - DB_HOST=localhost
+ - DB_USER=root
+ - DB_PASSWORD=your_password
+ - DB_NAME=donation_portal
+ - JWT_SECRET=your_secret_key
 
 🧪 Validation & Error Handling
 
