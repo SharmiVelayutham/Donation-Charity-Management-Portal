@@ -80,11 +80,11 @@ app-ngo-dashboard {
 }
 
 .profile-name {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 0.6rem;
+  font-weight: 400;
   margin: 0;
   padding: 0;
-  line-height: 1;
+  line-height: 0.5;
   background: linear-gradient(to right, #10b981, #3b82f6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -197,7 +197,7 @@ app-ngo-dashboard {
     height: 18px !important;
   }
 }
-    background-clip: text;
+    
   
   .profile-avatar {
     width: 24px;
@@ -209,7 +209,7 @@ app-ngo-dashboard {
     width: 14px;
     height: 14px;
   }
-}
+
 
 .status-chip {
   font-size: 11px;
@@ -620,8 +620,8 @@ app-ngo-dashboard {
   .main-content::before {
     display: none !important;
   }
-  .profile-header { 
-    padding-left: 50px !important; 
+  .profile-header {
+    padding-left: 50px !important;
     gap: 0.5rem !important;
   }
   .stats-grid {
@@ -677,6 +677,7 @@ app-ngo-dashboard {
 }
 .dashboard-view {
   display: flex;
+
   flex-direction: column;
   gap: 0;
   position: relative;
@@ -1022,7 +1023,7 @@ app-ngo-dashboard {
 }
 
 .activity-card {
-  background: #EDEAE0; /* Alabaster SW7008 */
+  background: #EDEAE0;
   border-radius: var(--radius-lg);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   border: 1px solid #f1f5f9;
@@ -1132,8 +1133,7 @@ app-ngo-dashboard {
   padding-left: 0;
 }
 .profile-card-unified {
-  background: #EDEAE0 !important; /* Alabaster SW7008 - Same as admin dashboard */
-  border-radius: 1rem;
+  background: #EDEAE0 !important;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   border: 1px solid #f1f5f9;
   color: #1e293b;

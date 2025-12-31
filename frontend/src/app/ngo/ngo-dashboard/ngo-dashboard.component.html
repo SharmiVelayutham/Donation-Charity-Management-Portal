@@ -10,9 +10,6 @@
       <div class="profile-avatar">
         <mat-icon class="avatar-icon">business</mat-icon>
       </div>
-      <div class="profile-info">
-        <h1 class="profile-name">{{ dashboardData?.profile?.name || 'NGO' }}</h1>
-      </div>
       <div class="header-actions" style="color: green;">
         <app-notification-bell [userRole]="'NGO'"></app-notification-bell>
       </div>
@@ -90,6 +87,9 @@
       <div *ngIf="!isLoading && currentView === 'dashboard'" class="dashboard-view">
         <section class="hero-section">
           <div class="hero-content">
+                <div class="profile-info">
+                    <h1 class="profile-name">{{ dashboardData?.profile?.name || 'NGO' }}</h1>
+                </div>
             <h1 class="hero-title">NGO Dashboard</h1>
             <p class="hero-subtitle">Manage donations and track your impact</p>
           </div>

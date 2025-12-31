@@ -2,10 +2,11 @@
 <header class="navbar" *ngIf="showHeader">
   <div class="nav-container">
     <div class="logo-section">
-      <div class="logo">
-        <span class="logo-star">★</span>
+      <div class="logo" routerLink="/">
+        <img src="assets/icons/donation.png" alt="Donation Logo" class="logo-img" />
         <h1>Donation</h1>
-      </div>
+</div>
+
       <p class="tagline">Help Others, Be Happy!</p>
     </div>
     <nav class="nav-menu" [class.menu-open]="menuOpen">

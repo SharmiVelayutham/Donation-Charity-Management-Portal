@@ -8,7 +8,7 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,          // ✅ REQUIRED for ngModel
+    FormsModule,         
     HttpClientModule
   ],
   templateUrl: './help-chat.component.html',

@@ -6,10 +6,11 @@
 }
 .auth-image {
   width: 50%;
-  background-image: url('/assets/images/donation-bg.jpg'); /* ✅ update path if needed */
+  background-image: url('/assets/images/donation-bg.jpg'); 
   background-size: cover;
   background-position: center;
   position: relative;
+ 
 }
 .image-overlay {
   position: absolute;
@@ -20,6 +21,7 @@
   flex-direction: column;
   justify-content: flex-end;
   padding: 40px;
+  display: block;
 }
 
 .image-overlay h1 {
@@ -87,8 +89,17 @@
 @media (max-width: 600px) {
   .address-row {
     grid-template-columns: 1fr;
+
   }
+   .auth-image {
+    display: none;
+
 }
+ .image-overlay{
+  display: none;
+}
+  }
+
 .create-account-btn {
   width: 100%;
   background: #1e88e5;
@@ -119,6 +130,8 @@
 @media (max-width: 900px) {
   .auth-image {
     display: none;
+    display: block;
+    background-image: none;
   }
 
   .auth-form {
